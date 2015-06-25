@@ -18,3 +18,5 @@ project/plugins/project/
 
 *~
 /*.v
+testOutput/
+verilogOutput/
