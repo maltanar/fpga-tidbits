@@ -9,7 +9,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "common",
     base / "interfaces",
     base / "profiler",
-    base / "streams"
+    base / "streams",
     base / "on-chip-memory"
   )
 }
