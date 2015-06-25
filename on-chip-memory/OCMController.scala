@@ -27,6 +27,17 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
   def makeWriteAddr(x: UInt): UInt = {
     if (wWidth < rWidth) x else (x << UInt(log2Up(wWidth/rWidth)))
   }
+
+  def printParams() {
+    println("OCM parameters:")
+    println("Address width: " + addrWidth.toString)
+    println("Total # bits: " + bits.toString)
+    println("Read width: " + readWidth.toString)
+    println("Read depth: " + readDepth.toString)
+    println("Write width: " + writeWidth.toString)
+    println("Write depth: " + writeDepth.toString)
+    println("Read latency: " + readLatency.toString)
+  }
 }
 
 class OCMRequest(writeWidth: Int, addrWidth: Int) extends Bundle {
@@ -113,7 +124,8 @@ class OCMController(p: OCMParameters) extends Module {
   val hasRoom = (dumpQ.io.count < UInt((fifoCapacity-2*p.readLatency-1)))
 
   // address register, for both reads and writes (we do only one at once)
-  val regAddr = Reg(init = UInt(0, p.addrWidth))
+  // +1 in width to not overflow to zero if we increment too much
+  val regAddr = Reg(init = UInt(0, p.addrWidth+1))
   // total number of words left in the dump operation
   val regWordsLeft = Reg(init = UInt(0, p.addrWidth))
   // # of words in the next dump burst
@@ -193,7 +205,7 @@ class OCMController(p: OCMParameters) extends Module {
 }
 
 // convenience module for instantiating an OCM and a coupled controller
-class OCMAndController(p: OCMParameters, ocmName: String) extends Module {
+class OCMAndController(p: OCMParameters, ocmName: String, blackbox: Boolean) extends Module {
   val io = new Bundle {
     val mcif = new OCMControllerIF(p)
     // TODO add support for several "external ports" (not connected to the MC)
@@ -203,7 +215,7 @@ class OCMAndController(p: OCMParameters, ocmName: String) extends Module {
   // instantiate the OCM controller
   val ocmControllerInst = Module(new OCMController(p))
   // instantiate the OCM
-  val ocmInst = Module(new OnChipMemory(p, ocmName))
+  val ocmInst = Module(if (blackbox) new OnChipMemory(p, ocmName) else new AsymDualPortRAM(p))
   // connect the interfaces
   io.mcif <> ocmControllerInst.io.mcif
   // TODO do not hardcode port connections
