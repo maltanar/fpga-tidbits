@@ -73,15 +73,29 @@ class OCMSlaveIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundle
     { new OCMSlaveIF(writeWidth, readWidth, addrWidth).asInstanceOf[this.type] }
 }
 
+class OnChipMemoryBlackBoxIF(p: OCMParameters)extends Bundle {
+  val ports = Vec.fill(p.portCount) {
+    new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+}
+
 // we assume the actual OCM instance is generated via vendor-provided tools
 // so this is just a BlackBox (wrapper module)
 class OnChipMemory(p: OCMParameters, ocmName: String) extends BlackBox {
   moduleName = ocmName
-  val io = new Bundle {
-    // TODO fix and match names to the template (add renaming function)
-    val ports = Vec.fill(p.portCount) {
-      new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+  val io = new OnChipMemoryBlackBoxIF(p)
+
+  def renameSignals() {
+    val portLetters = Array("a", "b")
+    for(i <- 0 until p.portCount) {
+      io.ports(i).req.writeEn.setName("we"+portLetters(i))
+      io.ports(i).req.writeData.setName("din"+portLetters(i))
+      io.ports(i).req.addr.setName("addr"+portLetters(i))
+      io.ports(i).rsp.readData.setName("dout"+portLetters(i))
+    }
   }
+
+  renameSignals()
+  this.addClock(Driver.implicitClock)
 }
 
 class OCMControllerIF(p: OCMParameters) extends Bundle {
@@ -216,6 +230,7 @@ class OCMAndController(p: OCMParameters, ocmName: String, blackbox: Boolean) ext
   val ocmControllerInst = Module(new OCMController(p))
   // instantiate the OCM
   val ocmInst = Module(if (blackbox) new OnChipMemory(p, ocmName) else new AsymDualPortRAM(p))
+
   // connect the interfaces
   io.mcif <> ocmControllerInst.io.mcif
   // TODO do not hardcode port connections
