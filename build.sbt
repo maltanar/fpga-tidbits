@@ -11,6 +11,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "profiler",
     base / "streams",
     base / "on-chip-memory",
-    base / "testbenches/on-chip-memory"
+    base / "testbenches/on-chip-memory",
+    base / "testbenches/streams"
   )
 }
