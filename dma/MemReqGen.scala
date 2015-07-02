@@ -6,7 +6,7 @@ import Chisel._
 class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID) {
   // force single beat per burst for now
   // TODO support write bursts -- needs support in interleaver
-  val bytesPerBurst = 1 * bytesPerBeat
+  override val bytesPerBurst = 1 * bytesPerBeat
   io.reqs.bits.isWrite := Bool(true)
 }
 
