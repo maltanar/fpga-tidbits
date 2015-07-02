@@ -2,20 +2,6 @@ package TidbitsDMA
 
 import Chisel._
 
-// a parametrizable memory request generator
-
-class ReadReqGenCtrl(addrWidth: Int) extends Bundle {
-  val start = Bool(INPUT)
-  val throttle = Bool(INPUT)
-  val baseAddr = UInt(INPUT, width = addrWidth)
-  val byteCount = UInt(INPUT, width = addrWidth)
-}
-
-class ReadReqGenStatus() extends Bundle {
-  val finished = Bool(OUTPUT)
-  val active = Bool(OUTPUT)
-}
-
 // a generic read request generator,
 // only for contiguous accesses for now (no indirects, no strides)
 // only burst-aligned addresses and sizes (no error checking!)
@@ -24,8 +10,8 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   val reqGenParams = p
   val io = new Bundle {
     // control/status interface
-    val ctrl = new ReadReqGenCtrl(p.addrWidth)
-    val stat = new ReadReqGenStatus()
+    val ctrl = new ReqGenCtrl(p.addrWidth)
+    val stat = new ReqGenStatus()
     // requests
     val reqs = Decoupled(new GenericMemoryRequest(p))
   }
@@ -78,8 +64,8 @@ class TestReadReqGenWrapper() extends Module {
   val p = new MemReqParams(48, 64, 4, 1, 8)
 
   val io = new Bundle {
-    val ctrl = new ReadReqGenCtrl(p.addrWidth)
-    val stat = new ReadReqGenStatus()
+    val ctrl = new ReqGenCtrl(p.addrWidth)
+    val stat = new ReqGenStatus()
     val reqQOut = Decoupled(new GenericMemoryRequest(p))
   }
 
