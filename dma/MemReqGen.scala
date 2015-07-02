@@ -2,7 +2,15 @@ package TidbitsDMA
 
 import Chisel._
 
-// a generic read request generator,
+
+class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID) {
+  // force single beat per burst for now
+  // TODO support write bursts -- needs support in interleaver
+  val bytesPerBurst = 1 * bytesPerBeat
+  io.reqs.bits.isWrite := Bool(true)
+}
+
+// a generic memory request generator,
 // only for contiguous accesses for now (no indirects, no strides)
 // only burst-aligned addresses and sizes (no error checking!)
 // TODO do we want to support unaligned/sub-word accesses?
