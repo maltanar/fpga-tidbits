@@ -10,7 +10,7 @@ class AXIMemReqAdp(p: MemReqParams) extends Module {
   }
 
   io.genericReqIn.ready := io.axiReqOut.ready
-  io.axiReqOut.valid := genericReqIn.valid
+  io.axiReqOut.valid := io.genericReqIn.valid
 
   val reqIn = io.genericReqIn.bits
   val axiOut = io.axiReqOut.bits
@@ -33,8 +33,8 @@ class AXIReadRspAdp(p: MemReqParams) extends Module {
     val axiReadRspIn = Decoupled(new AXIReadData(p.dataWidth, p.idWidth)).flip
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
   }
-  io.rspOut.valid := io.axiReadRspIn.valid
-  io.axiReadRspIn.ready := io.rspOut.ready
+  io.genericRspOut.valid := io.axiReadRspIn.valid
+  io.axiReadRspIn.ready := io.genericRspOut.ready
 
   val axiIn = io.axiReadRspIn.bits
   val rspOut = io.genericRspOut.bits
@@ -49,8 +49,8 @@ class AXIWriteRspAdp(p: MemReqParams) extends Module {
     val axiWriteRspIn = Decoupled(new AXIWriteResponse(p.idWidth)).flip
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
   }
-  io.rspOut.valid := io.axiWriteRspIn.valid
-  io.axiReadRspIn.ready := io.rspOut.ready
+  io.genericRspOut.valid := io.axiWriteRspIn.valid
+  io.axiWriteRspIn.ready := io.genericRspOut.ready
 
   val axiIn = io.axiWriteRspIn.bits
   val rspOut = io.genericRspOut.bits
