@@ -17,7 +17,8 @@ object MainObj {
 
   def main(args: Array[String]): Unit = {
     //runTest_OCMAndController()
-    runTest_HazardGuard()
+    //runTest_HazardGuard()
+    runTest_AXIStreamUpsizer()
   }
 
   def runTest_HazardGuard() {
@@ -27,6 +28,17 @@ object MainObj {
     val instTest = {c => new HazardGuardTestHarnessTester(c)}
     val aT = makeTestArgs("HazardGuard")
     def aV = makeVerilogBuildArgs("HazardGuard")
+
+    chiselMain(aV, instModule)
+    chiselMainTest(aT, instModule)(instTest)
+  }
+
+  def runTest_AXIStreamUpsizer() {
+    val moduleName: String = "AXIStreamUpsizer"
+    val instModule = {() => Module(new  AXIStreamUpsizer(8,32) )}
+    val instTest = {c => new AXIStreamUpsizerTester(c)}
+    val aT = makeTestArgs(moduleName)
+    def aV = makeVerilogBuildArgs(moduleName)
 
     chiselMain(aV, instModule)
     chiselMainTest(aT, instModule)(instTest)
