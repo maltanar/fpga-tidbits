@@ -6,7 +6,7 @@ import Chisel._
 class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID) {
   // force single beat per burst for now
   // TODO support write bursts -- needs support in interleaver
-  override val bytesPerBurst = 1 * bytesPerBeat
+  override lazy val bytesPerBurst = 1 * bytesPerBeat
   io.reqs.bits.isWrite := Bool(true)
 }
 
@@ -25,7 +25,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   }
   // shorthands for convenience
   val bytesPerBeat = (p.dataWidth/8)
-  val bytesPerBurst = p.beatsPerBurst * bytesPerBeat
+  lazy val bytesPerBurst = p.beatsPerBurst * bytesPerBeat
   // state machine definitions & internal registers
   val sIdle :: sRun :: sFinished :: Nil = Enum(UInt(), 3)
   val regState = Reg(init = UInt(sIdle))
