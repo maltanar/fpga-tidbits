@@ -66,7 +66,7 @@ class SimpleHLMHarness() extends Module {
         when(regRespCounter === UInt(memParams.depth)) {
           regAddr := UInt(0)
           regRespCounter := UInt(0)
-          regState := sFinished
+          regState := sDump
         } .otherwise {
           dut.ports(0).rsp.ready := Bool(true)
           when(dut.ports(0).rsp.valid) {
@@ -76,8 +76,33 @@ class SimpleHLMHarness() extends Module {
       }
 
       is(sDump) {
+        regDumpCycles := regDumpCycles + UInt(1)
+        // push requests
+        when(regAddr < UInt(memParams.depth)) {
+          // write request
+          dut.ports(0).req.bits.numBytes := UInt(4)
+          dut.ports(0).req.bits.addr := regAddr
+          dut.ports(0).req.valid := Bool(true)
 
-
+          when(dut.ports(0).req.ready) {
+            regAddr := regAddr + UInt(1)
+          }
+        }
+        // handle responses (just count them for now)
+        when(regRespCounter === UInt(memParams.depth)) {
+          regAddr := UInt(0)
+          regRespCounter := UInt(0)
+          regState := sFinished
+        } .otherwise {
+          dut.ports(0).rsp.ready := Bool(true)
+          when(dut.ports(0).rsp.valid) {
+            regRespCounter := regRespCounter + UInt(1)
+            when(dut.ports(0).rsp.bits.readData != UInt("hdeadbeef")) {
+              regState := sFinished
+              regErr := Bool(true)
+            }
+          }
+        }
       }
 
       is(sFinished) {
@@ -90,28 +115,19 @@ class SimpleHLMHarness() extends Module {
 class HLMSimpleTester(c: SimpleHLMHarness) extends Tester(c) {
   poke(c.io.start, 1)
 
-  val cycleLimit = c.memParams.depth*4
+  val cycleLimit = c.memParams.depth*5
   var cycles: Int = 0
-  var obsReq: Int = 0
-  var obsRsp: Int = 0
-  
+
   while(cycles < cycleLimit && peek(c.io.done) != 1) {
-    if(peek(c.dut.ports(0).req.valid) == 1 && peek(c.dut.ports(0).req.ready) == 1) {
-      obsReq += 1
-    }
-
-    if(peek(c.dut.ports(0).rsp.valid) == 1 && peek(c.dut.ports(0).rsp.ready) == 1) {
-      obsRsp += 1
-    }
-
     peek(c.dut)
     peek(c.regRespCounter)
     step(1)
     cycles += 1
   }
-  println(obsReq.toString)
-  println(obsRsp.toString)
+  expect(c.io.done, 1)
   expect(c.io.error, 0)
-  val elemsPerCycle=(c.memParams.depth.toFloat/peek(c.io.fillCycles).toFloat).toString
-  println("Elems per cycle: "+elemsPerCycle)
+  val fillElemsPerCycle=(c.memParams.depth.toFloat/peek(c.io.fillCycles).toFloat).toString
+  val dumpElemsPerCycle=(c.memParams.depth.toFloat/peek(c.io.dumpCycles).toFloat).toString
+  println("Fill elems per cycle: "+fillElemsPerCycle)
+  println("Dump elems per cycle: "+dumpElemsPerCycle)
 }
