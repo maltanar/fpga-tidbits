@@ -32,6 +32,22 @@ class GenericMemoryRequest(p: MemReqParams) extends Bundle {
   override def clone = {
     new GenericMemoryRequest(p).asInstanceOf[this.type]
   }
+
+  def driveDefaults() = {
+    channelID := UInt(0)
+    isWrite := Bool(false)
+    addr := UInt(0)
+    numBytes := UInt(0)
+    metaData := UInt(0)
+  }
+}
+
+object GenericMemoryRequest {
+  def apply(p: MemReqParams): GenericMemoryRequest = {
+    val n = new GenericMemoryRequest(p)
+    n.driveDefaults
+    n
+  }
 }
 
 // a generic memory response structure
@@ -46,6 +62,20 @@ class GenericMemoryResponse(p: MemReqParams) extends Bundle {
 
   override def clone = {
     new GenericMemoryResponse(p).asInstanceOf[this.type]
+  }
+
+  def driveDefaults() = {
+    channelID := UInt(0)
+    readData := UInt(0)
+    metaData := UInt(0)
+  }
+}
+
+object GenericMemoryResponse {
+  def apply(p: MemReqParams): GenericMemoryResponse = {
+    val n = new GenericMemoryResponse(p)
+    n.driveDefaults
+    n
   }
 }
 
