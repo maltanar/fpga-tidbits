@@ -2,6 +2,7 @@ import Chisel._
 import TidbitsTestbenches._
 import TidbitsOCM._
 import TidbitsStreams._
+import TidbitsSimUtils._
 
 object MainObj {
   val testOutputDir = "testOutput/"
@@ -18,7 +19,18 @@ object MainObj {
   def main(args: Array[String]): Unit = {
     //runTest_OCMAndController()
     //runTest_HazardGuard()
-    runTest_AXIStreamUpsizer()
+    //runTest_AXIStreamUpsizer()
+    runTest_HLM_Simple()
+  }
+
+  def runTest_HLM_Simple() {
+    val instModule = {() => Module(new SimpleHLMHarness())}
+    val instTest = {c => new HLMSimpleTester(c)}
+    val aT = makeTestArgs("HLMSimple")
+    def aV = makeVerilogBuildArgs("HLMSimple")
+
+    chiselMain(aV, instModule)
+    chiselMainTest(aT, instModule)(instTest)
   }
 
   def runTest_HazardGuard() {
