@@ -43,6 +43,8 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
 
   val io = new Bundle {
     val ports = Vec.fill(p.numPorts) {new HighLatencyMemPort(p)}
+    val reads = Vec.fill(p.numPorts) {UInt(OUTPUT, 32)}
+    val writes = Vec.fill(p.numPorts) {UInt(OUTPUT, 32)}
   }
 
   // the memory
@@ -59,6 +61,11 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
     wdtQ(i).enq <> io.ports(i).wdt
     rspQ(i).deq <> io.ports(i).rsp
 
+    val regReadCnt = Reg(init = UInt(0, 32))
+    val regWriteCnt = Reg(init = UInt(0, 32))
+    io.reads(i) := regReadCnt
+    io.writes(i) := regWriteCnt
+
     val req = reqQ(i).deq
     val wdt = wdtQ(i).deq
     val rsp = rspQ(i).enq
@@ -71,14 +78,14 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
     req.ready := Bool(false)
     wdt.ready := Bool(false)
     rsp.valid := Bool(false)
-    rsp.bits := new GenericMemoryRequest(pReq)
+    rsp.bits.driveDefaults()
 
     val sIdle :: sServe :: sBurst :: Nil = Enum(UInt(), 3)
     val regState = Reg(init = UInt(sIdle))
 
     val regBeatsLeft = Reg(init = UInt(0, 32))
     val regBurstAddr = Reg(init = UInt(0, p.portAddrWidth))
-    val regOrigReq = Reg(init = new GenericMemoryRequest(pReq))
+    val regOrigReq = Reg(init = GenericMemoryRequest(pReq))
 
     switch(regState) {
         is(sIdle) {
@@ -105,12 +112,14 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
               when(wdt.valid) {
                 wdt.ready := Bool(true)
                 mem(baseAddr) := wdt.bits
+                regWriteCnt := regWriteCnt+UInt(1)
                 rsp.valid := Bool(true)
                 regState := sIdle
               }
             } .otherwise {
               rsp.valid := Bool(true)
               rsp.bits.readData := mem(baseAddr)
+              regReadCnt := regReadCnt+UInt(1)
               regState := sIdle
             }
           }
