@@ -35,20 +35,26 @@ class AXIWrappableAccelIF(val p: AXIAccelWrapperParams) extends Bundle {
 class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   val io = new AXIWrappableAccelIF(p)
 
-  // plug default reg outs
-  for(i <- 0 until p.numRegs) {
-    io.regOut(i).valid := Bool(false)
-    io.regOut(i).bits := UInt(0)
+  def plugRegOuts() {
+    for(i <- 0 until p.numRegs) {
+      io.regOut(i).valid := Bool(false)
+      io.regOut(i).bits := UInt(0)
+    }
   }
-  // plug memory port outs
-  io.memRdReq.valid := Bool(false)
-  io.memRdReq.bits.driveDefaults()
-  io.memRdRsp.ready := Bool(false)
-  io.memWrReq.valid := Bool(false)
-  io.memWrReq.bits.driveDefaults()
-  io.memWrDat.valid := Bool(false)
-  io.memWrDat.bits := UInt(0)
-  io.memWrRsp.ready := Bool(false)
+
+  def plugMemReadPort() {
+    io.memRdReq.valid := Bool(false)
+    io.memRdReq.bits.driveDefaults()
+    io.memRdRsp.ready := Bool(false)
+  }
+
+  def plugMemWritePort() {
+    io.memWrReq.valid := Bool(false)
+    io.memWrReq.bits.driveDefaults()
+    io.memWrDat.valid := Bool(false)
+    io.memWrDat.bits := UInt(0)
+    io.memWrRsp.ready := Bool(false)
+  }  
 
   override def clone = { new AXIWrappableAccel(p).asInstanceOf[this.type] }
 }

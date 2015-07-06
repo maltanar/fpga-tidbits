@@ -6,6 +6,11 @@ import TidbitsDMA._
 import TidbitsStreams._
 
 class WrapperTest(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
+  // plug unused ports / set defaults
+  plugRegOuts()
+  plugMemWritePort()
+  // plugMemReadPort -- bulk interface connection <> won't work otherwise
+
   val readReqGen = Module(new ReadReqGen(p.toMRP(), 0)).io
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducer = Module(new StreamReducer(32, 0, redFxn)).io
