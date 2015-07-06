@@ -38,6 +38,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   // plug default reg outs
   for(i <- 0 until p.numRegs) {
     io.regOut(i).valid := Bool(false)
+    io.regOut(i).bits := UInt(0)
   }
   // plug memory port outs
   io.memRdReq.valid := Bool(false)
