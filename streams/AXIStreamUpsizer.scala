@@ -1,7 +1,7 @@
 package TidbitsStreams
 
 import Chisel._
-import TidbitsAXIStreamDefs._
+import TidbitsAXI._
 
 class SerialInParallelOut(parWidth: Int, serWidth: Int) extends Module {
   val numShiftSteps = parWidth/serWidth

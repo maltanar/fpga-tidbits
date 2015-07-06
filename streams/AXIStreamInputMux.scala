@@ -1,7 +1,7 @@
 package TidbitsStreams
 
 import Chisel._
-import TidbitsAXIStreamDefs._
+import TidbitsAXI._
 
 class AXIStreamInputMux(dataWidth: Int) extends Module {
   val io = new Bundle {
