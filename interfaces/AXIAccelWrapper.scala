@@ -125,19 +125,25 @@ class AXIAccelWrapper(val p: AXIAccelWrapperParams,
 
   val regModeWrite = Reg(init=Bool(false))
   val regRdReq = Reg(init=Bool(false))
-  val regRdAddr = Reg(init=UInt(0, regAddrBits))
+  val regRdAddr = Reg(init=UInt(0, p.addrWidth))
   val regWrReq = Reg(init=Bool(false))
-  val regWrAddr = Reg(init=UInt(0, regAddrBits))
+  val regWrAddr = Reg(init=UInt(0, p.addrWidth))
   val regWrData = Reg(init=UInt(0, p.csrDataWidth))
+  // AXI typically uses byte addressing, whereas regFile indices are
+  // element indices -- so the AXI addr needs to be divided by #bytes
+  // in one element to get the regFile ind
+  // Note that this permits reading/writing only the entire width of one
+  // register
+  val addrDiv = UInt(p.csrDataWidth/8)
 
   when(!regModeWrite) {
     regFile.extIF.cmd.valid := regRdReq
     regFile.extIF.cmd.bits.read := Bool(true)
-    regFile.extIF.cmd.bits.regID := regRdAddr
+    regFile.extIF.cmd.bits.regID := regRdAddr / addrDiv
   } .otherwise {
     regFile.extIF.cmd.valid := regWrReq
     regFile.extIF.cmd.bits.write := Bool(true)
-    regFile.extIF.cmd.bits.regID := regWrAddr
+    regFile.extIF.cmd.bits.regID := regWrAddr / addrDiv
     regFile.extIF.cmd.bits.writeData := regWrData
   }
 
