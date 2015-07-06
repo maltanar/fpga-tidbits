@@ -10,6 +10,13 @@ class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
   val writeData = UInt(width = dataBits)
 
   override def clone = { new RegCommand(idBits, dataBits).asInstanceOf[this.type] }
+
+  def driveDefaults() = {
+    regID := UInt(0)
+    read := Bool(false)
+    write := Bool(false)
+    writeData := UInt(0)
+  }
 }
 
 // register file interface
