@@ -1,4 +1,4 @@
-package TidbitsAXILiteDefs
+package TidbitsAXI
 
 import Chisel._
 
