@@ -2,12 +2,18 @@ package TidbitsDMA
 
 import Chisel._
 
+// control interface for (simple) request generators
+class ReqGenCtrl(addrWidth: Int) extends Bundle {
+  val start = Bool(INPUT)
+  val throttle = Bool(INPUT)
+  val baseAddr = UInt(INPUT, width = addrWidth)
+  val byteCount = UInt(INPUT, width = addrWidth)
+}
 
-class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID) {
-  // force single beat per burst for now
-  // TODO support write bursts -- needs support in interleaver
-  override lazy val bytesPerBurst = 1 * bytesPerBeat
-  io.reqs.bits.isWrite := Bool(true)
+// status interface for (simple) request generators
+class ReqGenStatus() extends Bundle {
+  val finished = Bool(OUTPUT)
+  val active = Bool(OUTPUT)
 }
 
 // a generic memory request generator,
@@ -170,4 +176,11 @@ class TestReadReqGen(c: TestReadReqGenWrapper) extends Tester(c) {
   expect(c.io.stat.finished, 0)
   expect(c.io.stat.active, 0)
   expect(c.reqQ.io.count, 0)
+}
+
+class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID) {
+  // force single beat per burst for now
+  // TODO support write bursts -- needs support in interleaver
+  override lazy val bytesPerBurst = 1 * bytesPerBeat
+  io.reqs.bits.isWrite := Bool(true)
 }

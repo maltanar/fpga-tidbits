@@ -78,17 +78,3 @@ object GenericMemoryResponse {
     n
   }
 }
-
-// control interface for (simple) request generators
-class ReqGenCtrl(addrWidth: Int) extends Bundle {
-  val start = Bool(INPUT)
-  val throttle = Bool(INPUT)
-  val baseAddr = UInt(INPUT, width = addrWidth)
-  val byteCount = UInt(INPUT, width = addrWidth)
-}
-
-// status interface for (simple) request generators
-class ReqGenStatus() extends Bundle {
-  val finished = Bool(OUTPUT)
-  val active = Bool(OUTPUT)
-}
