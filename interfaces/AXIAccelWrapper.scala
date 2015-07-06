@@ -35,6 +35,20 @@ class AXIWrappableAccelIF(val p: AXIAccelWrapperParams) extends Bundle {
 class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   val io = new AXIWrappableAccelIF(p)
 
+  // plug default reg outs
+  for(i <- 0 until p.numRegs) {
+    io.regOut(i).valid := Bool(false)
+  }
+  // plug memory port outs
+  io.memRdReq.valid := Bool(false)
+  io.memRdReq.bits.driveDefaults()
+  io.memRdRsp.ready := Bool(false)
+  io.memWrReq.valid := Bool(false)
+  io.memWrReq.bits.driveDefaults()
+  io.memWrDat.valid := Bool(false)
+  io.memWrDat.bits := UInt(0)
+  io.memWrRsp.ready := Bool(false)
+
   override def clone = { new AXIWrappableAccel(p).asInstanceOf[this.type] }
 }
 
@@ -166,7 +180,7 @@ class AXIAccelWrapper(val p: AXIAccelWrapperParams,
       is(sWriteD) {
         io.csr.writeData.ready := Bool(true)
         when(io.csr.writeData.valid) {
-          regWrData := io.csr.writeData.bits
+          regWrData := io.csr.writeData.bits.data
           regWrReq := Bool(true) // now we can set the request
           regState := sWriteRsp
         }

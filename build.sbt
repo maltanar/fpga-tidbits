@@ -16,6 +16,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "regfile",
     base / "testbenches/on-chip-memory",
     base / "testbenches/streams",
-    base / "testbenches/sim-utils"
+    base / "testbenches/sim-utils",
+    base / "testbenches/wrapper"
   )
 }

@@ -3,6 +3,7 @@ import TidbitsTestbenches._
 import TidbitsOCM._
 import TidbitsStreams._
 import TidbitsSimUtils._
+import TidbitsAXI._
 
 object MainObj {
   val testOutputDir = "testOutput/"
@@ -20,7 +21,17 @@ object MainObj {
     //runTest_OCMAndController()
     //runTest_HazardGuard()
     //runTest_AXIStreamUpsizer()
-    runTest_HLM_Simple()
+    //runTest_HLM_Simple()
+    runVerilog_WrapperTest()
+  }
+
+  def runVerilog_WrapperTest() {
+    val p = new AXIAccelWrapperParams(32,32,64,8,4)
+    val fxn = { p:AXIAccelWrapperParams => new WrapperTest(p)}
+    val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
+    def aV = makeVerilogBuildArgs("WrapperTest")
+
+    chiselMain(aV, instModule)
   }
 
   def runTest_HLM_Simple() {
