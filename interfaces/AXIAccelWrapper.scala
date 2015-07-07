@@ -54,7 +54,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     io.memWrDat.valid := Bool(false)
     io.memWrDat.bits := UInt(0)
     io.memWrRsp.ready := Bool(false)
-  }  
+  }
 
   override def clone = { new AXIWrappableAccel(p).asInstanceOf[this.type] }
 }
@@ -92,7 +92,7 @@ class AXIAccelWrapper(val p: AXIAccelWrapperParams,
   // write data
   // TODO handle this with own adapter?
   io.mem.writeData.bits.data := accel.memWrDat.bits
-  io.mem.writeData.bits.strb := ~UInt(0) // TODO forces all bytelanes valid!
+  io.mem.writeData.bits.strb := ~UInt(0, width=p.memDataWidth/8) // TODO forces all bytelanes valid!
   io.mem.writeData.bits.last := Bool(true) // TODO write bursts won't work properly
   io.mem.writeData.valid := accel.memWrDat.valid
   accel.memWrDat.ready := io.mem.writeData.ready
