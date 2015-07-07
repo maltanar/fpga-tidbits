@@ -2,15 +2,35 @@ package TidbitsDMA
 
 import Chisel._
 
-class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
-  val io = new Bundle {
-    // interleaved responses in
-    val rspIn = Decoupled(new GenericMemoryResponse(p)).flip
-    // deinterleaved responses out
-    val rspOut = Vec.fill(numPipes) {Decoupled(new GenericMemoryResponse(p))}
-    // number of decode errors (ID width no matching pipe)
-    val decodeErrors = UInt(OUTPUT, width = 32)
+class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
+  // interleaved responses in
+  val rspIn = Decoupled(new GenericMemoryResponse(p)).flip
+  // deinterleaved responses out
+  val rspOut = Vec.fill(numPipes) {Decoupled(new GenericMemoryResponse(p))}
+  // number of decode errors (ID width no matching pipe)
+  val decodeErrors = UInt(OUTPUT, width = 32)
+
+  override def clone = {
+    new RespDeinterleaverIF(numPipes, p).asInstanceOf[this.type]
   }
+}
+
+class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int) extends Module {
+  val io = new RespDeinterleaverIF(numPipes,p)
+  val deint = Module(new RespDeinterleaver(numPipes, p)).io
+  deint.rspIn <> io.rspIn
+  io.decodeErrors := deint.decodeErrors
+
+  for(i <- 0 until numPipes) {
+    val rspQ = Module(new Queue(new GenericMemoryResponse(p), n)).io
+    rspQ.deq <> io.rspOut(i)
+    rspQ.enq <> deint.rspOut(i)
+  }
+}
+
+
+class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
+  val io = new RespDeinterleaverIF(numPipes, p)
 
   val regDecodeErrors = Reg(init = UInt(0, 32))
   // TODO add ability to customize routing function
