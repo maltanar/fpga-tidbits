@@ -25,8 +25,18 @@ object MainObj {
     //runVerilog_WrapperTest()
     //runVerilog_WrapperTestMultiChanSum()
     //runVerilog_WrapperTestSeqWrite()
+    runVerilog_WrapperTestOCMController()
     //runTest_StreamDelta()
-    runTest_StreamRepeatElem()
+    //runTest_StreamRepeatElem()
+  }
+
+  def runVerilog_WrapperTestOCMController() {
+    val p = new AXIAccelWrapperParams(32,32,64,6,8)
+    val fxn = { p:AXIAccelWrapperParams => new WrapperTestOCMController(p)}
+    val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
+    def aV = makeVerilogBuildArgs("WrapperTest")
+
+    chiselMain(aV, instModule)
   }
 
   def runVerilog_WrapperTestSeqWrite() {
