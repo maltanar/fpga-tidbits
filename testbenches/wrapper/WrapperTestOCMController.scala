@@ -6,20 +6,32 @@ import TidbitsDMA._
 import TidbitsStreams._
 import TidbitsOCM._
 
+class SubStream[Tin <: Data, Tout <: Data]
+  (genI: Tin, genO: Tout, filterFxn: Tin => Tout  ) extends Module {
+    val io = new Bundle {
+      val in = Decoupled(genI).flip
+      val out = Decoupled(genO)
+    }
+    io.out.valid := io.in.valid
+    io.out.bits := filterFxn(io.in.bits)
+    io.in.ready := io.out.ready
+}
+
+object SubStream {
+  def apply[Tin <: Data, Tout <: Data]
+  (in: DecoupledIO[Tin], out: DecoupledIO[Tout], filterFxn: Tin=>Tout) = {
+    val ss = Module(new SubStream[Tin, Tout](in.bits.clone, out.bits.clone, filterFxn)).io
+    ss.in <> in
+    ss.out <> out
+    ss
+  }
+
+}
 class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
   //plugMemWritePort()
   //plugMemReadPort()
-
-  def SubStream[Tin <: Data, Tout <: Data](
-    in: DecoupledIO[Tin], gen: Tout, filterFxn: Tin => Tout  ): DecoupledIO[Tout] = {
-      val wr = new DecoupledIO(gen)
-      wr.valid := in.valid
-      in.ready := wr.ready
-      wr.bits := filterFxn(in.bits)
-      wr.flip
-    }
 
   // const identity register
   io.regOut(0).bits := UInt("h0c0c0c0c")
@@ -29,7 +41,7 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   val pOCM = new OCMParameters(64*1024, 64, 64, 2, 1)
   pOCM.printParams()
 
-  val ocmInst = Module(new OCMAndController(pOCM, "BRAM64x1024", true)).io
+  val ocmInst = Module(new OCMAndController(pOCM, "WrapperBRAM64x1024", true)).io
   // plug user ports (unused for now) -- accessed only via controller
   ocmInst.ocmUser(0).req := NullOCMRequest(pOCM)
   ocmInst.ocmUser(1).req := NullOCMRequest(pOCM)
@@ -41,11 +53,11 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   wrq.reqs <> io.memWrReq
   io.memWrDat <> Queue(ocmInst.mcif.dumpPort, 16)
   val filterFxn = {x: GenericMemoryResponse => x.readData}
-  ocmInst.mcif.fillPort <> SubStream(io.memRdRsp, UInt(width=64), filterFxn)
+  SubStream(io.memRdRsp, ocmInst.mcif.fillPort, filterFxn)
   // use a reducer to count the write responses
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducer = Module(new StreamReducer(64, 0, redFxn)).io
-  reducer.streamIn <> SubStream(io.memWrRsp, UInt(width=64), filterFxn)
+  SubStream(io.memWrRsp, reducer.streamIn, filterFxn)
 
   // wire up control
   val ctl = io.regIn(1)
