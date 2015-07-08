@@ -48,6 +48,16 @@ class OCMRequest(writeWidth: Int, addrWidth: Int) extends Bundle {
   override def clone = {new OCMRequest(writeWidth, addrWidth).asInstanceOf[this.type]}
 }
 
+object NullOCMRequest {
+  def apply(p: OCMParameters) = {
+    val ocmr = new OCMRequest(p.writeWidth, p.addrWidth)
+    ocmr.addr := UInt(0)
+    ocmr.writeEn := Bool(false)
+    ocmr.writeData := UInt(0)
+    ocmr
+  }
+}
+
 class OCMResponse(readWidth: Int) extends Bundle {
   val readData = UInt(width = readWidth)
 
