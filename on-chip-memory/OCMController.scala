@@ -130,7 +130,7 @@ class OCMController(p: OCMParameters) extends Module {
   }
   // TODO test fill port functionality
   // TODO test dump port functionality
-  val sIdle :: sFill :: sDumpWait :: sDump :: sFinished :: Nil = Enum(UInt(), 5)
+  val sIdle :: sFill :: sDump :: sFinished :: Nil = Enum(UInt(), 4)
   val regState = Reg(init = UInt(sIdle))
 
   val ocm = io.ocm
@@ -156,10 +156,6 @@ class OCMController(p: OCMParameters) extends Module {
   // address register, for both reads and writes (we do only one at once)
   // +1 in width to not overflow to zero if we increment too much
   val regAddr = Reg(init = UInt(0, p.addrWidth+1))
-  // total number of words left in the dump operation
-  val regWordsLeft = Reg(init = UInt(0, p.addrWidth))
-  // # of words in the next dump burst
-  val regReqCount = Reg(init=UInt(0,4))
 
   // default outputs
   io.mcif.done := Bool(false)
@@ -168,18 +164,15 @@ class OCMController(p: OCMParameters) extends Module {
   ocm.req.writeEn := Bool(false)
   ocm.req.writeData := io.mcif.fillPort.bits
 
-
   // default assignment to valid shiftreg
   regDumpValid := Bool(false)
 
   switch(regState) {
       is(sIdle) {
         regAddr := UInt(0)
-        regWordsLeft := UInt(p.readDepth)
-        regReqCount := UInt(0)
         when(io.mcif.start) {
           when (io.mcif.mode === UInt(0)) { regState := sFill }
-          .elsewhen (io.mcif.mode === UInt(1)) { regState := sDumpWait }
+          .elsewhen (io.mcif.mode === UInt(1)) { regState := sDump }
         }
       }
 
@@ -194,34 +187,12 @@ class OCMController(p: OCMParameters) extends Module {
         }
       }
 
-      is(sDumpWait) {
-        when (regWordsLeft === UInt(0)) {regState := sFinished}
-        // we only issue requests to BRAM if the FIFO can hold
-        // responses from all (bramStages) requests
-        .elsewhen (hasRoom) {
-          // calculate the next burst length:
-          // we might have less than a full burst's worth of words left in BRAM
-          val canDoFullReq = (regWordsLeft > UInt(p.readLatency))
-          regReqCount := Mux(canDoFullReq, UInt(p.readLatency), regWordsLeft)
-          // start burst
-          regState := sDump
-        }
-      }
-
       is(sDump) {
         ocm.req.addr := p.makeReadAddr(regAddr)
-
-        when ( regReqCount === UInt(0) ) {
-          // no more requests in burst, wait for more room
-          regState := sDumpWait
-        } .otherwise {
-          // issue requests (one burst beat)
+        when (regAddr === UInt(p.readDepth)) {regState := sFinished}
+        .elsewhen (hasRoom & dumpQ.io.enq.ready) {
           regDumpValid := Bool(true)
-          // one less beat to go
-          regReqCount := regReqCount - UInt(1)
           regAddr := regAddr + UInt(1)
-          regWordsLeft := regWordsLeft - UInt(1)
-          // TODO update count calculations here if we do multi-port dump
         }
       }
 
