@@ -105,12 +105,12 @@ class OCMControllerIF(p: OCMParameters) extends Bundle {
   val done = Bool(OUTPUT)
   val fillPort = Decoupled(UInt(width = p.writeWidth)).flip
   val dumpPort = Decoupled(UInt(width = p.readWidth))
+  val busy = Bool(OUTPUT)
 }
 
 // TODO support partial fill/dump by start&count registers
 // fill/dump ports
 // TODO support fill/dump through all ports (width*count)
-// TODO slave ports for passthrough mode
 
 class OCMController(p: OCMParameters) extends Module {
   val io = new Bundle {
@@ -120,8 +120,12 @@ class OCMController(p: OCMParameters) extends Module {
   }
   // TODO test fill port functionality
   // TODO test dump port functionality
+  val sIdle :: sFill :: sDumpWait :: sDump :: sFinished :: Nil = Enum(UInt(), 5)
+  val regState = Reg(init = UInt(sIdle))
 
   val ocm = io.ocm
+
+  io.mcif.busy := (regState != sIdle)
 
   // use a FIFO queue to make burst reads with latency easier
   // TODO parametrize # entires in dump queue
@@ -154,8 +158,6 @@ class OCMController(p: OCMParameters) extends Module {
   ocm.req.writeEn := Bool(false)
   ocm.req.writeData := io.mcif.fillPort.bits
 
-  val sIdle :: sFill :: sDumpWait :: sDump :: sFinished :: Nil = Enum(UInt(), 5)
-  val regState = Reg(init = UInt(sIdle))
 
   // default assignment to valid shiftreg
   regDumpValid := Bool(false)
@@ -224,18 +226,30 @@ class OCMController(p: OCMParameters) extends Module {
 class OCMAndController(p: OCMParameters, ocmName: String, blackbox: Boolean) extends Module {
   val io = new Bundle {
     val mcif = new OCMControllerIF(p)
-    // TODO add support for several "external ports" (not connected to the MC)
-    val ocmUser = new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)
+    val ocmUser = Vec.fill(p.portCount){
+      new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
   }
 
   // instantiate the OCM controller
   val ocmControllerInst = Module(new OCMController(p))
+  // connect the MCIF
+  io.mcif <> ocmControllerInst.io.mcif
+
   // instantiate the OCM
   val ocmInst = Module(if (blackbox) new OnChipMemory(p, ocmName) else new AsymDualPortRAM(p))
+  // connect OCM controller with passthrough logic:
+  // port 0 is driven by the MC when MC is busy, by the user port otherwise
+  val enablePassthrough = !ocmControllerInst.io.mcif.busy
+  val mcifPort = ocmControllerInst.io.ocm
+  val sharedPort = ocmInst.io.ports(0)
 
-  // connect the interfaces
-  io.mcif <> ocmControllerInst.io.mcif
-  // TODO do not hardcode port connections
-  ocmControllerInst.io.ocm <> ocmInst.io.ports(0)
-  ocmInst.io.ports(1) <> io.ocmUser
+  sharedPort.req := Mux(enablePassthrough, io.ocmUser(0).req, mcifPort.req)
+  mcifPort.rsp := sharedPort.rsp
+  io.ocmUser(0).rsp := sharedPort.rsp
+
+  // connect the rest of the ports
+  for(i <- 1 until p.portCount) {
+    ocmInst.io.ports(i) <> io.ocmUser(i)
+  }
+
 }
