@@ -21,11 +21,11 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
   val bits: Int = b
 
   def makeReadAddr(x: UInt): UInt = {
-    if (rWidth < wWidth) x else (x << UInt(log2Up(rWidth/wWidth)))
+    if (rWidth <= wWidth) x else (x << UInt(log2Up(rWidth/wWidth)))
   }
 
   def makeWriteAddr(x: UInt): UInt = {
-    if (wWidth < rWidth) x else (x << UInt(log2Up(wWidth/rWidth)))
+    if (wWidth <= rWidth) x else (x << UInt(log2Up(wWidth/rWidth)))
   }
 
   def printParams() {
