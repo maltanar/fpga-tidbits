@@ -86,4 +86,45 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   val statusList = List(   rrq.stat.finished, wrq.stat.finished,
                            reducer.finished, ocmInst.mcif.done)
   io.regOut(2).bits := Cat(statusList)
+
+  // memory port operation counters
+  // TODO make these an optional part of the infrastructure,
+  // can be quite useful for debugging
+  val regReadReqCount = Reg(init = UInt(0, 32))
+  val regWriteReqCount = Reg(init = UInt(0, 32))
+  val regWriteDataCount = Reg(init = UInt(0, 32))
+  val regReadRspCount = Reg(init = UInt(0, 32))
+  val regWriteRspCount = Reg(init = UInt(0, 32))
+
+
+  when(io.memRdReq.valid & io.memRdReq.ready) {
+    regReadReqCount := regReadReqCount + UInt(1)
+  }
+
+  when(io.memWrReq.valid & io.memWrReq.ready) {
+    regWriteReqCount := regWriteReqCount + UInt(1)
+  }
+
+  when(io.memWrDat.valid & io.memWrDat.ready) {
+    regWriteDataCount := regWriteDataCount + UInt(1)
+  }
+
+  when(io.memRdRsp.valid & io.memRdRsp.ready) {
+    regReadRspCount := regReadRspCount + UInt(1)
+  }
+
+  when(io.memWrRsp.valid & io.memWrRsp.ready) {
+    regWriteRspCount := regWriteRspCount + UInt(1)
+  }
+
+  io.regOut(5).valid := Bool(true)
+  io.regOut(5).bits := regReadReqCount
+  io.regOut(6).valid := Bool(true)
+  io.regOut(6).bits := regWriteReqCount
+  io.regOut(7).valid := Bool(true)
+  io.regOut(7).bits := regWriteDataCount
+  io.regOut(8).valid := Bool(true)
+  io.regOut(8).bits := regReadRspCount
+  io.regOut(9).valid := Bool(true)
+  io.regOut(9).bits := regWriteRspCount
 }

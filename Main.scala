@@ -31,7 +31,7 @@ object MainObj {
   }
 
   def runVerilog_WrapperTestOCMController() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,8)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16)
     val fxn = { p:AXIAccelWrapperParams => new WrapperTestOCMController(p)}
     val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
