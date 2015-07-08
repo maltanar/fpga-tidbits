@@ -60,6 +60,7 @@ class OCMFillDump(p: OCMParameters) extends Module {
           mcif.mode := UInt(0)
           mcif.start := Bool(true)
           fillQ.io.enq.valid := Bool(true)
+          fillQ.io.enq.bits := regFillCount
 
           when(fillQ.io.enq.ready) {regFillCount := regFillCount - UInt(1)}
         }
@@ -75,7 +76,7 @@ class OCMFillDump(p: OCMParameters) extends Module {
           dumpQ.io.deq.ready := Bool(true)
 
           when(dumpQ.io.deq.valid) {
-            when (dumpQ.io.deq.bits === fillWord) {
+            when (dumpQ.io.deq.bits === regDumpCount) {
               regDumpCount := regDumpCount - UInt(1)
             } .otherwise {
               regState := sFinErr
@@ -107,8 +108,8 @@ class TestOCMAndController(c: OCMFillDump) extends Tester(c) {
       peek(c.regFillCount)
       peek(c.dut.ocmControllerInst.regState)
       peek(c.dut.ocmControllerInst.regAddr)
-      peek(c.fillQ.io.count)
-      peek(c.fillQ.io.deq.valid)
+      peek(c.fillQ.io)
+      peek(c.dumpQ.io)
       step(1)
       cycles = cycles + 1
       if(cycles > cycleLimit)
