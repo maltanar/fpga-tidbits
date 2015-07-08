@@ -121,6 +121,8 @@ class OCMController(p: OCMParameters) extends Module {
   // TODO test fill port functionality
   // TODO test dump port functionality
 
+  val ocm = io.ocm
+
   // use a FIFO queue to make burst reads with latency easier
   // TODO parametrize # entires in dump queue
   val fifoCapacity = 16
@@ -129,7 +131,7 @@ class OCMController(p: OCMParameters) extends Module {
   // shift registers to compensate for OCM read latency (address to valid)
   // -1 since this is already sourced from a register
   dumpQ.io.enq.valid := ShiftRegister(in=regDumpValid, n=p.readLatency-1)
-  dumpQ.io.enq.bits := io.ocm.rsp.readData
+  dumpQ.io.enq.bits := ocm.rsp.readData
   dumpQ.io.deq <> io.mcif.dumpPort
 
   // TODO use instead "programmable full" threshold on Xilinx FIFOs
@@ -148,9 +150,9 @@ class OCMController(p: OCMParameters) extends Module {
   // default outputs
   io.mcif.done := Bool(false)
   io.mcif.fillPort.ready := Bool(false)
-  io.ocm.req.addr := UInt(0)
-  io.ocm.req.writeEn := Bool(false)
-  io.ocm.req.writeData := io.mcif.fillPort.bits
+  ocm.req.addr := UInt(0)
+  ocm.req.writeEn := Bool(false)
+  ocm.req.writeData := io.mcif.fillPort.bits
 
   val sIdle :: sFill :: sDumpWait :: sDump :: sFinished :: Nil = Enum(UInt(), 5)
   val regState = Reg(init = UInt(sIdle))
@@ -171,11 +173,11 @@ class OCMController(p: OCMParameters) extends Module {
 
       is(sFill) {
         io.mcif.fillPort.ready := Bool(true)
-        io.ocm.req.addr := p.makeWriteAddr(regAddr)
+        ocm.req.addr := p.makeWriteAddr(regAddr)
 
         when (regAddr === UInt(p.writeDepth)) {regState := sFinished}
         .elsewhen (io.mcif.fillPort.valid) {
-          io.ocm.req.writeEn := Bool(true)
+          ocm.req.writeEn := Bool(true)
           regAddr := regAddr + UInt(1)
         }
       }
@@ -195,7 +197,7 @@ class OCMController(p: OCMParameters) extends Module {
       }
 
       is(sDump) {
-        io.ocm.req.addr := p.makeReadAddr(regAddr)
+        ocm.req.addr := p.makeReadAddr(regAddr)
 
         when ( regReqCount === UInt(0) ) {
           // no more requests in burst, wait for more room
