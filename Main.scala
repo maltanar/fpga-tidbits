@@ -24,7 +24,8 @@ object MainObj {
     //runTest_HLM_Simple()
     //runVerilog_WrapperTest()
     //runVerilog_WrapperTestMultiChanSum()
-    runVerilog_WrapperTestSeqWrite()
+    //runVerilog_WrapperTestSeqWrite()
+    runTest_StreamDelta()
   }
 
   def runVerilog_WrapperTestSeqWrite() {
@@ -52,6 +53,13 @@ object MainObj {
     def aV = makeVerilogBuildArgs("WrapperTest")
 
     chiselMain(aV, instModule)
+  }
+
+  def runTest_StreamDelta() {
+    val instModule = {() => Module(new StreamDeltaTestBed())}
+    val instTest = {c => new StreamDeltaTester(c)}
+    val aT = makeTestArgs("StreamDelta")
+    chiselMainTest(aT, instModule)(instTest)
   }
 
   def runTest_HLM_Simple() {
