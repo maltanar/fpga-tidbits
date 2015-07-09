@@ -55,7 +55,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     val (rN, oB) = bundleToInds(outB, regs)
     regs = rN
     outputInds = oB
-    for((n,d) <- outB.elements) {
+    for((n,d) <- outB.flatten) {
       val i = outputInds(n)
       io.regOut(i).bits := d
       io.regOut(i).valid := Bool(true) // TODO don't always write
@@ -65,7 +65,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     val (rNN, oI) = bundleToInds(inB, regs)
     regs = rNN
     inputInds = oI
-    for((n,d) <- inB.elements) {
+    for((n,d) <- inB.flatten) {
       val i = inputInds(n)
       d := io.regIn(i)
     }
@@ -98,6 +98,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     val writer = new PrintWriter(new File(driverName+".hpp" ))
     writer.write(driverStr)
     writer.close()
+    println("Driver written to "+driverName+".hpp")
   }
 
   // traverse elements in a Bundle and assign an index to each
@@ -105,7 +106,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   // TODO pack smaller width elems into single register
   def bundleToInds(inB: Bundle, iStart: Int):(Int, LinkedHashMap[String, Int]) = {
     val regW = p.csrDataWidth
-    val e = inB.elements
+    val e = inB.flatten
     var res = LinkedHashMap[String, Int]()
     var upperInd: Int = iStart
 
