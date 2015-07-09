@@ -81,7 +81,10 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     inputInds = oI
     for((n,d) <- inB.flatten) {
       val i = inputInds(n)
-      d := io.regIn(i)
+      if(d.getWidth() < regW) {
+        // avoid "multi-bit signal to Bool" error
+        d := io.regIn(i)(d.getWidth()-1, 0)
+      } else {d := io.regIn(i)}
     }
     outputInds("signature") = 0
     // build driver
@@ -98,20 +101,22 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     driverStr = driverStr + "\n" + ("public:")
     driverStr = driverStr + "\n" + (" " + driverName + "(volatile unsigned int * baseAddr) {")
     driverStr = driverStr + "\n" + ("  m_baseAddr = baseAddr; assert(signature() == m_signature);};")
+    driverStr = driverStr + "\n\n" + (" // ============== accelerator inputs =================")
     for((n: String, i: Int) <- indsIn) {
       driverStr = driverStr + "\n" + (f" // read+write register: $n%s index: $i%s")
       driverStr = driverStr + "\n" + (f" void $n%s(unsigned int v) {m_baseAddr[$i%d] = v;};")
       driverStr = driverStr + "\n" + (f" unsigned int $n%s() {return m_baseAddr[$i%d];};")
     }
+    driverStr = driverStr + "\n\n" + (" // ============== accelerator outputs =================")
     for((n: String, i: Int) <- indsOut) {
       driverStr = driverStr + "\n" + (f" // read-only register: $n%s index: $i%s")
       driverStr = driverStr + "\n" + (f" unsigned int $n%s() {return m_baseAddr[$i%d];};")
     }
-    driverStr = driverStr + "\n" + ("protected:")
+    driverStr = driverStr + "\n\n" + ("protected:")
     driverStr = driverStr + "\n" + (" volatile unsigned int * m_baseAddr;")
     driverStr = driverStr + "\n" + (f" const static unsigned int m_signature = 0x$accelSignature%s;")
     driverStr = driverStr + "\n" + ("};")
-    driverStr = driverStr + "\n" + ("#endif")
+    driverStr = driverStr + "\n" + ("#endif") + "\n"
     import java.io._
     val writer = new PrintWriter(new File(driverName+".hpp" ))
     writer.write(driverStr)
