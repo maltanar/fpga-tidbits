@@ -35,6 +35,91 @@ class AXIWrappableAccelIF(val p: AXIAccelWrapperParams) extends Bundle {
 class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   val io = new AXIWrappableAccelIF(p)
 
+  import scala.collection.mutable.LinkedHashMap
+
+  // a call to this (optional) function and you won't have to
+  // manage your register maps by hand anymore!
+  // just define the inB and outB types as Bundles with what
+  // your accelerator needs -- the function will allocate register
+  // indices, wire the bundles to the register file, and generate
+  // a C++ header for manipulating the regs
+  def manageRegIO(signature: UInt, inB: => Bundle, outB: => Bundle) = {
+    val regW = p.csrDataWidth
+    var regs: Int = 0
+    // use reg 0 for signature
+    io.regOut(0).bits := signature
+    io.regOut(0).valid := Bool(true)
+    regs += 1
+    // output registers (outputs from accelerator)
+    var outputInds = LinkedHashMap[String, Int]()
+    val (rN, oB) = bundleToInds(outB, regs)
+    regs = rN
+    outputInds = oB
+    for((n,d) <- outB.elements) {
+      val i = outputInds(n)
+      io.regOut(i).bits := d
+      io.regOut(i).valid := Bool(true) // TODO don't always write
+    }
+    // input registers (inputs to accelerator)
+    var inputInds = LinkedHashMap[String, Int]()
+    val (rNN, oI) = bundleToInds(inB, regs)
+    regs = rNN
+    inputInds = oI
+    for((n,d) <- inB.elements) {
+      val i = inputInds(n)
+      d := io.regIn(i)
+    }
+    var allInds: LinkedHashMap[String, Int] = inputInds ++ outputInds
+    allInds("signature") = 0
+    // build driver
+    makeRegAccessCode(allInds)
+  }
+
+  def makeRegAccessCode(inds: LinkedHashMap[String, Int]) = {
+    // TODO add signature check
+    var driverStr: String = ""
+    val driverName: String = this.getClass.getSimpleName + "Driver"
+    driverStr = driverStr + ("#ifndef " + driverName + "_H")
+    driverStr = driverStr + "\n" + ("#define " + driverName + "_H")
+    driverStr = driverStr + "\n" + ("class " + driverName + " {")
+    driverStr = driverStr + "\n" + ("public:")
+    driverStr = driverStr + "\n" + (" " + driverName + "(volatile unsigned int * baseAddr) {m_baseAddr = baseAddr;};")
+    for((n: String, i: Int) <- inds) {
+      // TODO don't generate both read + write, need only one for each
+      driverStr = driverStr + "\n" + (f" // register: $n%s index: $i%s")
+      driverStr = driverStr + "\n" + (f" void $n%s(unsigned int v) {m_baseAddr[$i%d] = v;};")
+      driverStr = driverStr + "\n" + (f" unsigned int $n%s() {return m_baseAddr[$i%d];};")
+    }
+    driverStr = driverStr + "\n" + ("protected:")
+    driverStr = driverStr + "\n" + (" volatile unsigned int * m_baseAddr;")
+    driverStr = driverStr + "\n" + ("};")
+    driverStr = driverStr + "\n" + ("#endif")
+    import java.io._
+    val writer = new PrintWriter(new File(driverName+".hpp" ))
+    writer.write(driverStr)
+    writer.close()
+  }
+
+  // traverse elements in a Bundle and assign an index to each
+  // returns (<number of indices used>, <the name->index map>)
+  // TODO pack smaller width elems into single register
+  def bundleToInds(inB: Bundle, iStart: Int):(Int, LinkedHashMap[String, Int]) = {
+    val regW = p.csrDataWidth
+    val e = inB.elements
+    var res = LinkedHashMap[String, Int]()
+    var upperInd: Int = iStart
+
+    for((n,d) <- e) {
+      if(d.getWidth() > regW) {
+        println("BundleToRegInds does not yet support wide Bundle elems")
+        System.exit(-1)
+      }
+      res(n) = upperInd
+      upperInd += 1
+    }
+    (upperInd, res)
+  }
+
   def plugRegOuts() {
     for(i <- 0 until p.numRegs) {
       io.regOut(i).valid := Bool(false)
