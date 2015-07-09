@@ -11,6 +11,19 @@ class WrapperTestMultiChanSum(numChans: Int, p: AXIAccelWrapperParams) extends A
   plugMemWritePort()
   // no plugMemReadPort -- bulk interface connection <> won't work otherwise
 
+  val in = new Bundle {
+    val start = Bool()
+    val baseAddr = Vec.fill(numChans) {UInt(width=32)}
+    val byteCount = Vec.fill(numChans) {UInt(width=32)}
+  }
+
+  val out = new Bundle {
+    val sum = Vec.fill(numChans) {UInt(width=32)}
+    val status = Bool()
+  }
+
+  manageRegIO(UInt("h43214321"), in, out)
+
   val mrp = p.toMRP()
   val reqGens = Vec.tabulate(numChans) {i:Int => Module(new ReadReqGen(mrp, i)).io}
   val redFxn = {(a: UInt, b: UInt) => a+b}
@@ -23,24 +36,21 @@ class WrapperTestMultiChanSum(numChans: Int, p: AXIAccelWrapperParams) extends A
 
   for(i <- 0 until numChans) {
     reqGens(i).reqs <> intl.reqIn(i)
-    reqGens(i).ctrl.start := io.regIn(0)(0)
+    reqGens(i).ctrl.start := in.start
     reqGens(i).ctrl.throttle := Bool(false)
-    reqGens(i).ctrl.baseAddr := io.regIn(2+3*i)
-    reqGens(i).ctrl.byteCount := io.regIn(2+3*i+1)
+    reqGens(i).ctrl.baseAddr := in.baseAddr(i)
+    reqGens(i).ctrl.byteCount := in.byteCount(i)
     dss(i).in.valid := deintl.rspOut(i).valid
     dss(i).in.bits := deintl.rspOut(i).bits.readData
     deintl.rspOut(i).ready := dss(i).in.ready
     dss(i).out <> reducers(i).streamIn
-    reducers(i).start := io.regIn(0)(0)
-    reducers(i).byteCount := io.regIn(2+3*i+1)
-    io.regOut(2+3*i+2).bits := reducers(i).reduced
-    io.regOut(2+3*i+2).valid := reducers(i).finished
+    reducers(i).start := in.start
+    reducers(i).byteCount := in.byteCount(i)
+    out.sum(i) := reducers(i).reduced
   }
 
   intl.reqOut <> io.memRdReq
   deintl.rspIn <> io.memRdRsp
 
-
-  io.regOut(1).valid := Bool(true)
-  io.regOut(1).bits := reducers.forall(x => x.finished)
+  out.status := reducers.forall(x => x.finished)
 }

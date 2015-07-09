@@ -33,9 +33,21 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   //plugMemWritePort()
   //plugMemReadPort()
 
-  // const identity register
-  io.regOut(0).bits := UInt("h0c0c0c0c")
-  io.regOut(0).valid := Bool(true)
+  val in = new Bundle {
+    val ctl = UInt(width = 2)
+    val readBase = UInt(width = 32)
+    val writeBase = UInt(width = 32)
+  }
+  val out = new Bundle {
+    val status = UInt(width = 32)
+    val readReqC = UInt(width = 32)
+    val writeReqC = UInt(width = 32)
+    val readRspC = UInt(width = 32)
+    val writeDatC = UInt(width = 32)
+    val writeRspC = UInt(width = 32)
+  }
+  manageRegIO(UInt("h0c0c0c0c"), in, out)
+
 
   val pMR = p.toMRP()
   val pOCM = new OCMParameters(64*1024, 64, 64, 2, 1)
@@ -60,21 +72,18 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   SubStream(io.memWrRsp, reducer.streamIn, filterFxn)
 
   // wire up control
-  val ctl = io.regIn(1)
-  val readBase = io.regIn(3)
-  val writeBase = io.regIn(4)
   val byteCount = UInt(pOCM.bits/8)
 
-  ocmInst.mcif.start := ctl(0)
-  ocmInst.mcif.mode := ctl(1)
-  val startFill = ctl(0) && !ctl(1)
-  val startDump = ctl(0) && ctl(1)
+  ocmInst.mcif.start := in.ctl(0)
+  ocmInst.mcif.mode := in.ctl(1)
+  val startFill = in.ctl(0) && !in.ctl(1)
+  val startDump = in.ctl(0) && in.ctl(1)
   rrq.ctrl.start := startFill
   wrq.ctrl.start := startDump
   reducer.start := startDump
-  rrq.ctrl.baseAddr := readBase
+  rrq.ctrl.baseAddr := in.readBase
   rrq.ctrl.byteCount := byteCount
-  wrq.ctrl.baseAddr := writeBase
+  wrq.ctrl.baseAddr := in.writeBase
   wrq.ctrl.byteCount := byteCount
   reducer.byteCount := byteCount
 
@@ -82,10 +91,9 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   wrq.ctrl.throttle := Bool(false)
 
   // wire up status
-  io.regOut(2).valid := Bool(true)
   val statusList = List(   rrq.stat.finished, wrq.stat.finished,
                            reducer.finished, ocmInst.mcif.done)
-  io.regOut(2).bits := Cat(statusList)
+  out.status := Cat(statusList)
 
   // memory port operation counters
   // TODO make these an optional part of the infrastructure,
@@ -95,7 +103,6 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   val regWriteDataCount = Reg(init = UInt(0, 32))
   val regReadRspCount = Reg(init = UInt(0, 32))
   val regWriteRspCount = Reg(init = UInt(0, 32))
-
 
   when(io.memRdReq.valid & io.memRdReq.ready) {
     regReadReqCount := regReadReqCount + UInt(1)
@@ -117,14 +124,9 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
     regWriteRspCount := regWriteRspCount + UInt(1)
   }
 
-  io.regOut(5).valid := Bool(true)
-  io.regOut(5).bits := regReadReqCount
-  io.regOut(6).valid := Bool(true)
-  io.regOut(6).bits := regWriteReqCount
-  io.regOut(7).valid := Bool(true)
-  io.regOut(7).bits := regWriteDataCount
-  io.regOut(8).valid := Bool(true)
-  io.regOut(8).bits := regReadRspCount
-  io.regOut(9).valid := Bool(true)
-  io.regOut(9).bits := regWriteRspCount
+  out.readReqC := regReadReqCount
+  out.readRspC := regReadRspCount
+  out.writeReqC := regWriteReqCount
+  out.writeRspC := regWriteRspCount
+  out.writeDatC := regWriteDataCount
 }

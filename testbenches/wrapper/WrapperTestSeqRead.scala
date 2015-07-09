@@ -5,11 +5,24 @@ import TidbitsAXI._
 import TidbitsDMA._
 import TidbitsStreams._
 
-class WrapperTest(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
+class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
   plugMemWritePort()
   // plugMemReadPort -- bulk interface connection <> won't work otherwise
+
+  val in = new Bundle {
+    val start = Bool()
+    val baseAddr = UInt(width = 32)
+    val byteCount = UInt(width = 32)
+  }
+
+  val out = new Bundle {
+    val sum = UInt(width = 32)
+    val status = UInt(width = 2)
+  }
+  manageRegIO(UInt("hfeadbeed"), in, out)
+
 
   val readReqGen = Module(new ReadReqGen(p.toMRP(), 0)).io
   val redFxn = {(a: UInt, b: UInt) => a+b}
@@ -18,13 +31,13 @@ class WrapperTest(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
 
   // reg(0) for start control
   readReqGen.reqs <> io.memRdReq
-  readReqGen.ctrl.start := io.regIn(0)(0)
-  reducer.start := io.regIn(0)(0)
+  readReqGen.ctrl.start := in.start
+  reducer.start := in.start
 
   readReqGen.ctrl.throttle := Bool(false)
-  readReqGen.ctrl.baseAddr := io.regIn(1) // reg(1) for mem read base
-  readReqGen.ctrl.byteCount := io.regIn(2) // reg(2) for read byte count
-  reducer.byteCount := io.regIn(2)
+  readReqGen.ctrl.baseAddr := in.baseAddr
+  readReqGen.ctrl.byteCount := in.byteCount
+  reducer.byteCount := in.byteCount
   reducer.streamIn <> ds.out
 
   ds.in.valid := io.memRdRsp.valid
@@ -32,14 +45,8 @@ class WrapperTest(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   io.memRdRsp.ready := ds.in.ready
 
   // reg(3) for status
-  io.regOut(3).valid := Bool(true)
-  io.regOut(3).bits := Cat(List(reducer.finished, readReqGen.stat.finished))
+  out.status := Cat(List(reducer.finished, readReqGen.stat.finished))
 
   // reg(4) for sum
-  io.regOut(4).valid := reducer.finished
-  io.regOut(4).bits := reducer.reduced
-
-  // use reg(5) as fixed identifier
-  io.regOut(5).valid := Bool(true)
-  io.regOut(5).bits := UInt("hdeadbeef")
+  out.sum := reducer.reduced
 }

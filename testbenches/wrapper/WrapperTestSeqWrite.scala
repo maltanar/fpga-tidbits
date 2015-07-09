@@ -11,6 +11,18 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   //plugMemWritePort()
   plugMemReadPort()
 
+  val in = new Bundle {
+    val start = Bool()
+    val baseAddr = UInt(width = 32)
+    val byteCount = UInt(width = 32)
+  }
+
+  val out = new Bundle {
+    val sum = UInt(width = 32)
+    val status = Bool()
+  }
+  manageRegIO(UInt("hfeadfead"), in, out)
+
   val wrReqGen = Module(new WriteReqGen(p.toMRP(), 0)).io
   wrReqGen.reqs <> io.memWrReq
 
@@ -20,18 +32,14 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   // downsizer still needed to count # responses correctly
   val ds = Module(new AXIStreamDownsizer(p.memDataWidth, 32)).io
 
-  // reg(0) for identification
-  io.regOut(0).bits := UInt("hfeedbead")
-  io.regOut(0).valid := Bool(true)
-
   // reg(1) for start control
-  wrReqGen.ctrl.start := io.regIn(1)(0)
-  reducer.start := io.regIn(1)(0)
+  wrReqGen.ctrl.start := in.start
+  reducer.start := in.start
 
   wrReqGen.ctrl.throttle := Bool(false)
-  wrReqGen.ctrl.baseAddr := io.regIn(2) // reg(2) for mem write base
-  wrReqGen.ctrl.byteCount := io.regIn(3) // reg(3) for write byte count
-  reducer.byteCount := io.regIn(3)
+  wrReqGen.ctrl.baseAddr := in.baseAddr
+  wrReqGen.ctrl.byteCount := in.byteCount
+  reducer.byteCount := in.byteCount
   reducer.streamIn <> ds.out
 
   ds.in.valid := io.memWrRsp.valid
@@ -41,15 +49,13 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   // write data from sequence
   val wrDataGen = Module(new SequenceGenerator(32)).io
   wrDataGen.init := UInt(1)
-  wrDataGen.count := io.regIn(3) / UInt(4)
+  wrDataGen.count := in.byteCount / UInt(4)
   wrDataGen.step := UInt(1)
-  wrDataGen.start := io.regIn(1)(0)
+  wrDataGen.start := in.start
 
   val us = Module(new AXIStreamUpsizer(32,64)).io
   us.in <> wrDataGen.seq
   us.out <> io.memWrDat
 
-  // reg(4) for status
-  io.regOut(4).valid := Bool(true)
-  io.regOut(4).bits := reducer.finished
+  out.status := reducer.finished
 }
