@@ -21,7 +21,7 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
     val sum = UInt(width = 32)
     val status = Bool()
   }
-  manageRegIO(UInt("hfeadfead"), in, out)
+  manageRegIO(in, out)
 
   val wrReqGen = Module(new WriteReqGen(p.toMRP(), 0)).io
   wrReqGen.reqs <> io.memWrReq

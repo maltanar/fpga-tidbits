@@ -46,7 +46,7 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
     val writeDatC = UInt(width = 32)
     val writeRspC = UInt(width = 32)
   }
-  manageRegIO(UInt("h0c0c0c0c"), in, out)
+  manageRegIO(in, out)
 
 
   val pMR = p.toMRP()

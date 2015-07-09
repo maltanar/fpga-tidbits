@@ -4,6 +4,7 @@ import Chisel._
 import TidbitsAXI._
 
 class WrapperTestSum(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
+  override lazy val accelVersion = "1.0.0"
   plugRegOuts()
   plugMemWritePort()
   plugMemReadPort()
@@ -15,7 +16,7 @@ class WrapperTestSum(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   val out = new Bundle {
     val sum = UInt(width = 32)
   }
-  manageRegIO(UInt("h12341234"), in, out)
+  manageRegIO(in, out)
 
   out.sum := in.op(0) + in.op(1)
 }

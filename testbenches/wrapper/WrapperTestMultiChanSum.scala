@@ -22,7 +22,7 @@ class WrapperTestMultiChanSum(numChans: Int, p: AXIAccelWrapperParams) extends A
     val status = Bool()
   }
 
-  manageRegIO(UInt("h43214321"), in, out)
+  manageRegIO(in, out)
 
   val mrp = p.toMRP()
   val reqGens = Vec.tabulate(numChans) {i:Int => Module(new ReadReqGen(mrp, i)).io}

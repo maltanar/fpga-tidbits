@@ -37,17 +37,31 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
 
   import scala.collection.mutable.LinkedHashMap
 
+  lazy val accelVersion: String = "1.0.0"
+  // 4-byte signature for accelerator (in hex string format)
+  lazy val accelSignature: String = makeSignature()
+
+  // build a signature for this class
+  def makeSignature() = {
+    var signBase:String = this.getClass.getSimpleName
+    signBase = signBase + "-" + accelVersion
+    import java.util.zip.CRC32
+    val crc=new CRC32
+    crc.update(signBase.getBytes)
+    crc.getValue.toHexString
+  }
+
   // a call to this (optional) function and you won't have to
   // manage your register maps by hand anymore!
   // just define the inB and outB types as Bundles with what
   // your accelerator needs -- the function will allocate register
   // indices, wire the bundles to the register file, and generate
   // a C++ header for manipulating the regs
-  def manageRegIO(signature: UInt, inB: => Bundle, outB: => Bundle) = {
+  def manageRegIO(inB: => Bundle, outB: => Bundle) = {
     val regW = p.csrDataWidth
     var regs: Int = 0
     // use reg 0 for signature
-    io.regOut(0).bits := signature
+    io.regOut(0).bits := UInt("h" + accelSignature)
     io.regOut(0).valid := Bool(true)
     regs += 1
     // output registers (outputs from accelerator)
@@ -81,9 +95,11 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     val driverName: String = this.getClass.getSimpleName + "Driver"
     driverStr = driverStr + ("#ifndef " + driverName + "_H")
     driverStr = driverStr + "\n" + ("#define " + driverName + "_H")
+    driverStr = driverStr + "\n" + ("#include <assert.h>")
     driverStr = driverStr + "\n" + ("class " + driverName + " {")
     driverStr = driverStr + "\n" + ("public:")
-    driverStr = driverStr + "\n" + (" " + driverName + "(volatile unsigned int * baseAddr) {m_baseAddr = baseAddr;};")
+    driverStr = driverStr + "\n" + (" " + driverName + "(volatile unsigned int * baseAddr) {")
+    driverStr = driverStr + "\n" + ("  m_baseAddr = baseAddr; assert(signature() == m_signature);};")
     for((n: String, i: Int) <- inds) {
       // TODO don't generate both read + write, need only one for each
       driverStr = driverStr + "\n" + (f" // register: $n%s index: $i%s")
@@ -92,6 +108,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     }
     driverStr = driverStr + "\n" + ("protected:")
     driverStr = driverStr + "\n" + (" volatile unsigned int * m_baseAddr;")
+    driverStr = driverStr + "\n" + (f" const static unsigned int m_signature = 0x$accelSignature%s;")
     driverStr = driverStr + "\n" + ("};")
     driverStr = driverStr + "\n" + ("#endif")
     import java.io._

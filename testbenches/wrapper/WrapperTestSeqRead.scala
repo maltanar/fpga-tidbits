@@ -21,7 +21,7 @@ class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) 
     val sum = UInt(width = 32)
     val status = UInt(width = 2)
   }
-  manageRegIO(UInt("hfeadbeed"), in, out)
+  manageRegIO(in, out)
 
 
   val readReqGen = Module(new ReadReqGen(p.toMRP(), 0)).io
