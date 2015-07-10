@@ -54,6 +54,13 @@ class PISOTester(c: ParallelInSerialOut) extends Tester(c) {
 
 }
 
+object StreamDownsizer {
+  def apply(in: AXIStreamSlaveIF[UInt], outW: Int): AXIStreamMasterIF[UInt] = {
+    val ds = Module(new AXIStreamDownsizer(in.bits.getWidth(), outW)).io
+    ds.in <> in
+    ds.out
+  }
+}
 
 class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
   val numShiftSteps = inWidth/outWidth
