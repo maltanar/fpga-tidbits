@@ -6,27 +6,6 @@ import TidbitsDMA._
 import TidbitsStreams._
 import TidbitsOCM._
 
-class SubStream[Tin <: Data, Tout <: Data]
-  (genI: Tin, genO: Tout, filterFxn: Tin => Tout  ) extends Module {
-    val io = new Bundle {
-      val in = Decoupled(genI).flip
-      val out = Decoupled(genO)
-    }
-    io.out.valid := io.in.valid
-    io.out.bits := filterFxn(io.in.bits)
-    io.in.ready := io.out.ready
-}
-
-object SubStream {
-  def apply[Tin <: Data, Tout <: Data]
-  (in: DecoupledIO[Tin], out: DecoupledIO[Tout], filterFxn: Tin=>Tout) = {
-    val ss = Module(new SubStream[Tin, Tout](in.bits.clone, out.bits.clone, filterFxn)).io
-    ss.in <> in
-    ss.out <> out
-    ss
-  }
-
-}
 class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
@@ -65,11 +44,11 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   wrq.reqs <> io.memWrReq
   io.memWrDat <> Queue(ocmInst.mcif.dumpPort, 16)
   val filterFxn = {x: GenericMemoryResponse => x.readData}
-  SubStream(io.memRdRsp, ocmInst.mcif.fillPort, filterFxn)
+  ocmInst.mcif.fillPort <> StreamFilter(io.memRdRsp, UInt(width=64), filterFxn)
   // use a reducer to count the write responses
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducer = Module(new StreamReducer(64, 0, redFxn)).io
-  SubStream(io.memWrRsp, reducer.streamIn, filterFxn)
+  ocmInst.mcif.fillPort <> StreamFilter(io.memWrRsp, UInt(width=64), filterFxn)
 
   // wire up control
   val byteCount = UInt(pOCM.bits/8)
