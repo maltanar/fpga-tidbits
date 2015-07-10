@@ -34,7 +34,7 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
 
   val regDecodeErrors = Reg(init = UInt(0, 32))
   // TODO add ability to customize routing function
-  def idToPipe(x: UInt): UInt = {x}
+  lazy val idToPipe = {x: UInt => x: UInt}
 
   // TODO the current implementation is likely to cause timing problems
   // due to high-fanout signals and combinational paths
