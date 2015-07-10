@@ -16,10 +16,14 @@ class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
 }
 
 class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int) extends Module {
+  lazy val routeFxn = {x: UInt => x: UInt}
   val io = new RespDeinterleaverIF(numPipes,p)
-  val deint = Module(new RespDeinterleaver(numPipes, p)).io
+  val deint = Module(new RespDeinterleaver(numPipes, p) {
+    override lazy val idToPipe = routeFxn
+  }).io
   deint.rspIn <> io.rspIn
   io.decodeErrors := deint.decodeErrors
+
 
   for(i <- 0 until numPipes) {
     val rspQ = Module(new Queue(new GenericMemoryResponse(p), n)).io
@@ -33,7 +37,6 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
   val io = new RespDeinterleaverIF(numPipes, p)
 
   val regDecodeErrors = Reg(init = UInt(0, 32))
-  // TODO add ability to customize routing function
   lazy val idToPipe = {x: UInt => x: UInt}
 
   // TODO the current implementation is likely to cause timing problems
