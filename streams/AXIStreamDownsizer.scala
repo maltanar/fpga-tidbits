@@ -55,7 +55,7 @@ class PISOTester(c: ParallelInSerialOut) extends Tester(c) {
 }
 
 object StreamDownsizer {
-  def apply(in: AXIStreamSlaveIF[UInt], outW: Int): AXIStreamMasterIF[UInt] = {
+  def apply(in: DecoupledIO[UInt], outW: Int): DecoupledIO[UInt] = {
     val ds = Module(new AXIStreamDownsizer(in.bits.getWidth(), outW)).io
     ds.in <> in
     ds.out
