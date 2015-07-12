@@ -9,10 +9,10 @@ import TidbitsAXI._
 // <element> = A B C D E F
 // <repCnt> = 2 1 0 3
 // <out> = A A B D D D
-class StreamRepeatElem(dataWidth: Int) extends Module {
+class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
   val io = new Bundle {
     val inElem = new AXIStreamSlaveIF(UInt(width = dataWidth))
-    val inRepCnt = new AXIStreamSlaveIF(UInt(width = dataWidth))
+    val inRepCnt = new AXIStreamSlaveIF(UInt(width = repWidth))
     val out = new AXIStreamMasterIF(UInt(width = dataWidth))
   }
 
@@ -23,8 +23,8 @@ class StreamRepeatElem(dataWidth: Int) extends Module {
   val sWait :: sEmit :: Nil = Enum(UInt(), 2)
   val regState = Reg(init = UInt(sWait))
 
-  val regElem = Reg(init = UInt(0, 32))
-  val regRep = Reg(init = UInt(0, 32))
+  val regElem = Reg(init = UInt(0, dataWidth))
+  val regRep = Reg(init = UInt(0, repWidth))
 
   io.out.bits := regElem
 

@@ -67,7 +67,7 @@ object MainObj {
   }
 
   def runTest_StreamRepeatElem() {
-    val instModule = {() => Module(new StreamRepeatElem(32))}
+    val instModule = {() => Module(new StreamRepeatElem(32,32))}
     val instTest = {c => new StreamRepeatElemTester(c)}
     val aT = makeTestArgs("StreamRepeatElem")
     chiselMainTest(aT, instModule)(instTest)
