@@ -2,6 +2,7 @@ package TidbitsSimUtils
 
 import Chisel._
 import TidbitsAXI._
+import TidbitsDMA._
 import TidbitsRegFile._
 
 // testing infrastructure for wrappable accelerators
@@ -16,6 +17,7 @@ class WrappableAccelHarness(
   memWords: Int) extends Module {
   val rfAddrBits = log2Up(p.numRegs)
   val memAddrBits = log2Up(memWords)
+  val memUnitBytes = UInt(p.memDataWidth/8)
   val io = new Bundle {
     // register file access
     val regFileIF = new RegFileSlaveIF(rfAddrBits, p.csrDataWidth)
@@ -26,6 +28,7 @@ class WrappableAccelHarness(
     val memReadData = UInt(OUTPUT, p.memDataWidth)
   }
   val accel = Module(fxn(p))
+  val accio = accel.io
 
   // instantiate regfile
   val regFile = Module(new RegFile(p.numRegs, rfAddrBits, p.csrDataWidth)).io
@@ -46,6 +49,40 @@ class WrappableAccelHarness(
   io.memReadData := mem(memWord)
 
   when (io.memWriteEn) {mem(memWord) := io.memWriteData}
+
+  // accelerator memory access
+  // reads
+  val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
+  val regStateRead = Reg(init = UInt(sWaitRd))
+  val regReadRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+
+  accio.memRdReq.ready := Bool(false)
+  accio.memRdRsp.valid := Bool(false)
+  accio.memRdRsp.bits.channelID := regReadRequest.channelID
+  accio.memRdRsp.bits.metaData := UInt(0)
+  accio.memRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+
+  switch(regStateRead) {
+      is(sWaitRd) {
+        accio.memRdReq.ready := Bool(true)
+        when (accio.memRdReq.valid) {
+          regReadRequest := accio.memRdReq.bits
+          regStateRead := sRead
+        }
+      }
+
+      is(sRead) {
+        when(regReadRequest.numBytes === UInt(0)) { regStateRead := sWaitRd }
+        .otherwise {
+          accio.memRdRsp.valid := Bool(true)
+          when (accio.memRdRsp.ready) {
+            regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
+            regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
+          }
+        }
+      }
+  }
+  // TODO writes
 }
 
 class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
