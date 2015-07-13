@@ -177,9 +177,11 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
 }
 
 // the actual wrapper component
-class AXIAccelWrapper(val p: AXIAccelWrapperParams,
-                      val instFxn: AXIAccelWrapperParams => AXIWrappableAccel)
+class AXIAccelWrapper(val instFxn: () => AXIWrappableAccel)
                       extends Module {
+  // instantiate the wrapped accelerator
+  val accel = Module(instFxn())
+  lazy val p = accel.p
   val io = new Bundle {
     // AXI slave interface for control-status registers
     val csr = new AXILiteSlaveIF(p.addrWidth, p.csrDataWidth)
@@ -190,33 +192,31 @@ class AXIAccelWrapper(val p: AXIAccelWrapperParams,
   io.csr.renameSignals("csr")
   io.mem.renameSignals("mem")
 
-  // instantiate the wrapped accelerator
-  val accel = Module(instFxn(p)).io
 
   // instantiate AXI requets and response adapters for the mem interface
   // read requests
   val readReqAdp = Module(new AXIMemReqAdp(p.toMRP())).io
-  readReqAdp.genericReqIn <> accel.memRdReq
+  readReqAdp.genericReqIn <> accel.io.memRdReq
   readReqAdp.axiReqOut <> io.mem.readAddr
   // read responses
   val readRspAdp = Module(new AXIReadRspAdp(p.toMRP())).io
   readRspAdp.axiReadRspIn <> io.mem.readData
-  readRspAdp.genericRspOut <> accel.memRdRsp
+  readRspAdp.genericRspOut <> accel.io.memRdRsp
   // write requests
   val writeReqAdp = Module(new AXIMemReqAdp(p.toMRP())).io
-  writeReqAdp.genericReqIn <> accel.memWrReq
+  writeReqAdp.genericReqIn <> accel.io.memWrReq
   writeReqAdp.axiReqOut <> io.mem.writeAddr
   // write data
   // TODO handle this with own adapter?
-  io.mem.writeData.bits.data := accel.memWrDat.bits
+  io.mem.writeData.bits.data := accel.io.memWrDat.bits
   io.mem.writeData.bits.strb := ~UInt(0, width=p.memDataWidth/8) // TODO forces all bytelanes valid!
   io.mem.writeData.bits.last := Bool(true) // TODO write bursts won't work properly
-  io.mem.writeData.valid := accel.memWrDat.valid
-  accel.memWrDat.ready := io.mem.writeData.ready
+  io.mem.writeData.valid := accel.io.memWrDat.valid
+  accel.io.memWrDat.ready := io.mem.writeData.ready
   // write responses
   val writeRspAdp = Module(new AXIWriteRspAdp(p.toMRP())).io
   writeRspAdp.axiWriteRspIn <> io.mem.writeResp
-  writeRspAdp.genericRspOut <> accel.memWrRsp
+  writeRspAdp.genericRspOut <> accel.io.memWrRsp
 
   // instantiate regfile
   val regAddrBits = log2Up(p.numRegs)
@@ -224,8 +224,8 @@ class AXIAccelWrapper(val p: AXIAccelWrapperParams,
 
   // connect regfile to accel ports
   for(i <- 0 until p.numRegs) {
-    regFile.regIn(i) <> accel.regOut(i)
-    accel.regIn(i) := regFile.regOut(i)
+    regFile.regIn(i) <> accel.io.regOut(i)
+    accel.io.regIn(i) := regFile.regOut(i)
   }
 
   // AXI regfile read/write logic

@@ -35,8 +35,8 @@ object MainObj {
 
   def runVerilog_WrapperTestOCMController() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestOCMController(p)}
-    val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
+    val fxn = { () => new WrapperTestOCMController(p)}
+    val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
 
     chiselMain(aV, instModule)
@@ -44,8 +44,8 @@ object MainObj {
 
   def runVerilog_WrapperTestSeqWrite() {
     val p = new AXIAccelWrapperParams(32,32,64,6,8)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestSeqWrite(p)}
-    val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
+    val fxn = { () => new WrapperTestSeqWrite(p)}
+    val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
 
     chiselMain(aV, instModule)
@@ -53,8 +53,8 @@ object MainObj {
 
   def runVerilog_WrapperTestSum() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestSum(p)}
-    val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
+    val fxn = { () => new WrapperTestSum(p)}
+    val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
 
     chiselMain(aV, instModule)
@@ -89,8 +89,8 @@ object MainObj {
 
   def runVerilog_WrapperTestMultiChanSum() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestMultiChanSum(3,p)}
-    val instModule = {() => Module(new AXIAccelWrapper(p, fxn))}
+    val fxn = { () => new WrapperTestMultiChanSum(3,p)}
+    val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
 
     chiselMain(aV, instModule)
