@@ -29,7 +29,8 @@ object MainObj {
     //runTest_StreamDelta()
     //runTest_StreamRepeatElem()
     //runTest_WrapperTestSum()
-    runTest_WrapperTestSeqRead()
+    //runTest_WrapperTestSeqRead()
+    runTest_WrapperTestSeqWrite()
   }
 
   def runVerilog_WrapperTestOCMController() {
@@ -74,6 +75,15 @@ object MainObj {
     val instModule = {() => Module(new WrappableAccelHarness(p, fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
     val aT = makeTestArgs("WrapperTestSeqRead")
+    chiselMainTest(aT, instModule)(instTest)
+  }
+
+  def runTest_WrapperTestSeqWrite() {
+    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val fxn = { p:AXIAccelWrapperParams => new WrapperTestSeqWrite(p)}
+    val instModule = {() => Module(new WrappableAccelHarness(p, fxn, 1024))}
+    val instTest = {c => new WrappableAccelTester(c)}
+    val aT = makeTestArgs("WrapperTestSeqWrite")
     chiselMainTest(aT, instModule)(instTest)
   }
 

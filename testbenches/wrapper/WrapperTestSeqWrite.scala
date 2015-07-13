@@ -4,6 +4,7 @@ import Chisel._
 import TidbitsAXI._
 import TidbitsDMA._
 import TidbitsStreams._
+import TidbitsSimUtils._
 
 class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
@@ -18,10 +19,9 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   }
 
   val out = new Bundle {
-    val sum = UInt(width = 32)
     val status = Bool()
   }
-  manageRegIO(in, out)
+  override lazy val regMap = manageRegIO(in, out)
 
   val wrReqGen = Module(new WriteReqGen(p.toMRP(), 0)).io
   wrReqGen.reqs <> io.memWrReq
@@ -58,4 +58,28 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   us.out <> io.memWrDat
 
   out.status := reducer.finished
+
+  // default test
+  override def defaultTest(t: WrappableAccelTester): Boolean = {
+    super.defaultTest(t)
+    // initialize write buffer to zeroes
+    for(i <- 0 until 64) {
+      t.writeMem(i*8, 0)
+    }
+    // set up accelerator registers
+    t.writeReg("in_baseAddr", 0)
+    t.writeReg("in_byteCount", 64*8)
+    t.writeReg("in_start", 1)
+    // wait until completion
+    while(t.readReg("out_status") != 1) { t.step(1) }
+    // verify written data
+    for(i <- 0 until 64) {
+      // this accelerator generates a 32-bit-wide sequence, but mem read
+      // returns 64 bits -- so we verify 2 elements with each read
+      val expVal = Cat(UInt(2*i+2, width=32), UInt(2*i+1, width=32))
+      t.expectMem(i*8, expVal.litValue())
+    }
+
+    return true
+  }
 }
