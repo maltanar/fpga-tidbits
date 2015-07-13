@@ -15,9 +15,10 @@ import java.io.FileOutputStream
 
 
 class WrappableAccelHarness(
-  val p: AXIAccelWrapperParams,
-  fxn: AXIAccelWrapperParams => AXIWrappableAccel,
+  fxn: () => AXIWrappableAccel,
   memWords: Int) extends Module {
+  val accel = Module(fxn())
+  lazy val p = accel.p
   val rfAddrBits = log2Up(p.numRegs)
   val memAddrBits = log2Up(memWords)
   val memUnitBytes = UInt(p.memDataWidth/8)
@@ -30,7 +31,6 @@ class WrappableAccelHarness(
     val memWriteData = UInt(INPUT, p.memDataWidth)
     val memReadData = UInt(OUTPUT, p.memDataWidth)
   }
-  val accel = Module(fxn(p))
   val accio = accel.io
 
   // instantiate regfile

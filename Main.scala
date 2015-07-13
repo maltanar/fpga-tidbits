@@ -62,8 +62,8 @@ object MainObj {
 
   def runTest_WrapperTestSum() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestSum(p)}
-    val instModule = {() => Module(new WrappableAccelHarness(p, fxn, 1024))}
+    val fxn = { () => new WrapperTestSum(p)}
+    val instModule = {() => Module(new WrappableAccelHarness(fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
     val aT = makeTestArgs("WrapperTestSum")
     chiselMainTest(aT, instModule)(instTest)
@@ -71,8 +71,8 @@ object MainObj {
 
   def runTest_WrapperTestSeqRead() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestSeqRead(p)}
-    val instModule = {() => Module(new WrappableAccelHarness(p, fxn, 1024))}
+    val fxn = { () => new WrapperTestSeqRead(p)}
+    val instModule = {() => Module(new WrappableAccelHarness(fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
     val aT = makeTestArgs("WrapperTestSeqRead")
     chiselMainTest(aT, instModule)(instTest)
@@ -80,8 +80,8 @@ object MainObj {
 
   def runTest_WrapperTestSeqWrite() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
-    val fxn = { p:AXIAccelWrapperParams => new WrapperTestSeqWrite(p)}
-    val instModule = {() => Module(new WrappableAccelHarness(p, fxn, 1024))}
+    val fxn = { () => new WrapperTestSeqWrite(p)}
+    val instModule = {() => Module(new WrappableAccelHarness(fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
     val aT = makeTestArgs("WrapperTestSeqWrite")
     chiselMainTest(aT, instModule)(instTest)
