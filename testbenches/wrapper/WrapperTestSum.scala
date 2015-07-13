@@ -28,12 +28,6 @@ class WrapperTestSum(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
     t.writeReg("in_op_1", 200)
     t.step(10)
     t.expectReg("out_sum", 300)
-    for(a <- 0 to 10) {
-      t.writeMem(a*8, (a+1)*100)
-    }
-    for(i <- 0 until 10) {
-      t.expectMem(i*8, (i+1)*100)
-    }
 
     return true
   }
