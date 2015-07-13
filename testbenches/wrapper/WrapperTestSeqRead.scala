@@ -4,6 +4,7 @@ import Chisel._
 import TidbitsAXI._
 import TidbitsDMA._
 import TidbitsStreams._
+import TidbitsSimUtils._
 
 class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
@@ -21,7 +22,7 @@ class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) 
     val sum = UInt(width = 32)
     val status = UInt(width = 2)
   }
-  manageRegIO(in, out)
+  override lazy val regMap = manageRegIO(in, out)
 
 
   val readReqGen = Module(new ReadReqGen(p.toMRP(), 0)).io
@@ -49,4 +50,24 @@ class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) 
 
   // reg(4) for sum
   out.sum := reducer.reduced
+
+  // default test
+  override def defaultTest(t: WrappableAccelTester): Boolean = {
+    super.defaultTest(t)
+    for(i <- 0 until 64) {
+      t.writeMem(i*8, i+1)
+    }
+    for(i <- 0 until 64) {
+      t.expectMem(i*8, i+1)
+    }
+    t.writeReg("in_baseAddr", 0)
+    t.writeReg("in_byteCount", 64*8)
+    t.writeReg("in_start", 1)
+
+    while(t.readReg("out_status") != 3) { t.step(1) }
+
+    t.expectReg("out_sum", 65*32)
+
+    return true
+  }
 }
