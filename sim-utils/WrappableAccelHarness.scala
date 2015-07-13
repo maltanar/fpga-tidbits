@@ -158,6 +158,7 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     poke(regFile.cmd.valid, 1)
     step(1)
     poke(regFile.cmd.valid, 0)
+    step(5) // allow the command to propagate and take effect
   }
 
   def readMem(addr: BigInt): BigInt = {
