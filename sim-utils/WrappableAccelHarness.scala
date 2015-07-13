@@ -4,6 +4,9 @@ import Chisel._
 import TidbitsAXI._
 import TidbitsDMA._
 import TidbitsRegFile._
+import java.nio.file.{Files, Paths}
+import java.nio.ByteBuffer
+import java.io.FileOutputStream
 
 // testing infrastructure for wrappable accelerators
 // provides "main memory" simulation and a convenient way of setting up the
@@ -124,6 +127,7 @@ class WrappableAccelHarness(
 
 class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
   // TODO add functions for initializing memory
+  val memUnitBytes = c.memUnitBytes.litValue()
   val regFile = c.io.regFileIF
   def nameToRegInd(regName: String): Int = {
     return c.accel.regMap(regName).toInt
@@ -171,6 +175,49 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     poke(c.io.memWriteData, value)
     step(1)
     poke(c.io.memWriteEn, 0)
+  }
+
+  // read file and write into memory, starting at <baseAddr>
+  // use <reorderW> > 0 to reverse byte order (endianness) of every
+  // <reorderW>-byte group
+  def fileToMem(fileName: String, baseAddr: BigInt, reorderW: Int) = {
+    var buf = Files.readAllBytes(Paths.get(fileName))
+    if(buf.size % memUnitBytes != 0) {
+      println("fileToMem: file size must be multiple of mem unit width")
+      System.exit(-1)
+    }
+
+    if(reorderW > 0) {
+      var reordered = Array[Byte]()
+      for(b <- buf.grouped(reorderW)) {
+        reordered = reordered ++ b.reverse
+      }
+      buf = reordered
+    }
+
+    var i: Int = 0
+    for(b <- buf.grouped(c.p.memDataWidth/8)) {
+      val w : BigInt = new BigInt(new java.math.BigInteger(b))
+      def valueOf(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
+      //println("Read: " + valueOf(w.toByteArray))
+      //println("Read: " + valueOf(b))
+      writeMem(baseAddr+i*memUnitBytes, w)
+      i += 1
+    }
+  }
+
+  def memToFile(fileName: String, baseAddr: BigInt, wordCount: Int) = {
+    val fout = new FileOutputStream(fileName)
+    for(i <- 0 until wordCount) {
+      var ba = readMem(baseAddr+i*memUnitBytes).toByteArray
+      // BigInt.toByteArray returns the min # of bytes needed, pad to
+      // cover all bytes read from memory by adding zeroes
+      while(ba.size < memUnitBytes) {
+        ba = ba ++ Array[Byte](0)
+      }
+      fout.write(ba)
+    }
+    fout.close()
   }
 
   // let the accelerator do internal init (such as writing to the regfile)
