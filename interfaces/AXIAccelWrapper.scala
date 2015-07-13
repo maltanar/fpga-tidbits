@@ -3,6 +3,7 @@ package TidbitsAXI
 import Chisel._
 import TidbitsRegFile._
 import TidbitsDMA._
+import TidbitsSimUtils._
 
 class AXIAccelWrapperParams(
   val addrWidth: Int,
@@ -40,6 +41,12 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   lazy val accelVersion: String = "1.0.0"
   // 4-byte signature for accelerator (in hex string format)
   lazy val accelSignature: String = makeSignature()
+  // name-to-index mapping for registers
+  lazy val regMap = LinkedHashMap[String, Int]()
+  // module-defined tests
+  def defaultTest(t: WrappableAccelTester) = {
+    t.expectReg("signature", UInt("h" + accelSignature).litValue())
+  }
 
   // build a signature for this class
   def makeSignature() = {
@@ -57,7 +64,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   // your accelerator needs -- the function will allocate register
   // indices, wire the bundles to the register file, and generate
   // a C++ header for manipulating the regs
-  def manageRegIO(inB: => Bundle, outB: => Bundle) = {
+  def manageRegIO(inB: => Bundle, outB: => Bundle): LinkedHashMap[String, Int] = {
     val regW = p.csrDataWidth
     var regs: Int = 0
     // use reg 0 for signature
@@ -89,6 +96,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     outputInds("signature") = 0
     // build driver
     makeRegAccessCode(inputInds, outputInds)
+    return inputInds++outputInds
   }
 
   def makeRegAccessCode(indsIn: LinkedHashMap[String, Int], indsOut: LinkedHashMap[String, Int]) = {
