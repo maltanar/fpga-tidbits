@@ -82,7 +82,44 @@ class WrappableAccelHarness(
         }
       }
   }
-  // TODO writes
+
+  // writes
+  val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
+  val regStateWrite = Reg(init = UInt(sWaitWr))
+  val regWriteRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+  // queue on write response port (to avoid combinational loops)
+  val wrRspQ = Module(new Queue(GenericMemoryResponse(p.toMRP()), 16)).io
+  wrRspQ.deq <> accio.memWrRsp
+
+  accio.memWrReq.ready := Bool(false)
+  accio.memWrDat.ready := Bool(false)
+  wrRspQ.enq.valid := Bool(false)
+  wrRspQ.enq.bits.driveDefaults()
+  wrRspQ.enq.bits.channelID := regWriteRequest.channelID
+
+  switch(regStateWrite) {
+      is(sWaitWr) {
+        accio.memWrReq.ready := Bool(true)
+        when(accio.memWrReq.valid) {
+          regWriteRequest := accio.memWrReq.bits
+          regStateWrite := sWrite
+        }
+      }
+
+      is(sWrite) {
+        when(regWriteRequest.numBytes === UInt(0)) {regStateWrite := sWaitWr}
+        .otherwise {
+          when(wrRspQ.enq.ready && accio.memWrDat.valid) {
+            accio.memWrDat.ready := Bool(true)
+            wrRspQ.enq.valid := Bool(true)
+            mem(addrToWord(regWriteRequest.addr)) := accio.memWrDat.bits
+            regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
+            regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
+          }
+        }
+      }
+  }
+
 }
 
 class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
