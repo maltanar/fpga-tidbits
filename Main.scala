@@ -61,7 +61,7 @@ object MainObj {
   def runTest_WrapperTestSum() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16)
     val fxn = { p:AXIAccelWrapperParams => new WrapperTestSum(p)}
-    val instModule = {() => Module(new WrappableAccelHarness(p, fxn))}
+    val instModule = {() => Module(new WrappableAccelHarness(p, fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
     val aT = makeTestArgs("WrapperTestSum")
     chiselMainTest(aT, instModule)(instTest)

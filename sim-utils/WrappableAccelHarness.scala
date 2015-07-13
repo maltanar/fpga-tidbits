@@ -9,14 +9,21 @@ import TidbitsRegFile._
 // control/status registers for setting up the accelerator --
 // just like how a CPU would in an SoC-like setting
 
-// TODO how should the implementation here be partitioned?
 
 class WrappableAccelHarness(
   val p: AXIAccelWrapperParams,
-  fxn: AXIAccelWrapperParams => AXIWrappableAccel) extends Module {
+  fxn: AXIAccelWrapperParams => AXIWrappableAccel,
+  memWords: Int) extends Module {
   val rfAddrBits = log2Up(p.numRegs)
+  val memAddrBits = log2Up(memWords)
   val io = new Bundle {
+    // register file access
     val regFileIF = new RegFileSlaveIF(rfAddrBits, p.csrDataWidth)
+    // memory access
+    val memAddr = UInt(INPUT, p.addrWidth)
+    val memWriteEn = Bool(INPUT)
+    val memWriteData = UInt(INPUT, p.memDataWidth)
+    val memReadData = UInt(OUTPUT, p.memDataWidth)
   }
   val accel = Module(fxn(p))
 
@@ -31,7 +38,14 @@ class WrappableAccelHarness(
   // expose regfile interface
   io.regFileIF <> regFile.extIF
 
-  // TODO add memory simulation support
+  val mem = Mem(UInt(width=p.memDataWidth), memWords)
+
+  // testbench memory access
+  def addrToWord(x: UInt) = {x >> UInt(log2Up(p.memDataWidth/8))}
+  val memWord = addrToWord(io.memAddr)
+  io.memReadData := mem(memWord)
+
+  when (io.memWriteEn) {mem(memWord) := io.memWriteData}
 }
 
 class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
@@ -66,6 +80,23 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     poke(regFile.cmd.valid, 1)
     step(1)
     poke(regFile.cmd.valid, 0)
+  }
+
+  def readMem(addr: BigInt): BigInt = {
+    poke(c.io.memAddr, addr)
+    return peek(c.io.memReadData)
+  }
+
+  def expectMem(addr: BigInt, value: BigInt): Boolean = {
+    return expect(readMem(addr) == value, "Mem: "+addr.toString)
+  }
+
+  def writeMem(addr: BigInt, value: BigInt) = {
+    poke(c.io.memAddr, addr)
+    poke(c.io.memWriteEn, 1)
+    poke(c.io.memWriteData, value)
+    step(1)
+    poke(c.io.memWriteEn, 0)
   }
 
   // let the accelerator do internal init (such as writing to the regfile)

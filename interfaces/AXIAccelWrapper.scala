@@ -44,7 +44,7 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
   // name-to-index mapping for registers
   lazy val regMap = LinkedHashMap[String, Int]()
   // module-defined tests
-  def defaultTest(t: WrappableAccelTester) = {
+  def defaultTest(t: WrappableAccelTester): Boolean = {
     t.expectReg("signature", UInt("h" + accelSignature).litValue())
   }
 
