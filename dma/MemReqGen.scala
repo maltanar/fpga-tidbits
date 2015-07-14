@@ -18,8 +18,9 @@ class ReqGenStatus() extends Bundle {
 
 // a generic memory request generator,
 // only for contiguous accesses for now (no indirects, no strides)
-// only burst-aligned addresses and sizes (no error checking!)
-// TODO do we want to support unaligned/sub-word accesses?
+// only burst-aligned addresses (no error checking!)
+// only word-aligned sizes (no error checking!)
+// TODO do we want to support sub-word accesses?
 class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   val reqGenParams = p
   val io = new Bundle {
@@ -45,7 +46,10 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   io.reqs.bits.isWrite := Bool(false)
   io.reqs.bits.addr := regAddr
   io.reqs.bits.metaData := UInt(0)
-  io.reqs.bits.numBytes := UInt(bytesPerBurst)
+  // decide on length of burst depending on #bytes left
+  val doBurst = (regBytesLeft >= UInt(bytesPerBurst))
+  val burstLen = Mux(doBurst, UInt(bytesPerBurst), UInt(bytesPerBeat))
+  io.reqs.bits.numBytes := burstLen
 
   switch(regState) {
       is(sIdle) {
@@ -61,8 +65,8 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
           io.reqs.valid := Bool(true)
           when (io.reqs.ready) {
             // next request: update address & left request count
-            regAddr := regAddr + UInt(bytesPerBurst)
-            regBytesLeft := regBytesLeft - UInt(bytesPerBurst)
+            regAddr := regAddr + burstLen
+            regBytesLeft := regBytesLeft - burstLen
           }
         }
       }
@@ -92,7 +96,7 @@ class TestReadReqGenWrapper() extends Module {
 }
 
 class TestReadReqGen(c: TestReadReqGenWrapper) extends Tester(c) {
-
+  // TODO update test case to try non-burst-aligned size as well
   c.io.reqQOut.ready := Bool(false)
 
   val byteCount = 1024

@@ -4,6 +4,7 @@ import TidbitsOCM._
 import TidbitsStreams._
 import TidbitsSimUtils._
 import TidbitsAXI._
+import TidbitsDMA._
 
 object MainObj {
   val testOutputDir = "testOutput/"
@@ -26,11 +27,12 @@ object MainObj {
     //runVerilog_WrapperTestMultiChanSum()
     //runVerilog_WrapperTestSeqWrite()
     //runVerilog_WrapperTestOCMController()
+    //runTest_ReadReqGen()
     //runTest_StreamDelta()
     //runTest_StreamRepeatElem()
     //runTest_WrapperTestSum()
     //runTest_WrapperTestSeqRead()
-    runTest_WrapperTestSeqWrite()
+    //runTest_WrapperTestSeqWrite()
   }
 
   def runVerilog_WrapperTestOCMController() {
@@ -58,6 +60,13 @@ object MainObj {
     def aV = makeVerilogBuildArgs("WrapperTest")
 
     chiselMain(aV, instModule)
+  }
+
+  def runTest_ReadReqGen() {
+    val instModule = {() => Module(new TestReadReqGenWrapper())}
+    val instTest = {c => new TestReadReqGen(c)}
+    val aT = makeTestArgs("ReadReqGen")
+    chiselMainTest(aT, instModule)(instTest)
   }
 
   def runTest_WrapperTestSum() {
