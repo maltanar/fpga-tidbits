@@ -38,7 +38,7 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   ocmInst.ocmUser(1).req := NullOCMRequest(pOCM)
 
   // read-write request generators for fills and dumps
-  val rrq = Module(new ReadReqGen(pMR, 0)).io
+  val rrq = Module(new ReadReqGen(pMR, 0, 8)).io
   val wrq = Module(new WriteReqGen(pMR, 0)).io
   rrq.reqs <> io.memRdReq
   wrq.reqs <> io.memWrReq

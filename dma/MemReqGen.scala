@@ -22,7 +22,7 @@ class ReqGenStatus() extends Bundle {
 // only burst-aligned addresses (no error checking!)
 // will report error if start address is not word-aligned
 // TODO do we want to support sub-word accesses?
-class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
+class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
   val reqGenParams = p
   val io = new Bundle {
     // control/status interface
@@ -33,7 +33,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   }
   // shorthands for convenience
   val bytesPerBeat = (p.dataWidth/8)
-  lazy val bytesPerBurst = p.beatsPerBurst * bytesPerBeat
+  val bytesPerBurst = maxBeats * bytesPerBeat
   // state machine definitions & internal registers
   val sIdle :: sRun :: sFinished :: sError :: Nil = Enum(UInt(), 4)
   val regState = Reg(init = UInt(sIdle))
@@ -89,7 +89,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
 }
 
 class TestReadReqGenWrapper() extends Module {
-  val p = new MemReqParams(48, 64, 4, 1, 8)
+  val p = new MemReqParams(48, 64, 4, 1)
 
   val io = new Bundle {
     val ctrl = new ReqGenCtrl(p.addrWidth)
@@ -97,7 +97,7 @@ class TestReadReqGenWrapper() extends Module {
     val reqQOut = Decoupled(new GenericMemoryRequest(p))
   }
 
-  val dut = Module(new ReadReqGen(p, 0))
+  val dut = Module(new ReadReqGen(p, 0, 8))
   val reqQ = Module(new Queue(new GenericMemoryRequest(p), 4096))
   dut.io.reqs <> reqQ.io.enq
   reqQ.io.deq <> io.reqQOut
@@ -192,9 +192,8 @@ class TestReadReqGen(c: TestReadReqGenWrapper) extends Tester(c) {
   expect(c.reqQ.io.count, 0)
 }
 
-class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID) {
+class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID, 1) {
   // force single beat per burst for now
   // TODO support write bursts -- needs support in interleaver
-  override lazy val bytesPerBurst = 1 * bytesPerBeat
   io.reqs.bits.isWrite := Bool(true)
 }

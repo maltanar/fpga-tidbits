@@ -25,7 +25,7 @@ class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) 
   override lazy val regMap = manageRegIO(in, out)
 
 
-  val readReqGen = Module(new ReadReqGen(p.toMRP(), 0)).io
+  val readReqGen = Module(new ReadReqGen(p.toMRP(), 0, 8)).io
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducer = Module(new StreamReducer(32, 0, redFxn)).io
   val ds = Module(new AXIStreamDownsizer(p.memDataWidth, 32)).io

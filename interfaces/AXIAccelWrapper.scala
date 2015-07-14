@@ -13,7 +13,7 @@ class AXIAccelWrapperParams(
   val numRegs: Int
 ) {
   def toMRP(): MemReqParams = {
-    new MemReqParams(addrWidth, memDataWidth, idWidth, 1, 8)
+    new MemReqParams(addrWidth, memDataWidth, idWidth, 1)
   }
 }
 

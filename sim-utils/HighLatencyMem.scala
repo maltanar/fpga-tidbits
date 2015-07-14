@@ -19,7 +19,7 @@ class HighLatencyMemParams(
   }
 
   def toMemReqParams() = {
-    new MemReqParams(portAddrWidth, portDataWidth, portIDWidth, 1, 8)
+    new MemReqParams(portAddrWidth, portDataWidth, portIDWidth, 1)
   }
 }
 

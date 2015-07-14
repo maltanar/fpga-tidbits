@@ -25,7 +25,7 @@ class WrapperTestMultiChanSum(numChans: Int, p: AXIAccelWrapperParams) extends A
   manageRegIO(in, out)
 
   val mrp = p.toMRP()
-  val reqGens = Vec.tabulate(numChans) {i:Int => Module(new ReadReqGen(mrp, i)).io}
+  val reqGens = Vec.tabulate(numChans) {i:Int => Module(new ReadReqGen(mrp, i, 8)).io}
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducers = Vec.fill(numChans) {Module(new StreamReducer(32, 0, redFxn)).io}
   val dss = Vec.fill(numChans) {Module(new AXIStreamDownsizer(p.memDataWidth, 32)).io}

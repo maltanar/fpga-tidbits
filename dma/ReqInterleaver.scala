@@ -19,7 +19,8 @@ class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
 }
 
 class TestReqInterleaverWrapper() extends Module {
-  val p = new MemReqParams(48, 64, 4, 1, 8)
+  val p = new MemReqParams(48, 64, 4, 1)
+  val burstBeats = 8
   val io = new Bundle {
     val reqOut = Decoupled(new GenericMemoryRequest(p))
     val allFinished = Bool(OUTPUT)
@@ -27,7 +28,7 @@ class TestReqInterleaverWrapper() extends Module {
   }
   val N = 4
   val bytesPerPipe = 1024
-  val reqPipes = Vec.tabulate(N) {i => Module(new ReadReqGen(p, i)).io}
+  val reqPipes = Vec.tabulate(N) {i => Module(new ReadReqGen(p, i, burstBeats)).io}
   val dut = Module(new ReqInterleaver(N, p))
   for(i <- 0 until N) {
     reqPipes(i).reqs <> dut.io.reqIn(i)
@@ -56,7 +57,8 @@ class TestReqInterleaver(c: TestReqInterleaverWrapper) extends Tester(c) {
     step(1)
   }
   // verify number of requests in the interleaved queue
-  val expReqsPerPipe = c.bytesPerPipe / c.p.bytesPerBurst
+  val bytesPerBurst = (c.burstBeats*c.p.dataWidth/8)
+  val expReqsPerPipe = c.bytesPerPipe / bytesPerBurst
   val expTotalReqs = c.N * expReqsPerPipe
   expect(c.reqQ.io.count, expTotalReqs)
   // verify the request mix from different channels
@@ -66,7 +68,7 @@ class TestReqInterleaver(c: TestReqInterleaverWrapper) extends Tester(c) {
     val chanID = peek(c.io.reqOut.bits.channelID).toInt
     expect(c.io.reqOut.bits.addr, channelExpReq(chanID))
     reqsFromChannel(chanID) += 1
-    channelExpReq(chanID) += c.p.bytesPerBurst
+    channelExpReq(chanID) += bytesPerBurst
     poke(c.io.reqOut.ready, 1)
     step(1)
   }
