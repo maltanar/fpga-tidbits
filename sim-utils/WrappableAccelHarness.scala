@@ -133,6 +133,17 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     return c.accel.regMap(regName).toInt
   }
 
+  def printAllRegs() = {
+    val ks = c.accel.regMap.keys
+    var regVals = scala.collection.mutable.Map[String, BigInt]()
+    for(k <- ks) {
+      regVals(k) = readReg(k)
+    }
+    for(k <- ks) {
+      println(k + " : " + regVals(k).toString)
+    }
+  }
+
   def readReg(regName: String): BigInt = {
     val ind = nameToRegInd(regName)
     poke(regFile.cmd.bits.regID, ind)
