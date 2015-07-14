@@ -14,12 +14,13 @@ class ReqGenCtrl(addrWidth: Int) extends Bundle {
 class ReqGenStatus() extends Bundle {
   val finished = Bool(OUTPUT)
   val active = Bool(OUTPUT)
+  val error = Bool(OUTPUT)
 }
 
 // a generic memory request generator,
 // only for contiguous accesses for now (no indirects, no strides)
 // only burst-aligned addresses (no error checking!)
-// only word-aligned sizes (no error checking!)
+// will report error if start address is not word-aligned
 // TODO do we want to support sub-word accesses?
 class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   val reqGenParams = p
@@ -34,11 +35,12 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   val bytesPerBeat = (p.dataWidth/8)
   lazy val bytesPerBurst = p.beatsPerBurst * bytesPerBeat
   // state machine definitions & internal registers
-  val sIdle :: sRun :: sFinished :: Nil = Enum(UInt(), 3)
+  val sIdle :: sRun :: sFinished :: sError :: Nil = Enum(UInt(), 4)
   val regState = Reg(init = UInt(sIdle))
   val regAddr = Reg(init = UInt(0, p.addrWidth))
   val regBytesLeft = Reg(init = UInt(0, p.addrWidth))
   // default outputs
+  io.stat.error := Bool(false)
   io.stat.finished := Bool(false)
   io.stat.active := (regState != sIdle)
   io.reqs.valid := Bool(false)
@@ -51,11 +53,14 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
   val burstLen = Mux(doBurst, UInt(bytesPerBurst), UInt(bytesPerBeat))
   io.reqs.bits.numBytes := burstLen
 
+  val numZeroAddrBits = log2Up(bytesPerBeat)
+  val unalignedAddr = (regAddr(numZeroAddrBits-1, 0) != UInt(0))
+
   switch(regState) {
       is(sIdle) {
         regAddr := io.ctrl.baseAddr
         regBytesLeft := io.ctrl.byteCount
-        when (io.ctrl.start) { regState := sRun }
+        when (io.ctrl.start) { regState := Mux(unalignedAddr, sError, sRun) }
       }
 
       is(sRun) {
@@ -74,6 +79,11 @@ class ReadReqGen(p: MemReqParams, chanID: Int) extends Module {
       is(sFinished) {
         io.stat.finished := Bool(true)
         when (!io.ctrl.start) { regState := sIdle }
+      }
+
+      is(sError) {
+        // only way out is reset
+        io.stat.error := Bool(true)
       }
   }
 }
@@ -100,7 +110,7 @@ class TestReadReqGen(c: TestReadReqGenWrapper) extends Tester(c) {
   c.io.reqQOut.ready := Bool(false)
 
   val byteCount = 1024
-  val baseAddr = 100
+  val baseAddr = 128
 
   val expectedReqCount = byteCount / (c.dut.bytesPerBurst)
 
