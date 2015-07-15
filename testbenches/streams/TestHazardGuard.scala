@@ -1,7 +1,7 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsStreams.HazardGuard
+import TidbitsStreams._
 
 
 // set up a test scenario for the HazardGuard: a circuit with a high-latency
@@ -19,27 +19,25 @@ class HazardGuardTestParams(rS: Int, rL: Int, wL: Int, t: Int, w: Int) {
 }
 
 class HazardGuardTestHarness(p: HazardGuardTestParams) extends Module {
+  val opType = new OperandWithID(p.dataWidth, p.threadIDWidth)
   val io = new Bundle {
     val enable = Bool(INPUT)
     val writeCount = UInt(OUTPUT, width = 32)
     val readCount = UInt(OUTPUT, width = 32)
-    val testInThreadID = Decoupled(UInt(width = p.threadIDWidth)).flip
-    val testInData = Decoupled(UInt(width = p.dataWidth)).flip
+    val testInData = Decoupled(opType).flip
     val threadOutputs = Vec.fill(p.threadCount) {UInt(OUTPUT, width = p.dataWidth)}
   }
 
   // internal queues with large capacity for storing test inputs
-  val testQueueID = Module(new Queue(UInt(width = p.threadIDWidth), 1024)).io
-  val testQueueData = Module(new Queue(UInt(width = p.dataWidth), 1024)).io
-  testQueueID.enq <> io.testInThreadID
+  val testQueueData = Module(new Queue(opType, 1024)).io
   testQueueData.enq <> io.testInData
 
   // instantiate the hazard guard
   // depending on how the RAM handles read-write to same address simultaneously,
   // this can be less
   val hazardStages = p.reducerStages + p.readLatency + p.writeLatency
-  val guard = Module(new HazardGuard(p.threadIDWidth, hazardStages))
-  guard.io.streamIn <> testQueueID.deq
+  val guard = Module(new HazardGuard(p.dataWidth, p.threadIDWidth, hazardStages))
+  guard.io.streamIn <> testQueueData.deq
 
   //val idSource = testQueueID.deq
   val idSource = guard.io.streamOut
@@ -101,20 +99,27 @@ class HazardGuardTestHarness(p: HazardGuardTestParams) extends Module {
   reducerInValid := Bool(false)
 
   idSource.ready := Bool(false)
-  testQueueData.deq.ready := Bool(false)
+
+  val opDataQueue = Module(new Queue(UInt(width=p.dataWidth),1024)).io
+  opDataQueue.enq.bits := idSource.bits.data
+  opDataQueue.enq.valid := Bool(false)
+  opDataQueue.deq.ready := Bool(false)
 
   // stream logic
   when (io.enable) {
     // TODO stall the consumer sometimes? always-on for now
     idSource.ready := Bool(true)
-    testQueueData.deq.ready := memReadOutValid
+    // TODO data queue enq should not be ignored
+    opDataQueue.enq.valid := idSource.valid
 
-    memReadAddr := idSource.bits
+    opDataQueue.deq.ready := memReadOutValid
+
+    memReadAddr := idSource.bits.id
     memReadEn := idSource.valid
 
     reducerInA := memReadOutData
-    reducerInB := testQueueData.deq.bits
-    reducerInValid := testQueueData.deq.valid & memReadOutValid
+    reducerInB := opDataQueue.deq.bits
+    reducerInValid := opDataQueue.deq.valid & memReadOutValid
     reducerInID := memReadOutID
 
     memWriteAddr := reducerOutID
@@ -126,10 +131,11 @@ class HazardGuardTestHarness(p: HazardGuardTestParams) extends Module {
 
 class HazardGuardTestHarnessTester(c: HazardGuardTestHarness) extends Tester(c) {
 
-  def fillFrom(l: List[Int], q: DecoupledIO[UInt]) {
-    for(i <- l) {
+  def fillFrom(lID: List[Int], lData: List[Int], q: DecoupledIO[OperandWithID]) {
+    for(i <- 0 until lID.size) {
       poke(q.valid, 1)
-      poke(q.bits, i)
+      poke(q.bits.id, lID(i))
+      poke(q.bits.data, lData(i))
       while(peek(q.ready) != 1) {
         step(1)
       }
@@ -145,13 +151,14 @@ class HazardGuardTestHarnessTester(c: HazardGuardTestHarness) extends Tester(c) 
   val elemsPerThread = 20
 
   for(t <- 0 until threads) {
-    fillFrom( (1 to elemsPerThread).map(x => x+t).toList, c.io.testInData )
-    fillFrom( (1 to elemsPerThread).map(x => t).toList, c.io.testInThreadID )
+    val listID = (1 to elemsPerThread).map(x => t).toList
+    val listData = (1 to elemsPerThread).map(x => x+t).toList
+
+    fillFrom(listID, listData, c.io.testInData )
   }
 
   // verify that all data is written to the queues
   val totalElems = threads*elemsPerThread
-  expect(c.testQueueID.count, totalElems)
   expect(c.testQueueData.count, totalElems)
 
   // start the real test

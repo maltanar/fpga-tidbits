@@ -10,20 +10,28 @@ import Chisel._
 // new data is not allowed to enter the consumer until the consumer is ready
 // and the hazard has passed
 
+class OperandWithID(wOp: Int, wId: Int) extends Bundle {
+  val data = UInt(width = wOp)
+  val id = UInt(width = wId)
+  override def clone = {
+    new OperandWithID(wOp, wId).asInstanceOf[this.type]
+  }
+}
+
 // TODO break long combinatorial paths in here - OK to add some latency
-class HazardGuard(dataWidth: Int, hazardStages: Int) extends Module {
+class HazardGuard(dataWidth: Int, idWidth: Int, hazardStages: Int) extends Module {
   val io = new Bundle {
-    val streamIn = Decoupled(UInt(width = dataWidth)).flip
-    val streamOut = Decoupled(UInt(width = dataWidth))
+    val streamIn = Decoupled(new OperandWithID(dataWidth, idWidth)).flip
+    val streamOut = Decoupled(new OperandWithID(dataWidth, idWidth))
     val hazardStalls = UInt(OUTPUT, width = 32)
     val hazardHits = UInt(OUTPUT, width = hazardStages)
   }
   // extra bit in each stage to indicate a valid entry (bit 0)
-  val stages = Vec.fill(hazardStages) { Reg(init=UInt(0, dataWidth+1)) }
+  val stages = Vec.fill(hazardStages) { Reg(init=UInt(0, width=idWidth+1)) }
 
-  val hazardCandidate = io.streamIn.bits
+  val hazardCandidate = io.streamIn.bits.id
 
-  val hits = UInt(Cat(stages.map({x:UInt => x(0) & (x(dataWidth, 1) === hazardCandidate)})))
+  val hits = UInt(Cat(stages.map({x:UInt => x(0) & (x(idWidth, 1) === hazardCandidate)})))
   val hazardDetected = orR(hits)
   io.hazardHits := hits
 
@@ -35,7 +43,7 @@ class HazardGuard(dataWidth: Int, hazardStages: Int) extends Module {
   io.streamOut.bits := io.streamIn.bits
 
   when(downstreamReady) {
-    stages(0) := Mux(hazardDetected, UInt(0), Cat(io.streamIn.bits, io.streamIn.valid))
+    stages(0) := Mux(hazardDetected, UInt(0), Cat(io.streamIn.bits.id, io.streamIn.valid))
     for(i <- 1 until hazardStages) {
       stages(i) := stages(i-1)
     }
