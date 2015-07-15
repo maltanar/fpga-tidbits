@@ -10,6 +10,15 @@ import Chisel._
 // new data is not allowed to enter the consumer until the consumer is ready
 // and the hazard has passed
 
+object OperandWithID {
+  def apply(op: UInt, id: UInt) = {
+    val oid = new OperandWithID(op.getWidth(), id.getWidth())
+    oid.data := op
+    oid.id := id
+    oid
+  }
+}
+
 class OperandWithID(wOp: Int, wId: Int) extends Bundle {
   val data = UInt(width = wOp)
   val id = UInt(width = wId)
