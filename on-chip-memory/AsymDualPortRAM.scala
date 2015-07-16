@@ -40,8 +40,10 @@ class AsymDualPortRAM(p: OCMParameters) extends Module {
       io.ports(i).rsp.readData := ShiftRegister(n=p.readLatency, in=rdData)
       // need to write to multiple cells
       val wordsToWrite = p.writeWidth / p.readWidth
-      for(j <- 0 until wordsToWrite) {
+      when (io.ports(i).req.writeEn) {
+        for(j <- 0 until wordsToWrite) {
           mem(base+UInt(j)) := io.ports(i).req.writeData((j+1)*minWidth-1, j*minWidth)
+        }
       }
     }
   }
