@@ -116,10 +116,12 @@ class OCMControllerIF(p: OCMParameters) extends Bundle {
   val fillPort = Decoupled(UInt(width = p.writeWidth)).flip
   val dumpPort = Decoupled(UInt(width = p.readWidth))
   val busy = Bool(OUTPUT)
+  // word index to start with during fill/dump
+  val fillDumpStart = UInt(INPUT, width = p.addrWidth+1)
+  // number of OCM words to fill/dump
+  val fillDumpCount = UInt(INPUT, width = p.addrWidth+1)
 }
 
-// TODO support partial fill/dump by start&count registers
-// fill/dump ports
 // TODO support fill/dump through all ports (width*count)
 
 class OCMController(p: OCMParameters) extends Module {
@@ -156,6 +158,7 @@ class OCMController(p: OCMParameters) extends Module {
   // address register, for both reads and writes (we do only one at once)
   // +1 in width to not overflow to zero if we increment too much
   val regAddr = Reg(init = UInt(0, p.addrWidth+1))
+  val regFillDumpCount = Reg(init = UInt(0, p.addrWidth+1))
 
   // default outputs
   io.mcif.done := Bool(false)
@@ -169,7 +172,8 @@ class OCMController(p: OCMParameters) extends Module {
 
   switch(regState) {
       is(sIdle) {
-        regAddr := UInt(0)
+        regAddr := io.mcif.fillDumpStart
+        regFillDumpCount := io.mcif.fillDumpCount
         when(io.mcif.start) {
           when (io.mcif.mode === UInt(0)) { regState := sFill }
           .elsewhen (io.mcif.mode === UInt(1)) { regState := sDump }
@@ -180,7 +184,7 @@ class OCMController(p: OCMParameters) extends Module {
         io.mcif.fillPort.ready := Bool(true)
         ocm.req.addr := p.makeWriteAddr(regAddr)
 
-        when (regAddr === UInt(p.writeDepth)) {regState := sFinished}
+        when (regAddr === regFillDumpCount) {regState := sFinished}
         .elsewhen (io.mcif.fillPort.valid) {
           ocm.req.writeEn := Bool(true)
           regAddr := regAddr + UInt(1)
@@ -189,7 +193,7 @@ class OCMController(p: OCMParameters) extends Module {
 
       is(sDump) {
         ocm.req.addr := p.makeReadAddr(regAddr)
-        when (regAddr === UInt(p.readDepth)) {regState := sFinished}
+        when (regAddr === regFillDumpCount) {regState := sFinished}
         .elsewhen (hasRoom & dumpQ.io.enq.ready) {
           regDumpValid := Bool(true)
           regAddr := regAddr + UInt(1)

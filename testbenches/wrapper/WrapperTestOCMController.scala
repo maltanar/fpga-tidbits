@@ -49,7 +49,8 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducer = Module(new StreamReducer(64, 0, redFxn)).io
   ocmInst.mcif.fillPort <> StreamFilter(io.memWrRsp, UInt(width=64), filterFxn)
-
+  ocmInst.mcif.fillDumpStart := UInt(0)
+  ocmInst.mcif.fillDumpCount := UInt(pOCM.bits/64)
   // wire up control
   val byteCount = UInt(pOCM.bits/8)
 
@@ -108,4 +109,6 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   out.writeReqC := regWriteReqCount
   out.writeRspC := regWriteRspCount
   out.writeDatC := regWriteDataCount
+
+  // TODO write test
 }

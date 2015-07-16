@@ -22,6 +22,8 @@ class OCMFillDump(p: OCMParameters) extends Module {
   val mcif = dut.io.mcif
   mcif.mode := UInt(0)
   mcif.start := Bool(false)
+  mcif.fillDumpStart := UInt(0)
+  mcif.fillDumpCount := UInt(0)
 
   val regFillData = Reg(init = fillWord)
 
@@ -57,6 +59,7 @@ class OCMFillDump(p: OCMParameters) extends Module {
           mcif.start := Bool(false)
           when(mcif.done) {regState := sDump}
         } .otherwise {
+          mcif.fillDumpCount := UInt(p.writeDepth)
           mcif.mode := UInt(0)
           mcif.start := Bool(true)
           fillQ.io.enq.valid := Bool(true)
@@ -71,6 +74,7 @@ class OCMFillDump(p: OCMParameters) extends Module {
           mcif.start := Bool(false)
           when(mcif.done) {regState := sFinOK}
         } .otherwise {
+          mcif.fillDumpCount := UInt(p.readDepth)
           mcif.mode := UInt(1)
           mcif.start := Bool(true)
           dumpQ.io.deq.ready := Bool(true)
