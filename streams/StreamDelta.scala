@@ -10,7 +10,6 @@ import TidbitsAXI._
 
 class StreamDelta(dataWidth: Int) extends Module {
   val io = new Bundle {
-    val enable = Bool(INPUT)
     val samples = new AXIStreamSlaveIF(UInt(width = dataWidth))
     val deltas = new AXIStreamMasterIF(UInt(width = dataWidth))
   }
@@ -35,43 +34,37 @@ class StreamDelta(dataWidth: Int) extends Module {
   // FSM for control
   switch ( regState ) {
     is ( sIdle ) {
-      when (io.enable) {
-        io.samples.ready := Bool(true)
-        when ( io.samples.valid ) {
-          regState := sWaitNextSample
-          regSample2 := io.samples.bits
-        }
+      io.samples.ready := Bool(true)
+
+      when ( io.samples.valid ) {
+        regState := sWaitNextSample
+        regSample2 := io.samples.bits
       }
     }
 
     is ( sWaitNextSample ) {
-      when (!io.enable) {regState := sIdle}
-      .otherwise {
-        io.samples.ready := Bool(true)
-        when ( io.samples.valid ) {
-          regSample2 := io.samples.bits
-          regSample1 := regSample2
-          regState := sRun
-        }
+      io.samples.ready := Bool(true)
+
+      when ( io.samples.valid ) {
+        regSample2 := io.samples.bits
+        regSample1 := regSample2
+        regState := sRun
       }
     }
 
     is ( sRun ) {
-      when (!io.enable) {regState := sIdle}
-      .otherwise {
-        io.deltas.valid := Bool(true)
+      io.deltas.valid := Bool(true)
 
-        when ( io.deltas.ready ) {
-          when ( io.samples.valid ) {
-            // next sample already valid: just pop it while
-            // staying in the same state
-            regSample2 := io.samples.bits
-            regSample1 := regSample2
-            io.samples.ready := Bool(true)
-          } .otherwise {
-            // next sample not quite ready yet, wait for it
-            regState := sWaitNextSample
-          }
+      when ( io.deltas.ready ) {
+        when ( io.samples.valid ) {
+          // next sample already valid: just pop it while
+          // staying in the same state
+          regSample2 := io.samples.bits
+          regSample1 := regSample2
+          io.samples.ready := Bool(true)
+        } .otherwise {
+          // next sample not quite ready yet, wait for it
+          regState := sWaitNextSample
         }
       }
     }
@@ -98,7 +91,6 @@ class StreamDeltaTestBed() extends Module {
   inQueue.io.deq <> sdt.io.samples
   sdt.io.deltas <> outQueue.io.enq
   outQueue.io.deq <> io.deltas
-  sdt.io.enable := Bool(true)
 
   io.inQueueCount := inQueue.io.count
   io.outQueueCount := outQueue.io.count
