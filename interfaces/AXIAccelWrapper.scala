@@ -94,12 +94,11 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
       } else {d := io.regIn(i)}
     }
     outputInds("signature") = 0
-    // build driver
-    makeRegAccessCode(inputInds, outputInds)
+
     return inputInds++outputInds
   }
 
-  def makeRegAccessCode(indsIn: LinkedHashMap[String, Int], indsOut: LinkedHashMap[String, Int]) = {
+  def buildDriver(targetDir: String) = {
     var driverStr: String = ""
     val driverName: String = this.getClass.getSimpleName + "Driver"
     driverStr = driverStr + ("#ifndef " + driverName + "_H")
@@ -109,24 +108,20 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     driverStr = driverStr + "\n" + ("public:")
     driverStr = driverStr + "\n" + (" " + driverName + "(volatile unsigned int * baseAddr) {")
     driverStr = driverStr + "\n" + ("  m_baseAddr = baseAddr; assert(signature() == m_signature);};")
-    driverStr = driverStr + "\n\n" + (" // ============== accelerator inputs =================")
-    for((n: String, i: Int) <- indsIn) {
+
+    for((n: String, i: Int) <- regMap) {
       driverStr = driverStr + "\n" + (f" // read+write register: $n%s index: $i%s")
       driverStr = driverStr + "\n" + (f" void $n%s(unsigned int v) {m_baseAddr[$i%d] = v;};")
       driverStr = driverStr + "\n" + (f" unsigned int $n%s() {return m_baseAddr[$i%d];};")
     }
-    driverStr = driverStr + "\n\n" + (" // ============== accelerator outputs =================")
-    for((n: String, i: Int) <- indsOut) {
-      driverStr = driverStr + "\n" + (f" // read-only register: $n%s index: $i%s")
-      driverStr = driverStr + "\n" + (f" unsigned int $n%s() {return m_baseAddr[$i%d];};")
-    }
+
     driverStr = driverStr + "\n\n" + ("protected:")
     driverStr = driverStr + "\n" + (" volatile unsigned int * m_baseAddr;")
     driverStr = driverStr + "\n" + (f" const static unsigned int m_signature = 0x$accelSignature%s;")
     driverStr = driverStr + "\n" + ("};")
     driverStr = driverStr + "\n" + ("#endif") + "\n"
     import java.io._
-    val writer = new PrintWriter(new File(driverName+".hpp" ))
+    val writer = new PrintWriter(new File(targetDir+"/"+driverName+".hpp" ))
     writer.write(driverStr)
     writer.close()
     println("=======> Driver written to "+driverName+".hpp")
