@@ -190,29 +190,26 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
   }
 
   // read file and write into memory, starting at <baseAddr>
-  // use <reorderW> > 0 to reverse byte order (endianness) of every
-  // <reorderW>-byte group
-  def fileToMem(fileName: String, baseAddr: BigInt, reorderW: Int) = {
+  def fileToMem(fileName: String, baseAddr: BigInt) = {
     var buf = Files.readAllBytes(Paths.get(fileName))
-    if(buf.size % memUnitBytes != 0) {
-      println("fileToMem: file size must be multiple of mem unit width")
+    println("Loading "+fileName+" to baseAddr "+baseAddr.toString)
+    arrayToMem(buf, baseAddr)
+  }
+
+  // TODO not sure if this is the correct way to handle endianness --
+  // expect problems:
+  // every <memory-width> byte group is reversed while being written
+  def arrayToMem(buf: Array[Byte], baseAddr: BigInt) = {
+    if(baseAddr % memUnitBytes != 0) {
+      println("fileToMem: base addr must be multiple of mem unit width")
       System.exit(-1)
     }
-
-    if(reorderW > 0) {
-      var reordered = Array[Byte]()
-      for(b <- buf.grouped(reorderW)) {
-        reordered = reordered ++ b.reverse
-      }
-      buf = reordered
-    }
-
     var i: Int = 0
     for(b <- buf.grouped(c.p.memDataWidth/8)) {
-      val w : BigInt = new BigInt(new java.math.BigInteger(b))
+      val w : BigInt = new BigInt(new java.math.BigInteger(b.reverse))
       def valueOf(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
       //println("Read: " + valueOf(w.toByteArray))
-      //println("Read: " + valueOf(b))
+      //println("Read: " +i.toString+ "=" + valueOf(b))
       writeMem(baseAddr+i*memUnitBytes, w)
       i += 1
     }
