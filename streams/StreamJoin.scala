@@ -2,7 +2,7 @@ package TidbitsStreams
 
 import Chisel._
 
-// combinational join for two streams
+// combinational join for two streams -> one stream
 // join function can be customized
 
 class StreamJoin[TiA <: Data, TiB <: Data, TO <: Data]
