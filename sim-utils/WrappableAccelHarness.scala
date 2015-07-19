@@ -196,6 +196,8 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     arrayToMem(buf, baseAddr)
   }
 
+  def valueOf(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
+
   // TODO not sure if this is the correct way to handle endianness --
   // expect problems:
   // every <memory-width> byte group is reversed while being written
@@ -207,7 +209,7 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     var i: Int = 0
     for(b <- buf.grouped(c.p.memDataWidth/8)) {
       val w : BigInt = new BigInt(new java.math.BigInteger(b.reverse))
-      def valueOf(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
+
       //println("Read: " + valueOf(w.toByteArray))
       //println("Read: " +i.toString+ "=" + valueOf(b))
       writeMem(baseAddr+i*memUnitBytes, w)
@@ -219,11 +221,15 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     val fout = new FileOutputStream(fileName)
     for(i <- 0 until wordCount) {
       var ba = readMem(baseAddr+i*memUnitBytes).toByteArray
+      // the BigInt.toByteArray occasionally returns too many bytes,
+      // not sure why
+      if (ba.size > memUnitBytes) { ba = ba.takeRight(memUnitBytes.toInt) }
       // BigInt.toByteArray returns the min # of bytes needed, pad to
       // cover all bytes read from memory by adding zeroes
       while(ba.size < memUnitBytes) {
         ba = ba ++ Array[Byte](0)
       }
+      ba = ba.reverse
       fout.write(ba)
     }
     fout.close()
