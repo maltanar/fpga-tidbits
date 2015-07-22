@@ -27,6 +27,71 @@ class OperandWithID(wOp: Int, wId: Int) extends Bundle {
   }
 }
 
+
+// a queue that stores operand-id pairs. each ID in the queue is guaranteed
+// to be unique; trying to enqueue an operand-id pair with id already existing
+// in the queue will result in a stall (ready will go low)
+class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
+  val io = new Bundle {
+    val enq = Decoupled(new OperandWithID(dataWidth, idWidth)).flip
+    val deq = Decoupled(new OperandWithID(dataWidth, idWidth))
+    val hazard = Bool(OUTPUT)
+    val count = UInt(OUTPUT, width = log2Up(entries+1))
+  }
+  // mostly copied from Chisel Queue, with a few modifications:
+  // - vector of registers instead of Mem, to expose all outputs
+  // - id values already in the queue not allowed to get in
+  val dt = new OperandWithID(dataWidth, idWidth)
+  val ram = Vec.fill(entries) { Reg(init = dt) }
+  val ramValid = Vec.fill(entries) { Reg(init = Bool(false)) }
+
+  val enq_ptr = Counter(entries)
+  val deq_ptr = Counter(entries)
+  val maybe_full = Reg(init=Bool(false))
+
+  val ptr_match = enq_ptr.value === deq_ptr.value
+  val empty = ptr_match && !maybe_full
+  val full = ptr_match && maybe_full
+
+  val do_enq = io.enq.ready && io.enq.valid
+  val do_deq = io.deq.ready && io.deq.valid
+  when (do_enq) {
+    ram(enq_ptr.value) := io.enq.bits
+    ramValid(enq_ptr.value) := Bool(true)
+    enq_ptr.inc()
+  }
+  when (do_deq) {
+    ramValid(deq_ptr.value) := Bool(false)
+    deq_ptr.inc()
+  }
+  when (do_enq != do_deq) {
+    maybe_full := do_enq
+  }
+
+  // <hazard guard logic>
+  val newData = io.enq.bits.id
+  val hits = Vec.tabulate(entries) {i: Int => ram(i) === newData & ramValid(i)}
+  val hazardDetected = hits.forall({x:Bool => x}) & io.enq.valid
+  io.hazard := hazardDetected
+  // </hazard guard logic>
+
+  io.deq.valid := !empty
+  io.enq.ready := !full & !hazardDetected
+  io.deq.bits := ram(deq_ptr.value)
+
+  val ptr_diff = enq_ptr.value - deq_ptr.value
+  if (isPow2(entries)) {
+    io.count := Cat(maybe_full && ptr_match, ptr_diff)
+  } else {
+    io.count := Mux(ptr_match,
+                  Mux(maybe_full, UInt(entries), UInt(0)),
+                  Mux(deq_ptr.value > enq_ptr.value,
+                      UInt(entries) + ptr_diff, ptr_diff)
+                    )
+  }
+}
+
+
 // TODO break long combinatorial paths in here - OK to add some latency
 class HazardGuard(dataWidth: Int, idWidth: Int, hazardStages: Int) extends Module {
   val io = new Bundle {
