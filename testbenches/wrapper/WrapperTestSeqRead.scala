@@ -9,8 +9,8 @@ import TidbitsSimUtils._
 class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
-  plugMemWritePort()
-  // plugMemReadPort -- bulk interface connection <> won't work otherwise
+  plugMemWritePorts()
+  // plugMemReadPorts -- bulk interface connection <> won't work otherwise
 
   val in = new Bundle {
     val start = Bool()
@@ -31,7 +31,7 @@ class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) 
   val ds = Module(new AXIStreamDownsizer(p.memDataWidth, 32)).io
 
   // reg(0) for start control
-  readReqGen.reqs <> io.memRdReq
+  readReqGen.reqs <> io.mp(0).memRdReq
   readReqGen.ctrl.start := in.start
   reducer.start := in.start
 
@@ -41,9 +41,9 @@ class WrapperTestSeqRead(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) 
   reducer.byteCount := in.byteCount
   reducer.streamIn <> ds.out
 
-  ds.in.valid := io.memRdRsp.valid
-  ds.in.bits := io.memRdRsp.bits.readData
-  io.memRdRsp.ready := ds.in.ready
+  ds.in.valid := io.mp(0).memRdRsp.valid
+  ds.in.bits := io.mp(0).memRdRsp.bits.readData
+  io.mp(0).memRdRsp.ready := ds.in.ready
 
   // reg(3) for status
   out.status := Cat(List(reducer.finished, readReqGen.stat.finished))

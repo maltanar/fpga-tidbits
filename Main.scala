@@ -23,20 +23,20 @@ object MainObj {
     //runTest_HazardGuard()
     //runTest_AXIStreamUpsizer()
     //runTest_HLM_Simple()
-    //runVerilog_WrapperTestSum()
-    //runVerilog_WrapperTestMultiChanSum()
-    //runVerilog_WrapperTestSeqWrite()
-    //runVerilog_WrapperTestOCMController()
     //runTest_ReadReqGen()
     //runTest_StreamDelta()
     //runTest_StreamRepeatElem()
     //runTest_WrapperTestSum()
     //runTest_WrapperTestSeqRead()
     //runTest_WrapperTestSeqWrite()
+    //runVerilog_WrapperTestSum()
+    //runVerilog_WrapperTestMultiChanSum()
+    //runVerilog_WrapperTestSeqWrite()
+    //runVerilog_WrapperTestOCMController()
   }
 
   def runVerilog_WrapperTestOCMController() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
     val fxn = { () => new WrapperTestOCMController(p)}
     val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
@@ -45,7 +45,7 @@ object MainObj {
   }
 
   def runVerilog_WrapperTestSeqWrite() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,8)
+    val p = new AXIAccelWrapperParams(32,32,64,6,8,1)
     val fxn = { () => new WrapperTestSeqWrite(p)}
     val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
@@ -54,7 +54,7 @@ object MainObj {
   }
 
   def runVerilog_WrapperTestSum() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
     val fxn = { () => new WrapperTestSum(p)}
     val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")
@@ -70,7 +70,7 @@ object MainObj {
   }
 
   def runTest_WrapperTestSum() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
     val fxn = { () => new WrapperTestSum(p)}
     val instModule = {() => Module(new WrappableAccelHarness(fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
@@ -79,7 +79,7 @@ object MainObj {
   }
 
   def runTest_WrapperTestSeqRead() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
     val fxn = { () => new WrapperTestSeqRead(p)}
     val instModule = {() => Module(new WrappableAccelHarness(fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
@@ -88,7 +88,7 @@ object MainObj {
   }
 
   def runTest_WrapperTestSeqWrite() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
     val fxn = { () => new WrapperTestSeqWrite(p)}
     val instModule = {() => Module(new WrappableAccelHarness(fxn, 1024))}
     val instTest = {c => new WrappableAccelTester(c)}
@@ -97,7 +97,7 @@ object MainObj {
   }
 
   def runVerilog_WrapperTestMultiChanSum() {
-    val p = new AXIAccelWrapperParams(32,32,64,6,16)
+    val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
     val fxn = { () => new WrapperTestMultiChanSum(3,p)}
     val instModule = {() => Module(new AXIAccelWrapper(fxn))}
     def aV = makeVerilogBuildArgs("WrapperTest")

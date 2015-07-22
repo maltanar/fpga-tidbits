@@ -7,8 +7,8 @@ import TidbitsSimUtils._
 class WrapperTestSum(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   override lazy val accelVersion = "1.0.0"
   plugRegOuts()
-  plugMemWritePort()
-  plugMemReadPort()
+  plugMemWritePorts()
+  plugMemReadPorts()
 
   val in = new Bundle {
     val op = Vec.fill(2) {UInt(width = 32)}

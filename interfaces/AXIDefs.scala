@@ -71,6 +71,39 @@ class AXIMasterIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) extends B
   // read data channel
   val readData    = Decoupled(new AXIReadData(dataWidthBits, idBits)).flip
 
+  // drive default/"harmless" values to leave no output uninitialized
+  def driveDefaults() {
+    writeAddr.valid := Bool(false)
+    writeData.valid := Bool(false)
+    writeResp.ready := Bool(false)
+    readAddr.valid := Bool(false)
+    readData.ready := Bool(false)
+    // write address channel
+    writeAddr.bits.addr := UInt(0)
+    writeAddr.bits.prot := UInt(0)
+    writeAddr.bits.size := UInt(0)
+    writeAddr.bits.len := UInt(0)
+    writeAddr.bits.burst := UInt(0)
+    writeAddr.bits.lock := Bool(false)
+    writeAddr.bits.cache := UInt(0)
+    writeAddr.bits.qos := UInt(0)
+    writeAddr.bits.id := UInt(0)
+    // write data channel
+    writeData.bits.data := UInt(0)
+    writeData.bits.strb := UInt(0)
+    writeData.bits.last := Bool(false)
+    // read address channel
+    readAddr.bits.addr := UInt(0)
+    readAddr.bits.prot := UInt(0)
+    readAddr.bits.size := UInt(0)
+    readAddr.bits.len := UInt(0)
+    readAddr.bits.burst := UInt(0)
+    readAddr.bits.lock := Bool(false)
+    readAddr.bits.cache := UInt(0)
+    readAddr.bits.qos := UInt(0)
+    readAddr.bits.id := UInt(0)
+  }
+
   // rename signals to be compatible with those in the Xilinx template
   def renameSignals(ifName: String) {
     // write address channel

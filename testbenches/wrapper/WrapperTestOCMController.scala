@@ -9,8 +9,8 @@ import TidbitsOCM._
 class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
-  //plugMemWritePort()
-  //plugMemReadPort()
+  //plugMemWritePorts()
+  //plugMemReadPorts()
 
   val in = new Bundle {
     val ctl = UInt(width = 2)
@@ -40,15 +40,15 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   // read-write request generators for fills and dumps
   val rrq = Module(new ReadReqGen(pMR, 0, 8)).io
   val wrq = Module(new WriteReqGen(pMR, 0)).io
-  rrq.reqs <> io.memRdReq
-  wrq.reqs <> io.memWrReq
-  io.memWrDat <> Queue(ocmInst.mcif.dumpPort, 16)
+  rrq.reqs <> io.mp(0).memRdReq
+  wrq.reqs <> io.mp(0).memWrReq
+  io.mp(0).memWrDat <> Queue(ocmInst.mcif.dumpPort, 16)
   val filterFxn = {x: GenericMemoryResponse => x.readData}
-  ocmInst.mcif.fillPort <> StreamFilter(io.memRdRsp, UInt(width=64), filterFxn)
+  ocmInst.mcif.fillPort <> StreamFilter(io.mp(0).memRdRsp, UInt(width=64), filterFxn)
   // use a reducer to count the write responses
   val redFxn = {(a: UInt, b: UInt) => a+b}
   val reducer = Module(new StreamReducer(64, 0, redFxn)).io
-  ocmInst.mcif.fillPort <> StreamFilter(io.memWrRsp, UInt(width=64), filterFxn)
+  ocmInst.mcif.fillPort <> StreamFilter(io.mp(0).memWrRsp, UInt(width=64), filterFxn)
   ocmInst.mcif.fillDumpStart := UInt(0)
   ocmInst.mcif.fillDumpCount := UInt(pOCM.bits/64)
   // wire up control
@@ -84,23 +84,23 @@ class WrapperTestOCMController(p: AXIAccelWrapperParams) extends AXIWrappableAcc
   val regReadRspCount = Reg(init = UInt(0, 32))
   val regWriteRspCount = Reg(init = UInt(0, 32))
 
-  when(io.memRdReq.valid & io.memRdReq.ready) {
+  when(io.mp(0).memRdReq.valid & io.mp(0).memRdReq.ready) {
     regReadReqCount := regReadReqCount + UInt(1)
   }
 
-  when(io.memWrReq.valid & io.memWrReq.ready) {
+  when(io.mp(0).memWrReq.valid & io.mp(0).memWrReq.ready) {
     regWriteReqCount := regWriteReqCount + UInt(1)
   }
 
-  when(io.memWrDat.valid & io.memWrDat.ready) {
+  when(io.mp(0).memWrDat.valid & io.mp(0).memWrDat.ready) {
     regWriteDataCount := regWriteDataCount + UInt(1)
   }
 
-  when(io.memRdRsp.valid & io.memRdRsp.ready) {
+  when(io.mp(0).memRdRsp.valid & io.mp(0).memRdRsp.ready) {
     regReadRspCount := regReadRspCount + UInt(1)
   }
 
-  when(io.memWrRsp.valid & io.memWrRsp.ready) {
+  when(io.mp(0).memWrRsp.valid & io.mp(0).memWrRsp.ready) {
     regWriteRspCount := regWriteRspCount + UInt(1)
   }
 

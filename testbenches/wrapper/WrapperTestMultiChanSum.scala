@@ -8,8 +8,8 @@ import TidbitsStreams._
 class WrapperTestMultiChanSum(numChans: Int, p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
-  plugMemWritePort()
-  // no plugMemReadPort -- bulk interface connection <> won't work otherwise
+  plugMemWritePorts()
+  // no plugMemReadPorts -- bulk interface connection <> won't work otherwise
 
   val in = new Bundle {
     val start = Bool()
@@ -49,8 +49,8 @@ class WrapperTestMultiChanSum(numChans: Int, p: AXIAccelWrapperParams) extends A
     out.sum(i) := reducers(i).reduced
   }
 
-  intl.reqOut <> io.memRdReq
-  deintl.rspIn <> io.memRdRsp
+  intl.reqOut <> io.mp(0).memRdReq
+  deintl.rspIn <> io.mp(0).memRdRsp
 
   out.status := reducers.forall(x => x.finished)
 }
