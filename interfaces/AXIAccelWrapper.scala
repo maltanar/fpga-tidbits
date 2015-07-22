@@ -10,7 +10,8 @@ class AXIAccelWrapperParams(
   val csrDataWidth: Int,
   val memDataWidth: Int,
   val idWidth: Int,
-  val numRegs: Int
+  val numRegs: Int,
+  val numMemPorts: Int
 ) {
   def toMRP(): MemReqParams = {
     new MemReqParams(addrWidth, memDataWidth, idWidth, 1)
@@ -23,13 +24,8 @@ class AXIWrappableAccelIF(val p: AXIAccelWrapperParams) extends Bundle {
   // valid on regOut implies register write
   val regIn = Vec.fill(p.numRegs) { UInt(INPUT, width = p.csrDataWidth) }
   val regOut = Vec.fill(p.numRegs) { Valid(UInt(width = p.csrDataWidth)) }
-  // req - rsp interface for memory reads
-  val memRdReq = Decoupled(new GenericMemoryRequest(p.toMRP()))
-  val memRdRsp = Decoupled(new GenericMemoryResponse(p.toMRP())).flip
-  // req - rsp interface for memory writes
-  val memWrReq = Decoupled(new GenericMemoryRequest(p.toMRP()))
-  val memWrDat = Decoupled(UInt(width = p.memDataWidth))
-  val memWrRsp = Decoupled(new GenericMemoryResponse(p.toMRP())).flip
+  // memory ports
+  val mp = Vec.fill(p.numMemPorts) {new GenericMemoryMasterPort(p.toMRP())}
 }
 
 // accelerator to be wrapped must be derived from this class
@@ -154,18 +150,22 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     }
   }
 
-  def plugMemReadPort() {
-    io.memRdReq.valid := Bool(false)
-    io.memRdReq.bits.driveDefaults()
-    io.memRdRsp.ready := Bool(false)
+  def plugMemReadPorts() {
+    for(i <- 0 until p.numMemPorts) {
+      io.mp(i).memRdReq.valid := Bool(false)
+      io.mp(i).memRdReq.bits.driveDefaults()
+      io.mp(i).memRdRsp.ready := Bool(false)
+    }
   }
 
-  def plugMemWritePort() {
-    io.memWrReq.valid := Bool(false)
-    io.memWrReq.bits.driveDefaults()
-    io.memWrDat.valid := Bool(false)
-    io.memWrDat.bits := UInt(0)
-    io.memWrRsp.ready := Bool(false)
+  def plugMemWritePorts() {
+    for(i <- 0 until p.numMemPorts) {
+      io.mp(i).memWrReq.valid := Bool(false)
+      io.mp(i).memWrReq.bits.driveDefaults()
+      io.mp(i).memWrDat.valid := Bool(false)
+      io.mp(i).memWrDat.bits := UInt(0)
+      io.mp(i).memWrRsp.ready := Bool(false)
+    }
   }
 
   override def clone = { new AXIWrappableAccel(p).asInstanceOf[this.type] }
@@ -174,44 +174,59 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
 // the actual wrapper component
 class AXIAccelWrapper(val instFxn: () => AXIWrappableAccel)
                       extends Module {
+  val maxAXIMemPorts: Int = 4
   // instantiate the wrapped accelerator
   val accel = Module(instFxn())
   lazy val p = accel.p
   val io = new Bundle {
     // AXI slave interface for control-status registers
     val csr = new AXILiteSlaveIF(p.addrWidth, p.csrDataWidth)
-    // AXI master interface for reading and writing memory
-    val mem = new AXIMasterIF(p.addrWidth, p.memDataWidth, p.idWidth)
+    // AXI master interfaces for reading and writing memory
+    // note that we create the max. num of allowed ports to stay
+    // faithful to the Vivado template (the superflous ones will be
+    // plugged)
+    val mem = Vec.fill (maxAXIMemPorts) {
+      new AXIMasterIF(p.addrWidth, p.memDataWidth, p.idWidth)
+    }
   }
   // rename signals to support Vivado interface inference
   io.csr.renameSignals("csr")
-  io.mem.renameSignals("mem")
+  for(i <- 0 until maxAXIMemPorts) {io.mem(i).renameSignals(s"mem$i")}
 
+  // plug unused memory ports
+  for(i <- p.numMemPorts until maxAXIMemPorts) {
+    io.mem(i).driveDefaults()
+  }
 
-  // instantiate AXI requets and response adapters for the mem interface
-  // read requests
-  val readReqAdp = Module(new AXIMemReqAdp(p.toMRP())).io
-  readReqAdp.genericReqIn <> accel.io.memRdReq
-  readReqAdp.axiReqOut <> io.mem.readAddr
-  // read responses
-  val readRspAdp = Module(new AXIReadRspAdp(p.toMRP())).io
-  readRspAdp.axiReadRspIn <> io.mem.readData
-  readRspAdp.genericRspOut <> accel.io.memRdRsp
-  // write requests
-  val writeReqAdp = Module(new AXIMemReqAdp(p.toMRP())).io
-  writeReqAdp.genericReqIn <> accel.io.memWrReq
-  writeReqAdp.axiReqOut <> io.mem.writeAddr
-  // write data
-  // TODO handle this with own adapter?
-  io.mem.writeData.bits.data := accel.io.memWrDat.bits
-  io.mem.writeData.bits.strb := ~UInt(0, width=p.memDataWidth/8) // TODO forces all bytelanes valid!
-  io.mem.writeData.bits.last := Bool(true) // TODO write bursts won't work properly
-  io.mem.writeData.valid := accel.io.memWrDat.valid
-  accel.io.memWrDat.ready := io.mem.writeData.ready
-  // write responses
-  val writeRspAdp = Module(new AXIWriteRspAdp(p.toMRP())).io
-  writeRspAdp.axiWriteRspIn <> io.mem.writeResp
-  writeRspAdp.genericRspOut <> accel.io.memWrRsp
+  // memory ports
+  for(i <- 0 until p.numMemPorts) {
+    // instantiate AXI requets and response adapters for the mem interface
+    val mrp = p.toMRP()
+    // read requests
+    val readReqAdp = Module(new AXIMemReqAdp(mrp)).io
+    readReqAdp.genericReqIn <> accel.io.mp(i).memRdReq
+    readReqAdp.axiReqOut <> io.mem(i).readAddr
+    // read responses
+    val readRspAdp = Module(new AXIReadRspAdp(mrp)).io
+    readRspAdp.axiReadRspIn <> io.mem(i).readData
+    readRspAdp.genericRspOut <> accel.io.mp(i).memRdRsp
+    // write requests
+    val writeReqAdp = Module(new AXIMemReqAdp(mrp)).io
+    writeReqAdp.genericReqIn <> accel.io.mp(i).memWrReq
+    writeReqAdp.axiReqOut <> io.mem(i).writeAddr
+    // write data
+    // TODO handle this with own adapter?
+    io.mem(i).writeData.bits.data := accel.io.mp(i).memWrDat.bits
+    io.mem(i).writeData.bits.strb := ~UInt(0, width=p.memDataWidth/8) // TODO forces all bytelanes valid!
+    io.mem(i).writeData.bits.last := Bool(true) // TODO write bursts won't work properly!
+    io.mem(i).writeData.valid := accel.io.mp(i).memWrDat.valid
+    accel.io.mp(i).memWrDat.ready := io.mem(i).writeData.ready
+    // write responses
+    val writeRspAdp = Module(new AXIWriteRspAdp(mrp)).io
+    writeRspAdp.axiWriteRspIn <> io.mem(i).writeResp
+    writeRspAdp.genericRspOut <> accel.io.mp(i).memWrRsp
+  }
+
 
   // instantiate regfile
   val regAddrBits = log2Up(p.numRegs)

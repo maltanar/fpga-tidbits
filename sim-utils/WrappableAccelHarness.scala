@@ -25,7 +25,7 @@ class WrappableAccelHarness(
   val io = new Bundle {
     // register file access
     val regFileIF = new RegFileSlaveIF(rfAddrBits, p.csrDataWidth)
-    // memory access
+    // memory access for the testbench
     val memAddr = UInt(INPUT, p.addrWidth)
     val memWriteEn = Bool(INPUT)
     val memWriteData = UInt(INPUT, p.memDataWidth)
@@ -53,23 +53,27 @@ class WrappableAccelHarness(
 
   when (io.memWriteEn) {mem(memWord) := io.memWriteData}
 
-  // accelerator memory access
-  // reads
-  val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
-  val regStateRead = Reg(init = UInt(sWaitRd))
-  val regReadRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+  // accelerator memory access ports
+  // one FSM per port, rather simple, but supports bursts
+  for(i <- 0 until p.numMemPorts) {
+    // reads
+    val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
+    val regStateRead = Reg(init = UInt(sWaitRd))
+    val regReadRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
 
-  accio.memRdReq.ready := Bool(false)
-  accio.memRdRsp.valid := Bool(false)
-  accio.memRdRsp.bits.channelID := regReadRequest.channelID
-  accio.memRdRsp.bits.metaData := UInt(0)
-  accio.memRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+    val accmp = accio.mp(i)
 
-  switch(regStateRead) {
+    accmp.memRdReq.ready := Bool(false)
+    accmp.memRdRsp.valid := Bool(false)
+    accmp.memRdRsp.bits.channelID := regReadRequest.channelID
+    accmp.memRdRsp.bits.metaData := UInt(0)
+    accmp.memRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+
+    switch(regStateRead) {
       is(sWaitRd) {
-        accio.memRdReq.ready := Bool(true)
-        when (accio.memRdReq.valid) {
-          regReadRequest := accio.memRdReq.bits
+        accmp.memRdReq.ready := Bool(true)
+        when (accmp.memRdReq.valid) {
+          regReadRequest := accmp.memRdReq.bits
           regStateRead := sRead
         }
       }
@@ -77,34 +81,34 @@ class WrappableAccelHarness(
       is(sRead) {
         when(regReadRequest.numBytes === UInt(0)) { regStateRead := sWaitRd }
         .otherwise {
-          accio.memRdRsp.valid := Bool(true)
-          when (accio.memRdRsp.ready) {
+          accmp.memRdRsp.valid := Bool(true)
+          when (accmp.memRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
             regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
           }
         }
       }
-  }
+    }
 
-  // writes
-  val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
-  val regStateWrite = Reg(init = UInt(sWaitWr))
-  val regWriteRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
-  // queue on write response port (to avoid combinational loops)
-  val wrRspQ = Module(new Queue(GenericMemoryResponse(p.toMRP()), 16)).io
-  wrRspQ.deq <> accio.memWrRsp
+    // writes
+    val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
+    val regStateWrite = Reg(init = UInt(sWaitWr))
+    val regWriteRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+    // queue on write response port (to avoid combinational loops)
+    val wrRspQ = Module(new Queue(GenericMemoryResponse(p.toMRP()), 16)).io
+    wrRspQ.deq <> accmp.memWrRsp
 
-  accio.memWrReq.ready := Bool(false)
-  accio.memWrDat.ready := Bool(false)
-  wrRspQ.enq.valid := Bool(false)
-  wrRspQ.enq.bits.driveDefaults()
-  wrRspQ.enq.bits.channelID := regWriteRequest.channelID
+    accmp.memWrReq.ready := Bool(false)
+    accmp.memWrDat.ready := Bool(false)
+    wrRspQ.enq.valid := Bool(false)
+    wrRspQ.enq.bits.driveDefaults()
+    wrRspQ.enq.bits.channelID := regWriteRequest.channelID
 
-  switch(regStateWrite) {
+    switch(regStateWrite) {
       is(sWaitWr) {
-        accio.memWrReq.ready := Bool(true)
-        when(accio.memWrReq.valid) {
-          regWriteRequest := accio.memWrReq.bits
+        accmp.memWrReq.ready := Bool(true)
+        when(accmp.memWrReq.valid) {
+          regWriteRequest := accmp.memWrReq.bits
           regStateWrite := sWrite
         }
       }
@@ -112,17 +116,17 @@ class WrappableAccelHarness(
       is(sWrite) {
         when(regWriteRequest.numBytes === UInt(0)) {regStateWrite := sWaitWr}
         .otherwise {
-          when(wrRspQ.enq.ready && accio.memWrDat.valid) {
-            accio.memWrDat.ready := Bool(true)
+          when(wrRspQ.enq.ready && accmp.memWrDat.valid) {
+            accmp.memWrDat.ready := Bool(true)
             wrRspQ.enq.valid := Bool(true)
-            mem(addrToWord(regWriteRequest.addr)) := accio.memWrDat.bits
+            mem(addrToWord(regWriteRequest.addr)) := accmp.memWrDat.bits
             regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
             regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
           }
         }
       }
+    }
   }
-
 }
 
 class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
@@ -196,6 +200,8 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     arrayToMem(buf, baseAddr)
   }
 
+  def valueOf(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
+
   // TODO not sure if this is the correct way to handle endianness --
   // expect problems:
   // every <memory-width> byte group is reversed while being written
@@ -207,7 +213,7 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     var i: Int = 0
     for(b <- buf.grouped(c.p.memDataWidth/8)) {
       val w : BigInt = new BigInt(new java.math.BigInteger(b.reverse))
-      def valueOf(buf: Array[Byte]): String = buf.map("%02X" format _).mkString
+
       //println("Read: " + valueOf(w.toByteArray))
       //println("Read: " +i.toString+ "=" + valueOf(b))
       writeMem(baseAddr+i*memUnitBytes, w)
@@ -219,11 +225,15 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
     val fout = new FileOutputStream(fileName)
     for(i <- 0 until wordCount) {
       var ba = readMem(baseAddr+i*memUnitBytes).toByteArray
+      // the BigInt.toByteArray occasionally returns too many bytes,
+      // not sure why
+      if (ba.size > memUnitBytes) { ba = ba.takeRight(memUnitBytes.toInt) }
       // BigInt.toByteArray returns the min # of bytes needed, pad to
       // cover all bytes read from memory by adding zeroes
       while(ba.size < memUnitBytes) {
         ba = ba ++ Array[Byte](0)
       }
+      ba = ba.reverse
       fout.write(ba)
     }
     fout.close()

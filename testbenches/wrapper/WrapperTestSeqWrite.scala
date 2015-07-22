@@ -9,8 +9,8 @@ import TidbitsSimUtils._
 class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p) {
   // plug unused ports / set defaults
   plugRegOuts()
-  //plugMemWritePort()
-  plugMemReadPort()
+  //plugMemWritePorts()
+  plugMemReadPorts()
 
   val in = new Bundle {
     val start = Bool()
@@ -24,7 +24,7 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   override lazy val regMap = manageRegIO(in, out)
 
   val wrReqGen = Module(new WriteReqGen(p.toMRP(), 0)).io
-  wrReqGen.reqs <> io.memWrReq
+  wrReqGen.reqs <> io.mp(0).memWrReq
 
   // use a reducer to count the write responses
   val redFxn = {(a: UInt, b: UInt) => a+b}
@@ -42,9 +42,9 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
   reducer.byteCount := in.byteCount
   reducer.streamIn <> ds.out
 
-  ds.in.valid := io.memWrRsp.valid
-  ds.in.bits := io.memWrRsp.bits.readData
-  io.memWrRsp.ready := ds.in.ready
+  ds.in.valid := io.mp(0).memWrRsp.valid
+  ds.in.bits := io.mp(0).memWrRsp.bits.readData
+  io.mp(0).memWrRsp.ready := ds.in.ready
 
   // write data from sequence
   val wrDataGen = Module(new SequenceGenerator(32)).io
@@ -55,7 +55,7 @@ class WrapperTestSeqWrite(p: AXIAccelWrapperParams) extends AXIWrappableAccel(p)
 
   val us = Module(new AXIStreamUpsizer(32,64)).io
   us.in <> wrDataGen.seq
-  us.out <> io.memWrDat
+  us.out <> io.mp(0).memWrDat
 
   out.status := reducer.finished
 
