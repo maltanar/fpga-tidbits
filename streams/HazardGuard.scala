@@ -71,7 +71,7 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
   // <hazard guard logic>
   val newData = io.enq.bits.id
   val hits = Vec.tabulate(entries) {i: Int => ram(i).id === newData & ramValid(i)}
-  val hazardDetected = hits.forall({x:Bool => x}) & io.enq.valid
+  val hazardDetected = hits.exists({x:Bool => x}) & io.enq.valid
   io.hazard := hazardDetected
   // </hazard guard logic>
 
