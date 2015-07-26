@@ -18,13 +18,13 @@ extends Module {
   }
 
   val regDecodeErrors = Reg(init = UInt(0, 32))
-  val outQ = Vec.fill(numDests) {Module(new Queue(gen, 2)).io}
+  val outQ = Vec.fill(numDests) {Decoupled(gen).asDirectionless()}
 
   for(i <- 0 until numDests) {
-    io.out(i) <> outQ(i).deq
+    io.out(i) <> Queue(outQ(i),2)
 
-    outQ(i).enq.bits := io.in.bits
-    outQ(i).enq.valid := Bool(false)
+    outQ(i).bits := io.in.bits
+    outQ(i).valid := Bool(false)
   }
 
   io.in.ready := Bool(false)
@@ -32,7 +32,7 @@ extends Module {
 
   val destPipe = route(io.in.bits)
   val invalidChannel = (destPipe >= UInt(numDests))
-  val canProceed = io.in.valid && outQ(destPipe).enq.ready
+  val canProceed = io.in.valid && outQ(destPipe).ready
 
   when (invalidChannel) {
     // do not let the entire pipe stall because head of line has invalid dest
@@ -42,6 +42,6 @@ extends Module {
   }
   .elsewhen (canProceed) {
     io.in.ready := Bool(true)
-    outQ(destPipe).enq.valid := Bool(true)
+    outQ(destPipe).valid := Bool(true)
   }
 }
