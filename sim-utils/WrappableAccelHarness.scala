@@ -94,12 +94,17 @@ class WrappableAccelHarness(
     val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
     val regStateWrite = Reg(init = UInt(sWaitWr))
     val regWriteRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+    // write data queue to avoid deadlocks (state machine expects rspQ and data
+    // available simultaneously)
+    val wrDatQ = Module(new Queue(UInt(width = p.memDataWidth), 16)).io
+    wrDatQ.enq <> accmp.memWrDat
+
     // queue on write response port (to avoid combinational loops)
     val wrRspQ = Module(new Queue(GenericMemoryResponse(p.toMRP()), 16)).io
     wrRspQ.deq <> accmp.memWrRsp
 
     accmp.memWrReq.ready := Bool(false)
-    accmp.memWrDat.ready := Bool(false)
+    wrDatQ.deq.ready := Bool(false)
     wrRspQ.enq.valid := Bool(false)
     wrRspQ.enq.bits.driveDefaults()
     wrRspQ.enq.bits.channelID := regWriteRequest.channelID
@@ -116,10 +121,10 @@ class WrappableAccelHarness(
       is(sWrite) {
         when(regWriteRequest.numBytes === UInt(0)) {regStateWrite := sWaitWr}
         .otherwise {
-          when(wrRspQ.enq.ready && accmp.memWrDat.valid) {
-            accmp.memWrDat.ready := Bool(true)
+          when(wrRspQ.enq.ready && wrDatQ.deq.valid) {
+            wrDatQ.deq.ready := Bool(true)
             wrRspQ.enq.valid := Bool(true)
-            mem(addrToWord(regWriteRequest.addr)) := accmp.memWrDat.bits
+            mem(addrToWord(regWriteRequest.addr)) := wrDatQ.deq.bits
             regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
             regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
           }
