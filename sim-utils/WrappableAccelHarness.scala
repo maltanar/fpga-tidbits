@@ -141,6 +141,13 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
   def nameToRegInd(regName: String): Int = {
     return c.accel.regMap(regName).toInt
   }
+  type HookFxn = () => Unit
+  var hooks = scala.collection.mutable.Map[String, HookFxn]()
+
+  override def step(n: Int) = {
+    for((n,f) <- hooks) {f()}
+    super.step(n)
+  }
 
   def printAllRegs() = {
     val ks = c.accel.regMap.keys
