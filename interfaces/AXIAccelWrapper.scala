@@ -102,8 +102,9 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
     driverStr = driverStr + "\n" + ("#include <assert.h>")
     driverStr = driverStr + "\n" + ("class " + driverName + " {")
     driverStr = driverStr + "\n" + ("public:")
+    driverStr = driverStr + "\n" + (f" static unsigned int expSignature() {return 0x$accelSignature%s;};")
     driverStr = driverStr + "\n" + (" " + driverName + "(volatile unsigned int * baseAddr) {")
-    driverStr = driverStr + "\n" + ("  m_baseAddr = baseAddr; assert(signature() == m_signature);};")
+    driverStr = driverStr + "\n" + ("  m_baseAddr = baseAddr; assert(signature() == expSignature());};")
 
     for((n: String, i: Int) <- regMap) {
       driverStr = driverStr + "\n" + (f" // read+write register: $n%s index: $i%s")
@@ -113,7 +114,6 @@ class AXIWrappableAccel(val p: AXIAccelWrapperParams) extends Module {
 
     driverStr = driverStr + "\n\n" + ("protected:")
     driverStr = driverStr + "\n" + (" volatile unsigned int * m_baseAddr;")
-    driverStr = driverStr + "\n" + (f" const static unsigned int m_signature = 0x$accelSignature%s;")
     driverStr = driverStr + "\n" + ("};")
     driverStr = driverStr + "\n" + ("#endif") + "\n"
     import java.io._
