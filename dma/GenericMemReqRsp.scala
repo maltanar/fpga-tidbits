@@ -86,3 +86,13 @@ class GenericMemoryMasterPort(p: MemReqParams) extends Bundle {
   val memWrDat = Decoupled(UInt(width = p.dataWidth))
   val memWrRsp = Decoupled(new GenericMemoryResponse(p)).flip
 }
+
+class GenericMemorySlavePort(p: MemReqParams) extends Bundle {
+  // req - rsp interface for memory reads
+  val memRdReq = Decoupled(new GenericMemoryRequest(p)).flip
+  val memRdRsp = Decoupled(new GenericMemoryResponse(p))
+  // req - rsp interface for memory writes
+  val memWrReq = Decoupled(new GenericMemoryRequest(p)).flip
+  val memWrDat = Decoupled(UInt(width = p.dataWidth)).flip
+  val memWrRsp = Decoupled(new GenericMemoryResponse(p))
+}
