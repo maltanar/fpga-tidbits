@@ -19,6 +19,8 @@ object StreamMonitor {
 class StreamMonitorOutIF() extends Bundle {
   val totalCycles = UInt(OUTPUT, 32)
   val activeCycles = UInt(OUTPUT, 32)
+  val noValidButReady = UInt(OUTPUT, 32)
+  val noReadyButValid = UInt(OUTPUT, 32)
 }
 
 class StreamMonitor() extends Module {
@@ -33,9 +35,13 @@ class StreamMonitor() extends Module {
 
   val regActiveCycles = Reg(init = UInt(0, 32))
   val regTotalCycles = Reg(init = UInt(0, 32))
+  val regNoValidButReady = Reg(init = UInt(0, 32))
+  val regNoReadyButValid = Reg(init = UInt(0, 32))
 
   io.out.totalCycles := regTotalCycles
   io.out.activeCycles := regActiveCycles
+  io.out.noValidButReady := regNoValidButReady
+  io.out.noReadyButValid := regNoReadyButValid
 
   switch(regState) {
       is(sIdle) {
@@ -43,6 +49,8 @@ class StreamMonitor() extends Module {
           regState := sRun
           regActiveCycles := UInt(0)
           regTotalCycles := UInt(0)
+          regNoValidButReady := UInt(0)
+          regNoReadyButValid := UInt(0)
         }
       }
 
@@ -50,6 +58,12 @@ class StreamMonitor() extends Module {
         when(!io.enable) { regState := sIdle}
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
+          when (io.validIn & !io.readyIn) {
+            regNoReadyButValid := regNoReadyButValid + UInt(1)
+          }
+          when (!io.validIn & io.readyIn) {
+            regNoValidButReady := regNoValidButReady + UInt(1)
+          }
           when (io.validIn & io.readyIn) {
             regActiveCycles := regActiveCycles + UInt(1)
           }
