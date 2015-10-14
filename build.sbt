@@ -1,6 +1,4 @@
-scalaVersion := "2.10.4"
-
-addSbtPlugin("com.github.scct" % "sbt-scct" % "0.2")
+scalaVersion := "2.11.6"
 
 libraryDependencies += "edu.berkeley.cs" %% "chisel" % "latest.release"
 
@@ -17,6 +15,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "testbenches/on-chip-memory",
     base / "testbenches/streams",
     base / "testbenches/sim-utils",
-    base / "testbenches/wrapper"
+    base / "testbenches/wrapper",
+    base / "platform-wrapper"
   )
 }
