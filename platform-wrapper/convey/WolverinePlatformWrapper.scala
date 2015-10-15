@@ -53,20 +53,56 @@ extends PlatformWrapper(p, instFxn) {
   io.dispIdle := accel.idle
   io.dispStall := !accel.idle
 
-  // TODO wire up memory port adapters
-  if (p.numMemPorts == 0) {
-    // plug unused memory port (remember we need at least one)
-    io.mcReqValid := UInt(0)
-    io.mcReqRtnCtl := UInt(0)
-    io.mcReqData := UInt(0)
-    io.mcReqAddr := UInt(0)
-    io.mcReqSize := UInt(0)
-    io.mcReqCmd := UInt(0)
-    io.mcReqSCmd := UInt(0)
-    io.mcResStall := UInt(0)
-    io.mcReqFlush := UInt(0)
-  } else {
-    throw new Exception("Convey wrappers don't yet support memory ports")
+  io.mcReqValid := UInt(0)
+  io.mcReqRtnCtl := UInt(0)
+  io.mcReqData := UInt(0)
+  io.mcReqAddr := UInt(0)
+  io.mcReqSize := UInt(0)
+  io.mcReqCmd := UInt(0)
+  io.mcReqSCmd := UInt(0)
+  io.mcResStall := UInt(0)
+  io.mcReqFlush := UInt(0)
+
+  // wire up memory port adapters
+  // TODO also enable the write channels
+  // TODO add support for write flush
+  if (p.numMemPorts != 0) {
+    // Convey's interface semantics (stall-valid) are a bit more different than
+    // just a decoupled (inverted ready)-valid:
+    // X1) valid and stall asserted together can still mean a transferred element
+    //     (i.e valid may not go down for up to 2 cycles after stall is asserted)
+    // X2) valid on Convey IF must actually go down after stall is asserted
+
+    def mpHelper(extr: GenericMemoryMasterPort => Bits): Bits = {
+      Cat(accel.memPort.map(extr).reverse)
+    }
+    type mp = GenericMemoryMasterPort
+
+    // to compensate for X2, we AND the valid with the inverse of stall before
+    // outputting valid
+    // TODO do not create potential combinational loop -- make queue-based sln
+    io.mcReqValid := mpHelper({mp => mp.memRdReq.valid & mp.memRdReq.ready})
+
+    io.mcReqRtnCtl := mpHelper({mp => mp.memRdReq.bits.channelID})
+    io.mcReqAddr := mpHelper({mp => mp.memRdReq.bits.addr})
+
+    // TODO only full words for now -- also support sub-word writes/reads
+    if(p.memDataBits != 64) {
+      throw new Exception("Convey wrapper only supports 64-bit data for now")}
+
+    io.mcReqSize := Fill(UInt(log2Up(p.memDataBits/8)), p.numMemPorts)
+
+    // TODO more rigorous check for burst sizes?
+    // TODO write will change command here
+    def cmdMux(x: UInt): UInt = {Mux(x === UInt(64), UInt(7), UInt(1))}
+    io.mcReqCmd := mpHelper({mp => cmdMux(mp.memRdReq.bits.numBytes)})
+    io.mcReqSCmd := UInt(0) // TODO add support for atomics?
+
+    // TODO response queues
+
+    for(i <- 0 until p.numMemPorts) {
+      // TODO connect mem port inputs on Chisel side
+    }
   }
 
   // print some warnings to remind the user to change the cae_pers.v values

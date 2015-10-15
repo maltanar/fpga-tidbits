@@ -11,6 +11,10 @@ import Chisel._
 import TidbitsDMA._
 import TidbitsRegFile._
 
+// TODO need cleaner separation of accel and platform parameters, also a way
+// of dynamically instantiating and combining these to e.g command-line
+// parametrize creation: makeVerilogWrapper("wx690t", "my-accelerator")
+
 // parameters for the platform
 trait PlatformWrapperParams {
   def numMemPorts: Int
