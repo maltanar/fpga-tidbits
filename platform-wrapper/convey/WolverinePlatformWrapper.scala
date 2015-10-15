@@ -64,7 +64,8 @@ extends PlatformWrapper(p, instFxn) {
   io.mcReqFlush := UInt(0)
 
   // wire up memory port adapters
-  // TODO also enable the write channels
+  // TODO also enable the write channels -- use simplex generic channel
+  // TODO use adapter modules instead of manual adapting
   // TODO add support for write flush
   if (p.numMemPorts != 0) {
     // Convey's interface semantics (stall-valid) are a bit more different than
@@ -77,11 +78,6 @@ extends PlatformWrapper(p, instFxn) {
       Cat(accel.memPort.map(extr).reverse)
     }
     type mp = GenericMemoryMasterPort
-
-    // to compensate for X2, we AND the valid with the inverse of stall before
-    // outputting valid
-    // TODO do not create potential combinational loop -- make queue-based sln
-    io.mcReqValid := mpHelper({mp => mp.memRdReq.valid & mp.memRdReq.ready})
 
     io.mcReqRtnCtl := mpHelper({mp => mp.memRdReq.bits.channelID})
     io.mcReqAddr := mpHelper({mp => mp.memRdReq.bits.addr})
@@ -98,11 +94,49 @@ extends PlatformWrapper(p, instFxn) {
     io.mcReqCmd := mpHelper({mp => cmdMux(mp.memRdReq.bits.numBytes)})
     io.mcReqSCmd := UInt(0) // TODO add support for atomics?
 
-    // TODO response queues
-
-    for(i <- 0 until p.numMemPorts) {
-      // TODO connect mem port inputs on Chisel side
+    // memory response handling:
+    // compensate for interface semantics mismatch for memory responses (X1) with
+    // little queues
+    // - personality receives responses through queue
+    // - Convey mem.port's stall is driven by "almost full" from queue
+    // TODO generalize this idea into an interface adapter + use for reqs too
+    val respQueElems = 8
+    val respQueues = Vec.fill(p.numMemPorts) {
+      Module(
+          new Queue(new ConveyMemResponse(p.memIDBits, p.memDataBits), respQueElems)
+        ).io
     }
+
+    // an "almost full" derived from the queue count is used
+    // to drive the Convey mem resp port's stall input
+    // this is quite conservative (stall when FIFO is half full) but
+    // it seems to work (there may be a deeper problem here)
+    val respStall = Cat(respQueues.map(x => (x.count >= UInt(respQueElems/2))))
+    // Cat concatenation order needs to be reversed
+    io.mcResStall := Reverse(respStall)
+
+    // drive personality inputs
+    for(i <- 0 until p.numMemPorts) {
+      respQueues(i).enq.valid := io.mcResValid(i)
+      respQueues(i).enq.bits.rtnCtl := io.mcResRtnCtl(32*(i+1)-1, 32*i)
+      respQueues(i).enq.bits.readData := io.mcResData(64*(i+1)-1, 64*i)
+      respQueues(i).enq.bits.cmd := io.mcResCmd(3*(i+1)-1, 3*i)
+      respQueues(i).enq.bits.scmd := io.mcResSCmd(4*(i+1)-1, 4*i)
+      // note that we don't use the enq.ready signal from the queue --
+      // we generate our own variant of ready when half-full
+
+      // personality receives responses from the queue, through an adapter
+      val rspAdp = Module(new ConveyMemRspAdp(p.toMemReqParams())).io
+      accel.memPort(i).memRdRsp <> rspAdp.genericRspOut
+      rspAdp.conveyRspIn <> respQueues(i).deq
+
+      accel.memPort(i).memRdReq.ready := ~io.mcReqStall(i)
+    }
+
+    // to compensate for X2, we AND the valid with the inverse of stall before
+    // outputting valid
+    // TODO do not create potential combinational loop -- make queue-based sln
+    io.mcReqValid := mpHelper({mp => mp.memRdReq.valid & mp.memRdReq.ready})
   }
 
   // print some warnings to remind the user to change the cae_pers.v values
@@ -268,41 +302,57 @@ class ConveyPersonalityVerilogIF(numMemPorts: Int, rtnctl: Int) extends Bundle {
 }
 
 
-/*
-memory req-rsp adapters for Convey -- to be re-enabled and tested
-
-// TODO update adapter to also work for writes
-class ConveyMemReqAdp(p: MemReqParams) extends Module {
+class ConveyMemReqAdp(p: MemReqParams, numWriteChans: Int, routeFxn: UInt => UInt) extends Module {
   val io = new Bundle {
     val genericReqIn = Decoupled(new GenericMemoryRequest(p)).flip
-    val conveyReqOut = Decoupled(new MemRequest(32, 48, 64))
+    val conveyReqOut = Decoupled(new ConveyMemRequest(p.idWidth, p.addrWidth, p.dataWidth))
+    val writeData = Vec.fill(numWriteChans) {Decoupled(UInt(width = p.dataWidth)).flip}
   }
-
-  io.conveyReqOut.valid := io.genericReqIn.valid
-  io.genericReqIn.ready := io.conveyReqOut.ready
-
+  if(p.dataWidth != 64) {
+    throw new Exception("ConveyMemReqAdp requires p.dataWidth=64")
+  }
+  // default outputs
+  io.genericReqIn.ready := Bool(false)
+  io.conveyReqOut.valid := Bool(false)
   io.conveyReqOut.bits.rtnCtl := io.genericReqIn.bits.channelID
   io.conveyReqOut.bits.writeData := UInt(0)
   io.conveyReqOut.bits.addr := io.genericReqIn.bits.addr
   io.conveyReqOut.bits.size := UInt( log2Up(p.dataWidth/8) )
+  // TODO scmd needs to be set for write bursts
   io.conveyReqOut.bits.scmd := UInt(0)
+  io.conveyReqOut.bits.cmd := UInt(0)
 
-  if(p.dataWidth != 64) {
-    println("ConveyMemReqAdp requires p.dataWidth=64")
-  } else {
-    if (p.beatsPerBurst == 8) {
-      io.conveyReqOut.bits.cmd := UInt(7)
-    } else if (p.beatsPerBurst == 1) {
-      io.conveyReqOut.bits.cmd := UInt(1)
-    } else {
-      println("Unsupported number of burst beats!")
-    }
+  // plug write data ready signals
+  for(i <- 0 until numWriteChans) {
+    io.writeData(i).ready := Bool(false)
+  }
+  // write must have both request and data ready
+  val src = routeFxn(io.genericReqIn.bits.channelID)
+  val validWrite = io.genericReqIn.valid & io.writeData(src).valid
+
+  when (validWrite && io.genericReqIn.bits.isWrite) {
+    // write request
+    // both request and associated channel data are valid
+    io.conveyReqOut.valid := Bool(true)
+    // both request and associated channel data must be ready
+    io.genericReqIn.ready := io.conveyReqOut.ready
+    io.writeData(src).ready := io.conveyReqOut.ready
+  } .elsewhen (io.genericReqIn.valid && !io.genericReqIn.bits.isWrite) {
+    // read request
+    io.conveyReqOut.valid := Bool(true)
+    io.genericReqIn.ready := io.conveyReqOut.ready
+  }
+  // command according to burst length and r/w flag
+  when (io.genericReqIn.bits.numBytes === UInt(64)) {
+    io.conveyReqOut.bits.cmd := Mux(io.genericReqIn.bits.isWrite, UInt(6), UInt(7))
+  } .elsewhen (io.genericReqIn.bits.numBytes === UInt(8)) {
+    io.conveyReqOut.bits.cmd := Mux(io.genericReqIn.bits.isWrite, UInt(2), UInt(1))
   }
 }
 
 class ConveyMemRspAdp(p: MemReqParams) extends Module {
   val io = new Bundle {
-    val conveyRspIn = Decoupled(new MemResponse(32, 64)).flip
+    val conveyRspIn = Decoupled(new ConveyMemResponse(32, 64)).flip
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
   }
 
@@ -311,8 +361,6 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
 
   io.genericRspOut.bits.channelID := io.conveyRspIn.bits.rtnCtl
   io.genericRspOut.bits.readData := io.conveyRspIn.bits.readData
-  // TODO carry cmd and scmd, if needed
+  // TODO carry cmd and scmd here
   io.genericRspOut.bits.metaData := UInt(0)
 }
-
-*/

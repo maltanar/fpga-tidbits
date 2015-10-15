@@ -96,3 +96,5 @@ class GenericMemorySlavePort(p: MemReqParams) extends Bundle {
   val memWrDat = Decoupled(UInt(width = p.dataWidth)).flip
   val memWrRsp = Decoupled(new GenericMemoryResponse(p))
 }
+
+// TODO add definitions and adapter for simplex memory ports
