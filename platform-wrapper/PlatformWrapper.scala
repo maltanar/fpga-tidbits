@@ -15,7 +15,8 @@ import TidbitsRegFile._
 trait PlatformWrapperParams {
   def numMemPorts: Int
   def numRegs: Int
-  def name: String
+  def platformName: String
+  def accelName: String
   def memAddrBits: Int
   def memDataBits: Int
   def memIDBits: Int
@@ -35,6 +36,8 @@ abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
 val instFxn: PlatformWrapperParams => GenericAccelerator)
 extends Module {
+
+  setName(p.platformName+"-"+p.accelName)
 
   // instantiate the accelerators
   val accel = Module(instFxn(p)).io

@@ -10,7 +10,7 @@ import TidbitsRegFile._
 // TODO implement muxing for memory ports?
 
 trait WX690TParams extends PlatformWrapperParams {
-  val name = "wx690t"
+  val platformName = "wx690t"
   val memAddrBits = 48
   val memDataBits = 64
   val memIDBits = 32

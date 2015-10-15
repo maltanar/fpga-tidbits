@@ -23,11 +23,10 @@ class TestRegOps(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 trait TestRegOpsParams extends PlatformWrapperParams {
   val numMemPorts = 0
   val numRegs = 4
+  val accelName = "TestRegOps"
 }
 
-object TestRegOpsWolverine extends PlatformWrapperParams with TestRegOpsParams with WX690TParams {
-
-}
+object TestRegOpsWolverine extends WX690TParams with TestRegOpsParams
 
 object TestRegOpsMain {
   def apply() = {
