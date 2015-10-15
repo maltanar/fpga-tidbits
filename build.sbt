@@ -16,6 +16,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "testbenches/streams",
     base / "testbenches/sim-utils",
     base / "testbenches/wrapper",
-    base / "platform-wrapper"
+    base / "platform-wrapper",
+    base / "platform-wrapper/convey"
   )
 }
