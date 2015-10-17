@@ -16,6 +16,7 @@ trait WX690TParams extends PlatformWrapperParams {
   val memIDBits = 32
   val memMetaBits = 1
   val csrDataBits = 64
+  val useAEGforRegFile = 0
 }
 
 class WolverinePlatformWrapper(p: WX690TParams,
@@ -33,20 +34,39 @@ extends PlatformWrapper(p, instFxn) {
   // - the accelerator as "accel"
   // - the register file as "regFile"
 
-  // wiring up register file access
-  io.dispAegCnt := UInt(p.numRegs)
   io.dispException := UInt(0) // TODO Convey: support exceptions
-  io.dispRtnValid := regFile.extIF.readData.valid
-  io.dispRtnData := regFile.extIF.readData.bits
-  regFile.extIF.cmd.bits.regID := io.dispRegID
-  regFile.extIF.cmd.bits.read := io.dispRegRead
-  regFile.extIF.cmd.bits.write := io.dispRegWrite
-  regFile.extIF.cmd.bits.writeData := io.dispRegWrData
-  regFile.extIF.cmd.valid := io.dispRegRead || io.dispRegWrite
 
-  // TODO Convey: add support for Convey's CSR interface, disabled for now
-  io.csrReadAck := Bool(false)
-  io.csrReadData := UInt(0)
+  if(p.useAEGforRegFile == 1) {
+    // use the Convey AEG interface for controlling the register file
+    io.dispAegCnt := UInt(p.numRegs)
+    io.dispRtnValid := regFile.extIF.readData.valid
+    io.dispRtnData := regFile.extIF.readData.bits
+    regFile.extIF.cmd.bits.regID := io.dispRegID
+    regFile.extIF.cmd.bits.read := io.dispRegRead
+    regFile.extIF.cmd.bits.write := io.dispRegWrite
+    regFile.extIF.cmd.bits.writeData := io.dispRegWrData
+    regFile.extIF.cmd.valid := io.dispRegRead || io.dispRegWrite
+    // plug the CSR IF
+    io.csrReadAck := Bool(false)
+    io.csrReadData := UInt(0)
+    println("====> RegFile is using the Convey AEG interface")
+  } else {
+    // use the Convey CSR interface for controlling the register file
+    // use a single, constant register for the AEGs
+    io.dispAegCnt := UInt(1)
+    io.dispRtnValid := Reg(next = io.dispRegRead)
+    io.dispRtnData := UInt("hdeadbeef")
+
+    // use Convey CSR interface to talk to our regfile
+    regFile.extIF.cmd.bits.regID := io.csrAddr
+    regFile.extIF.cmd.bits.read := io.csrRdValid
+    regFile.extIF.cmd.bits.write := io.csrWrValid
+    regFile.extIF.cmd.bits.writeData := io.csrWrData
+    regFile.extIF.cmd.valid := io.csrRdValid || io.csrWrValid
+    io.csrReadAck := regFile.extIF.readData.valid
+    io.csrReadData := regFile.extIF.readData.bits
+    println("====> RegFile is using the Convey CSR interface, remember to enable the CSR agent")
+  }
 
   // instruction dispatch
   accel.start := io.dispInstValid
