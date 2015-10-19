@@ -21,3 +21,6 @@ project/plugins/project/
 testOutput/
 verilogOutput/
 /*.hpp
+
+# Qt
+*.pro.user
