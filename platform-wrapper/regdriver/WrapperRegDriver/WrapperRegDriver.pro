@@ -3,9 +3,9 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.cpp \
-    wrapperregdriver.cpp
+SOURCES += main.cpp
 
 HEADERS += \
-    wrapperregdriver.h
+    wrapperregdriver.h \
+    wolverineregdriver.h
 
