@@ -1,5 +1,5 @@
 package TidbitsTestbenches
-
+/*
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsDMA._
@@ -59,3 +59,4 @@ object TestSumMain {
     chiselMain(Array("--v"), () => Module(new WolverinePlatformWrapper(TestSumParamsWolverine, instFxn)))
   }
 }
+*/

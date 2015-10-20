@@ -22,6 +22,10 @@ trait WX690TParams extends PlatformWrapperParams {
 class WolverinePlatformWrapper(p: WX690TParams,
 instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(p, instFxn) {
+  val driverBaseHeader = "wolverineregdriver.h"
+  val driverBaseClass = "WolverineRegDriver"
+  val driverRegType = "AccelReg"
+
   // the Convey wrapper itself always expects at least one memory port
   // if no mem ports are desired, we still create one and drive outputs to 0
   val numCalculatedMemPorts = if(p.numMemPorts == 0) 1 else p.numMemPorts
@@ -38,7 +42,7 @@ extends PlatformWrapper(p, instFxn) {
 
   if(p.useAEGforRegFile == 1) {
     // use the Convey AEG interface for controlling the register file
-    io.dispAegCnt := UInt(p.numRegs)
+    io.dispAegCnt := UInt(numRegs)
     io.dispRtnValid := regFile.extIF.readData.valid
     io.dispRtnData := regFile.extIF.readData.bits
     regFile.extIF.cmd.bits.regID := io.dispRegID
@@ -68,10 +72,9 @@ extends PlatformWrapper(p, instFxn) {
     println("====> RegFile is using the Convey CSR interface, remember to enable the CSR agent")
   }
 
-  // instruction dispatch
-  accel.start := io.dispInstValid
-  io.dispIdle := accel.idle
-  io.dispStall := !accel.idle
+  // we don't use Convey's instruction dispatch interface
+  io.dispIdle := Bool(false)
+  io.dispStall := Bool(true)
 
   io.mcReqValid := UInt(0)
   io.mcReqRtnCtl := UInt(0)
