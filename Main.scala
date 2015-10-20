@@ -17,7 +17,7 @@ object MainObj {
   def makeVerilogBuildArgs(cmpName: String): Array[String] = {
     return Array( "--targetDir", verilogOutputDir+cmpName, "--v")
   }
-  
+
   def main(args: Array[String]): Unit = {
     //runTest_OCMAndController()
     //runTest_HazardGuard()
@@ -35,7 +35,7 @@ object MainObj {
     //runVerilog_WrapperTestOCMController()
     TestRegOpsMain()
   }
-  
+
 
   def runVerilog_WrapperTestOCMController() {
     val p = new AXIAccelWrapperParams(32,32,64,6,16,1)
