@@ -72,9 +72,13 @@ extends PlatformWrapper(p, instFxn) {
     println("====> RegFile is using the Convey CSR interface, remember to enable the CSR agent")
   }
 
-  // we don't use Convey's instruction dispatch interface
-  io.dispIdle := Bool(false)
-  io.dispStall := Bool(true)
+  // for now, our Convey wrapper accepts a single instructions, then never
+  // returns (just keeps idle low and stall high)
+  // TODO add a platform-level register to control this
+  val regBusy = Reg(init = Bool(false))
+  when (!regBusy) {regBusy := io.dispInstValid}
+  io.dispIdle := !regBusy
+  io.dispStall := regBusy
 
   io.mcReqValid := UInt(0)
   io.mcReqRtnCtl := UInt(0)

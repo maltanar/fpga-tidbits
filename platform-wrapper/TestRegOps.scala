@@ -8,7 +8,7 @@ class TestRegOps(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val op = Vec.fill(2) {UInt(INPUT, width = 64)}
     val sum = UInt(OUTPUT, width = 64)
   }
-
+  // TODO generate signature with digest function
   io.signature := UInt(20151020)
   io.sum := io.op(0) + io.op(1)
 }
