@@ -228,6 +228,29 @@ class ConveyMemMasterIF(rtnCtlBits: Int) extends Bundle {
     new ConveyMemMasterIF(rtnCtlBits).asInstanceOf[this.type] }
 }
 
+class ConveyGenericMemAdapter(p: MemReqParams) extends Bundle {
+  val io = new Bundle {
+    val genericMem = new GenericMemoryMasterPort(p)
+    val conveyMem = new ConveyMemMasterIF(32)
+  }
+
+  val muxer = Module(new SimplexAdapter(p)).io
+  io.genericMem <> muxer.duplex
+
+  val reqadp = Module(new ConveyMemReqAdp(p, 1, {x: UInt => x})).io
+  muxer.simplex.req <> reqadp.genericReqIn
+  muxer.simplex.wrdat <> reqadp.writeData(0)
+  reqadp.conveyReqOut <> io.conveyMem.req
+
+  val rspadp = Module(new ConveyMemRspAdp(p)).io
+  io.conveyMem.rsp <> rspadp.conveyRspIn
+  rspadp.genericRspOut <> muxer.simplex.rsp
+
+  // TODO enable flush requests from generic interface somehow?
+  io.conveyMem.flushReq := Bool(false)
+}
+
+
 // interface for a Convey personality (for use in Chisel)
 class ConveyPersonalityIF(numMemPorts: Int, rtnCtlBits: Int) extends Bundle {
   val disp = new DispatchSlaveIF()

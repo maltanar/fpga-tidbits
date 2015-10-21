@@ -97,4 +97,29 @@ class GenericMemorySlavePort(p: MemReqParams) extends Bundle {
   val memWrRsp = Decoupled(new GenericMemoryResponse(p))
 }
 
-// TODO add definitions and adapter for simplex memory ports
+// variant of the generic memory port where read/write requests
+// are multiplexed onto the same channel
+class SimplexMemoryMasterPort(p: MemReqParams) extends Bundle {
+  val req = Decoupled(new GenericMemoryRequest(p))
+  val wrdat = Decoupled(UInt(width = p.dataWidth))
+  val rsp = Decoupled(new GenericMemoryResponse(p)).flip
+}
+
+class SimplexMemorySlavePort(p: MemReqParams) extends SimplexMemoryMasterPort(p) {
+  flip
+}
+
+// adapter for duplex <> simplex
+class SimplexAdapter(p: MemReqParams) extends Module {
+  val io = new Bundle {
+    val duplex = new GenericMemorySlavePort(p)
+    val simplex = new SimplexMemoryMasterPort(p)
+  }
+  io.simplex.req <> io.duplex.memRdReq
+  io.simplex.rsp <> io.duplex.memRdRsp
+  // TODO add support for writes -- read-only for now
+  io.simplex.wrdat.valid := Bool(false)
+  io.duplex.memWrReq.ready := Bool(false)
+  io.duplex.memWrDat.ready := Bool(false)
+  io.duplex.memWrRsp.valid := Bool(false)
+}
