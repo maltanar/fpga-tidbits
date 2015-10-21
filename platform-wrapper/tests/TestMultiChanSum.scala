@@ -65,5 +65,6 @@ object TestMultiChanSumMain {
     def instFxnWrapper() = {new WolverinePlatformWrapper(TestMultiChanSumParamsWolverine, instFxnAccel)}
     val instFxnTop = {() => Module(instFxnWrapper())}
     chiselMain(Array("--v"), instFxnTop)
+    instFxnWrapper().generateRegDriver(".")
   }
 }

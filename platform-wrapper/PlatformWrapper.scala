@@ -40,8 +40,8 @@ abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
 val instFxn: PlatformWrapperParams => GenericAccelerator)
 extends Module {
-
-  setName(p.accelName+p.platformName)
+  val fullName: String = p.accelName+p.platformName
+  setName(fullName)
 
   type RegFileMap = LinkedHashMap[String, Int]
 
@@ -87,6 +87,7 @@ extends Module {
 
   def driverBaseHeader: String
   def driverBaseClass: String
+  def driverConstructor: String
   def driverRegType: String
 
   def makeRegReadFxn(regName: String): String = {
@@ -105,12 +106,13 @@ extends Module {
 
   def generateRegDriver(targetDir: String) = {
     var driverStr: String = ""
-    val driverName: String = p.accelName+p.platformName
+    val driverName: String = fullName
     driverStr += ("#ifndef " + driverName + "_H") + "\n"
     driverStr += ("#define " + driverName + "_H") + "\n"
     driverStr += "#include \""+driverBaseHeader + "\"\n"
     driverStr += "class " + driverName + ": public " + driverBaseClass + " {\n"
     driverStr += "public:" + "\n"
+    driverStr += driverConstructor + "\n"
     for((name, bits) <- ownIO) {
       if(bits.dir == INPUT) {
         driverStr += makeRegWriteFxn(name) + "\n"

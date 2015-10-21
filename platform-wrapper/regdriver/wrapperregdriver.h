@@ -7,9 +7,11 @@ template <class T>
 class WrapperRegDriver
 {
 public:
-  // (optional) functions to ensure coherency across host-accelerator
+  // (optional) functions for host-accelerator buffer management
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {}
   virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {}
+  virtual void * allocAccelBuffer(unsigned int numBytes) {return NULL;}
+  virtual void deallocAccelBuffer(void * buffer) {}
 
 protected:
   // (mandatory) register access methods for the platform wrapper

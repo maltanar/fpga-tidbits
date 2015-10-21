@@ -26,6 +26,7 @@ extends PlatformWrapper(p, instFxn) {
   val driverBaseHeader = "wolverineregdriver.h"
   val driverBaseClass = "WolverineRegDriver"
   val driverRegType = "AccelReg"
+  val driverConstructor = fullName + "() : WolverineRegDriver(\""+fullName+"\") {}"
 
   // the Convey wrapper itself always expects at least one memory port
   // if no mem ports are desired, we still create one and drive outputs to 0
