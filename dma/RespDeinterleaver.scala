@@ -18,7 +18,7 @@ class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
 class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int) extends Module {
   lazy val routeFxn = {x: UInt => x: UInt}
   val io = new RespDeinterleaverIF(numPipes,p)
-  val deint = Module(new RespDeinterleaver(numPipes, p) {
+  lazy val deint = Module(new RespDeinterleaver(numPipes, p) {
     override lazy val idToPipe = routeFxn
   }).io
   deint.rspIn <> io.rspIn
@@ -51,7 +51,7 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
   io.rspIn.ready := Bool(false)
   io.decodeErrors := regDecodeErrors
 
-  val destPipe = idToPipe(io.rspIn.bits.channelID)
+  lazy val destPipe = idToPipe(io.rspIn.bits.channelID)
   val invalidChannel = (destPipe >= UInt(numPipes))
   val canProceed = io.rspIn.valid && io.rspOut(destPipe).ready
 

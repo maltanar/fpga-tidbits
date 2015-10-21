@@ -231,6 +231,9 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
 
   io.genericRspOut.bits.channelID := io.conveyRspIn.bits.rtnCtl
   io.genericRspOut.bits.readData := io.conveyRspIn.bits.readData
+  // TODO handle Convey atomics correctly?
+  io.genericRspOut.bits.isWrite := ~io.conveyRspIn.bits.cmd(0)
+
   // TODO carry cmd and scmd here
   io.genericRspOut.bits.metaData := UInt(0)
 }

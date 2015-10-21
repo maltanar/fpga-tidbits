@@ -55,6 +55,8 @@ class GenericMemoryResponse(p: MemReqParams) extends Bundle {
   // returned read data (always single beat, bursts broken down into
   // multiple beats while returning)
   val readData = UInt(width = p.dataWidth)
+  // is this response from a write?
+  val isWrite = Bool()
   // metadata information (can be status/error bits, etc.)
   val metaData = UInt(width = p.metaDataWidth)
 
@@ -66,6 +68,7 @@ class GenericMemoryResponse(p: MemReqParams) extends Bundle {
     channelID := UInt(0)
     readData := UInt(0)
     metaData := UInt(0)
+    isWrite := Bool(false)
   }
 }
 
@@ -109,17 +112,34 @@ class SimplexMemorySlavePort(p: MemReqParams) extends SimplexMemoryMasterPort(p)
   flip
 }
 
+// derive a read-write deinterleaver for handling the responses
+class RdWrDeinterleaver(p: MemReqParams) extends RespDeinterleaver(2, p) {
+  override lazy val destPipe = Mux(io.rspIn.bits.isWrite, UInt(1), UInt(0))
+}
+
+class QueuedRdWrDeinterleaver(p: MemReqParams) extends QueuedDeinterleaver(2, p, 4) {
+  override lazy val deint = Module(new RdWrDeinterleaver(p)).io
+}
+
 // adapter for duplex <> simplex
 class SimplexAdapter(p: MemReqParams) extends Module {
   val io = new Bundle {
     val duplex = new GenericMemorySlavePort(p)
     val simplex = new SimplexMemoryMasterPort(p)
   }
-  io.simplex.req <> io.duplex.memRdReq
-  io.simplex.rsp <> io.duplex.memRdRsp
-  // TODO add support for writes -- read-only for now
-  io.simplex.wrdat.valid := Bool(false)
-  io.duplex.memWrReq.ready := Bool(false)
-  io.duplex.memWrDat.ready := Bool(false)
-  io.duplex.memWrRsp.valid := Bool(false)
+
+  // simply interleave the read-write reqs onto common req channel
+  val mux = Module(new ReqInterleaver(2, p)).io
+  io.duplex.memRdReq <> mux.reqIn(0)
+  io.duplex.memWrReq <> mux.reqIn(1)
+  mux.reqOut <> io.simplex.req
+
+
+  val demux = Module(new QueuedRdWrDeinterleaver(p)).io
+  io.simplex.rsp <> demux.rspIn
+  demux.rspOut(0) <> io.duplex.memRdRsp
+  demux.rspOut(1) <> io.duplex.memWrRsp
+
+  // connect write data channel directly
+  io.duplex.memWrDat <> io.simplex.wrdat
 }
