@@ -119,6 +119,7 @@ extends PlatformWrapper(p, instFxn) {
     io.mcReqSize := mpHelper({mp => mp.req.bits.size})
     io.mcReqCmd := mpHelper({mp => mp.req.bits.cmd})
     io.mcReqSCmd := mpHelper({mp => mp.req.bits.scmd})
+    io.mcReqData := mpHelper({mp => mp.req.bits.writeData})
 
     // memory response handling:
     // compensate for interface semantics mismatch for memory responses (X1) with
