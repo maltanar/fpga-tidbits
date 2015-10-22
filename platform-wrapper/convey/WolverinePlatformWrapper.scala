@@ -17,16 +17,16 @@ trait WX690TParams extends PlatformWrapperParams {
   val memIDBits = 32
   val memMetaBits = 1
   val csrDataBits = 64
-  val useAEGforRegFile = 0
+  val useAEGforRegFile = false
 }
 
 class WolverinePlatformWrapper(p: WX690TParams,
 instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(p, instFxn) {
-  val driverBaseHeader = "wolverineregdriver.h"
-  val driverBaseClass = "WolverineRegDriver"
   val driverRegType = "AccelReg"
-  val driverConstructor = fullName + "() : WolverineRegDriver(\""+fullName+"\") {}"
+  val driverBaseHeader = if(p.useAEGforRegFile) "wolverineregdriverdebug.h" else "wolverineregdriver.h"
+  val driverBaseClass = if(p.useAEGforRegFile) "WolverineRegDriverDebug.h" else "WolverineRegDriver"
+  val driverConstructor = fullName + "() : "+driverBaseClass+"(\""+fullName+"\") {}"
 
   // the Convey wrapper itself always expects at least one memory port
   // if no mem ports are desired, we still create one and drive outputs to 0
@@ -50,7 +50,7 @@ extends PlatformWrapper(p, instFxn) {
   io.dispIdle := !regBusy
   io.dispStall := regBusy
 
-  if(p.useAEGforRegFile == 1) {
+  if(p.useAEGforRegFile) {
     // use the Convey AEG interface for controlling the register file
     // useful mostly for debugging in simulation, since the Convey simulation
     // infrastructure does not seem to support CSR r/w

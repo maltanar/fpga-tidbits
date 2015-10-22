@@ -53,9 +53,7 @@ trait TestSeqWriteParams extends PlatformWrapperParams {
   val accelName = "TestSeqWrite"
 }
 
-object TestSeqWriteWolverine extends WX690TParams with TestSeqWriteParams {
-  override val useAEGforRegFile = 0
-}
+object TestSeqWriteWolverine extends WX690TParams with TestSeqWriteParams
 
 object TestSeqWriteMain {
   def apply() = {
