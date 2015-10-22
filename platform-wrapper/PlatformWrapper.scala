@@ -73,6 +73,8 @@ extends Module {
       if(bits.getWidth() == 1) {
         bits := regFile.regOut(allocReg)(0)
       } else { bits := regFile.regOut(allocReg) }
+      // disable internal write for this register
+      regFile.regIn(allocReg).valid := Bool(false)
 
     } else if(bits.dir == OUTPUT) {
       // TODO don't always write (change detect?)
