@@ -25,7 +25,7 @@ instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(p, instFxn) {
   val driverRegType = "AccelReg"
   val driverBaseHeader = if(p.useAEGforRegFile) "wolverineregdriverdebug.h" else "wolverineregdriver.h"
-  val driverBaseClass = if(p.useAEGforRegFile) "WolverineRegDriverDebug.h" else "WolverineRegDriver"
+  val driverBaseClass = if(p.useAEGforRegFile) "WolverineRegDriverDebug" else "WolverineRegDriver"
   val driverConstructor = fullName + "() : "+driverBaseClass+"(\""+fullName+"\") {}"
 
   // the Convey wrapper itself always expects at least one memory port
