@@ -134,6 +134,14 @@ class SimplexAdapter(p: MemReqParams) extends Module {
   io.duplex.memWrReq <> mux.reqIn(1)
   mux.reqOut <> io.simplex.req
 
+  // deprioritize writes whose data is not yet ready -- otherwise,
+  // writes whose requests are issued before the write data is available
+  // will block the head of request queue, potentially causing deadlock
+  // how? make sure write data has arrived before sending out write req
+  // TODO is there a better way to handle this?
+  // TODO how does this affect write bursts?
+  mux.reqIn(1).valid := io.duplex.memWrReq.valid & io.duplex.memWrDat.valid
+  io.duplex.memWrReq.ready := mux.reqIn(1).ready & io.duplex.memWrDat.valid
 
   val demux = Module(new QueuedRdWrDeinterleaver(p)).io
   io.simplex.rsp <> demux.rspIn
