@@ -20,9 +20,9 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val finBytes = UInt(OUTPUT, width = p.csrDataBits)
   }
   // TODO generate signature with digest function
-  io.signature := UInt(20151021)
+  io.signature := UInt(20151024)
 
-  val rrg = Module(new ReadReqGen(p.toMemReqParams(), 0, 8)).io
+  val rrg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
   val wrg = Module(new WriteReqGen(p.toMemReqParams(), 0)).io
 
   rrg.ctrl.start := io.start
@@ -56,7 +56,9 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.finBytes := regCompletes
 }
 
-object TestCopyParamsWolverine extends WX690TParams with TestCopyParams
+object TestCopyParamsWolverine extends WX690TParams with TestCopyParams {
+  override val useAEGforRegFile = false
+}
 
 object TestCopyMain {
   def apply() = {
