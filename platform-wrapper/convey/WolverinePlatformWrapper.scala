@@ -8,8 +8,6 @@ import ConveyInterfaces._
 // Wrapper for the Convey Wolverine hardware platform
 // (made for WX690T, may work for others)
 
-// TODO implement muxing for memory ports?
-
 trait WX690TParams extends PlatformWrapperParams {
   val platformName = "wx690t"
   val memAddrBits = 48
