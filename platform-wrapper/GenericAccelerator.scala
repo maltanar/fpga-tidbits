@@ -21,6 +21,26 @@ class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends B
 abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   def io: GenericAcceleratorIF
   def numMemPorts: Int
+
+  def hexcrc32(s: String): String = {
+    import java.util.zip.CRC32
+    val crc=new CRC32
+    crc.update(s.getBytes)
+    crc.getValue.toHexString
+  }
+
+  def makeDefaultSignature(): UInt = {
+    import java.util.Date
+    import java.text.SimpleDateFormat
+    val dateFormat = new SimpleDateFormat("yyyyMMdd");
+    val date = new Date();
+    val dateString = dateFormat.format(date);
+    val fullSignature = this.getClass.getSimpleName + "-" + dateString
+    val hexSignature = hexcrc32(fullSignature)
+
+    return UInt("h" + hexSignature)
+  }
+
   /*
   // drive default values for memory read ports
   def plugMemReadPorts() {
