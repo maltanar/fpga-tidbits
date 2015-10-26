@@ -1,17 +1,13 @@
 package TidbitsTestbenches
-/*
+
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsDMA._
 import TidbitsStreams._
 
-trait TestRandomReadParams extends PlatformWrapperParams {
-  val numMemPorts = 2
-  val accelName = "TestRandomRead"
-}
-
 class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  override val io = new GenericAcceleratorIF(p) {
+  val numMemPorts = 2
+  val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
     val indsBase = UInt(INPUT, p.csrDataBits)
@@ -19,8 +15,7 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val count = UInt(INPUT, p.csrDataBits)
     val sum = UInt(OUTPUT, p.csrDataBits)
   }
-  // TODO generate signature with digest function
-  io.signature := UInt(20151024)
+  io.signature := makeDefaultSignature()
 
   val rrgInds = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
   val opBytes = UInt(p.memDataBits/8)
@@ -58,18 +53,3 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.sum := red.reduced
   io.finished := red.finished
 }
-
-object TestRandomReadParamsWolverine extends WX690TParams with TestRandomReadParams {
-  override val useAEGforRegFile = false
-}
-
-object TestRandomReadMain {
-  def apply() = {
-    val instFxnAccel = {p: PlatformWrapperParams => new TestRandomRead(p)}
-    def instFxnWrapper() = {new WolverinePlatformWrapper(TestRandomReadParamsWolverine, instFxnAccel)}
-    val instFxnTop = {() => Module(instFxnWrapper())}
-    chiselMain(Array("--v"), instFxnTop)
-    instFxnWrapper().generateRegDriver(".")
-  }
-}
-*/

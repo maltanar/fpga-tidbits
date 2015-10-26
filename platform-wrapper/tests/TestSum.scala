@@ -1,20 +1,20 @@
 package TidbitsTestbenches
-/*
+
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsDMA._
 import TidbitsStreams._
 
 class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  override val io = new GenericAcceleratorIF(p) {
+  val numMemPorts = 1
+  val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
     val baseAddr = UInt(INPUT, width = p.csrDataBits)
     val byteCount = UInt(INPUT, width = p.csrDataBits)
     val sum = UInt(OUTPUT, width = p.csrDataBits)
   }
-  // TODO generate signature with digest function
-  io.signature := UInt(20151020)
+  io.signature := makeDefaultSignature()
 
   val rg = Module(new ReadReqGen(p.toMemReqParams(), 0, 8)).io
   val red = Module(new StreamReducer(p.memDataBits, 0, {_+_})).io
@@ -35,18 +35,3 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   red.streamIn.bits := io.memPort(0).memRdRsp.bits.readData
   io.memPort(0).memRdRsp.ready := red.streamIn.ready
 }
-
-trait TestSumParams extends PlatformWrapperParams {
-  val numMemPorts = 1
-  val accelName = "TestSum"
-}
-
-object TestSumParamsWolverine extends WX690TParams with TestSumParams
-
-object TestSumMain {
-  def apply() = {
-    val instFxn = {p: PlatformWrapperParams => new TestSum(p)}
-    chiselMain(Array("--v"), () => Module(new WolverinePlatformWrapper(TestSumParamsWolverine, instFxn)))
-  }
-}
-*/

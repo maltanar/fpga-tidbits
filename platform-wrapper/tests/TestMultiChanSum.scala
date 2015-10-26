@@ -1,27 +1,23 @@
 package TidbitsTestbenches
-/*
+
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsAXI._
 import TidbitsDMA._
 import TidbitsStreams._
 
-trait TestMultiChanSumParams extends PlatformWrapperParams {
-  val numMemPorts = 1
-  val accelName = "TestMultiChanSum"
-}
-
 class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+  val numMemPorts = 1
   val numChans = 2
-  override val io = new GenericAcceleratorIF(p) {
+  val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val baseAddr = Vec.fill(numChans) {UInt(INPUT, width=p.csrDataBits)}
     val byteCount = Vec.fill(numChans) {UInt(INPUT, width=p.csrDataBits)}
     val sum = Vec.fill(numChans) {UInt(OUTPUT, width=p.csrDataBits)}
     val status = Bool(OUTPUT)
   }
-  plugMemWritePorts() // write ports not used
-  io.signature := UInt(20151021)
+  plugMemWritePort(0) // write ports not used
+  io.signature := makeDefaultSignature()
 
   val mrp = p.toMemReqParams()
   val reqGens = Vec.tabulate(numChans) {i:Int => Module(new ReadReqGen(mrp, i, 8)).io}
@@ -56,16 +52,3 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   io.status := reducers.forall(x => x.finished)
 }
-
-object TestMultiChanSumParamsWolverine extends WX690TParams with TestMultiChanSumParams
-
-object TestMultiChanSumMain {
-  def apply() = {
-    val instFxnAccel = {p: PlatformWrapperParams => new TestMultiChanSum(p)}
-    def instFxnWrapper() = {new WolverinePlatformWrapper(TestMultiChanSumParamsWolverine, instFxnAccel)}
-    val instFxnTop = {() => Module(instFxnWrapper())}
-    chiselMain(Array("--v"), instFxnTop)
-    instFxnWrapper().generateRegDriver(".")
-  }
-}
-*/

@@ -11,7 +11,7 @@ object ZedBoardParams extends PlatformWrapperParams {
   val memIDBits = 6
   val memMetaBits = 1
   val csrDataBits = 64
-  val numMemPorts = 1
+  val numMemPorts = 2
 }
 
 

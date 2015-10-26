@@ -58,7 +58,10 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
 
   // the accelerator may be using fewer memory ports than what the platform
   // exposes; plug the unused ones
-  for(i <- accel.numMemPorts until p.numMemPorts) { io.mem(i).driveDefaults() }
+  for(i <- accel.numMemPorts until p.numMemPorts) {
+    println("Plugging unused memory port " + i.toString)
+    io.mem(i).driveDefaults()
+  }
 
   // AXI regfile read/write logic
   // slow and clumsy, but ctrl/status is not supposed to be performance-

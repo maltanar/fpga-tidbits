@@ -1,21 +1,21 @@
 package TidbitsTestbenches
-/*
+
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsDMA._
 import TidbitsStreams._
 
 class TestSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  override val io = new GenericAcceleratorIF(p) {
+  val numMemPorts = 1
+  val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val status = UInt(OUTPUT, 3)
     val baseAddr = UInt(INPUT, width = p.csrDataBits)
     val count = UInt(INPUT, width = p.csrDataBits)
   }
-  plugMemReadPorts()
-  // TODO generate signature with digest function
-  io.signature := UInt(20151022)
+  plugMemReadPort(0)  // read port not used
 
+  io.signature := makeDefaultSignature()
 
   val sg = Module(new SequenceGenerator(p.memDataBits)).io
   val wg = Module(new WriteReqGen(p.toMemReqParams(), 0)).io
@@ -32,7 +32,6 @@ class TestSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   sg.count := io.count
   sg.seq <> io.memPort(0).memWrDat
 
-
   io.memPort(0).memWrRsp.ready := Bool(true)
 
   val regRspCount = Reg(init = UInt(0, 32))
@@ -47,21 +46,3 @@ class TestSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.status(1) := sg.finished
   io.status(2) := (regRspCount === io.count)
 }
-
-trait TestSeqWriteParams extends PlatformWrapperParams {
-  val numMemPorts = 1
-  val accelName = "TestSeqWrite"
-}
-
-object TestSeqWriteWolverine extends WX690TParams with TestSeqWriteParams
-
-object TestSeqWriteMain {
-  def apply() = {
-    val instFxnAccel = {p: PlatformWrapperParams => new TestSeqWrite(p)}
-    def instFxnWrapper() = {new WolverinePlatformWrapper(TestSeqWriteWolverine, instFxnAccel)}
-    val instFxnTop = {() => Module(instFxnWrapper())}
-    chiselMain(Array("--v"), instFxnTop)
-    instFxnWrapper().generateRegDriver(".")
-  }
-}
-*/

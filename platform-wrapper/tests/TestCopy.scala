@@ -1,17 +1,14 @@
 package TidbitsTestbenches
-/*
+
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsDMA._
 import TidbitsStreams._
 
-trait TestCopyParams extends PlatformWrapperParams {
-  val numMemPorts = 1
-  val accelName = "TestCopy"
-}
 
 class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  override val io = new GenericAcceleratorIF(p) {
+  val numMemPorts = 1
+  val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
     val srcAddr = UInt(INPUT, width = p.csrDataBits)
@@ -19,8 +16,7 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val byteCount = UInt(INPUT, width = p.csrDataBits)
     val finBytes = UInt(OUTPUT, width = p.csrDataBits)
   }
-  // TODO generate signature with digest function
-  io.signature := UInt(20151024)
+  io.signature := makeDefaultSignature()
 
   val rrg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
   val wrg = Module(new WriteReqGen(p.toMemReqParams(), 0)).io
@@ -55,18 +51,3 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.finished := io.start & (regCompletes === io.byteCount)
   io.finBytes := regCompletes
 }
-
-object TestCopyParamsWolverine extends WX690TParams with TestCopyParams {
-  override val useAEGforRegFile = false
-}
-
-object TestCopyMain {
-  def apply() = {
-    val instFxnAccel = {p: PlatformWrapperParams => new TestCopy(p)}
-    def instFxnWrapper() = {new WolverinePlatformWrapper(TestCopyParamsWolverine, instFxnAccel)}
-    val instFxnTop = {() => Module(instFxnWrapper())}
-    chiselMain(Array("--v"), instFxnTop)
-    instFxnWrapper().generateRegDriver(".")
-  }
-}
-*/
