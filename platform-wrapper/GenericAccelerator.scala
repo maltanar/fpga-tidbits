@@ -16,8 +16,7 @@ class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends B
 }
 
 // GenericAccelerator, serving as a base class for creating portable accelerators
-// support managing the accelerator I/O as control-status registers and generating
-// a register map driver for talking to the accelerator from software
+// support managing the accelerator I/O as control-status registers
 abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   def io: GenericAcceleratorIF
   def numMemPorts: Int
@@ -41,24 +40,18 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
     return UInt("h" + hexSignature)
   }
 
-  /*
-  // drive default values for memory read ports
-  def plugMemReadPorts() {
-    for(i <- 0 until p.numMemPorts) {
-      io.memPort(i).memRdReq.valid := Bool(false)
-      io.memPort(i).memRdReq.bits.driveDefaults()
-      io.memPort(i).memRdRsp.ready := Bool(false)
-    }
+  // drive default values for memory read port i
+  def plugMemReadPort(i: Int) {
+    io.memPort(i).memRdReq.valid := Bool(false)
+    io.memPort(i).memRdReq.bits.driveDefaults()
+    io.memPort(i).memRdRsp.ready := Bool(false)
   }
-  // drive default values for memory write ports
-  def plugMemWritePorts() {
-    for(i <- 0 until p.numMemPorts) {
-      io.memPort(i).memWrReq.valid := Bool(false)
-      io.memPort(i).memWrReq.bits.driveDefaults()
-      io.memPort(i).memWrDat.valid := Bool(false)
-      io.memPort(i).memWrDat.bits := UInt(0)
-      io.memPort(i).memWrRsp.ready := Bool(false)
-    }
+  // drive default values for memory write port i
+  def plugMemWritePort(i: Int) {
+    io.memPort(i).memWrReq.valid := Bool(false)
+    io.memPort(i).memWrReq.bits.driveDefaults()
+    io.memPort(i).memWrDat.valid := Bool(false)
+    io.memPort(i).memWrDat.bits := UInt(0)
+    io.memPort(i).memWrRsp.ready := Bool(false)
   }
-  */
 }
