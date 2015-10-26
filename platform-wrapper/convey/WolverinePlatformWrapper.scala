@@ -9,7 +9,7 @@ import ConveyInterfaces._
 // (made for WX690T, may work for others)
 
 object WX690TParams extends PlatformWrapperParams {
-  val platformName = "wx690t"
+  val platformName = "WX690T"
   val memAddrBits = 48
   val memDataBits = 64
   val memIDBits = 32

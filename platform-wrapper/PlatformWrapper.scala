@@ -44,7 +44,7 @@ extends Module {
   // instantiate the accelerators
   val accel = Module(instFxn(p))
 
-  val fullName: String = accel.name+p.platformName
+  val fullName: String = accel.getClass.getSimpleName+p.platformName
   setName(fullName)
 
   // separate out the mem port signals, won't map the to the regfile

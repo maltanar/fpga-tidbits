@@ -5,7 +5,7 @@ import Chisel._
 // platform wrapper for the ZedBoard
 
 object ZedBoardParams extends PlatformWrapperParams {
-  val platformName = "zedboard"
+  val platformName = "ZedBoard"
   val memAddrBits = 32
   val memDataBits = 64
   val memIDBits = 6
