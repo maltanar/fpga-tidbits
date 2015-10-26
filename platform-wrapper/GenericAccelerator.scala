@@ -8,9 +8,9 @@ import scala.collection.mutable.LinkedHashMap
 // parameters for PlatformWrapper?
 
 // interface definition for GenericAccelerator-derived modules
-class GenericAcceleratorIF(p: PlatformWrapperParams) extends Bundle {
+class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends Bundle {
   // memory ports
-  val memPort = Vec.fill(p.numMemPorts) {new GenericMemoryMasterPort(p.toMemReqParams())}
+  val memPort = Vec.fill(numMemPorts) {new GenericMemoryMasterPort(p.toMemReqParams())}
   // use the signature field for sanity and version checks
   val signature = UInt(OUTPUT, p.csrDataBits)
 }
@@ -18,9 +18,10 @@ class GenericAcceleratorIF(p: PlatformWrapperParams) extends Bundle {
 // GenericAccelerator, serving as a base class for creating portable accelerators
 // support managing the accelerator I/O as control-status registers and generating
 // a register map driver for talking to the accelerator from software
-class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
-  val io = new GenericAcceleratorIF(p)
-
+abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
+  def io: GenericAcceleratorIF
+  def numMemPorts: Int
+  /*
   // drive default values for memory read ports
   def plugMemReadPorts() {
     for(i <- 0 until p.numMemPorts) {
@@ -39,6 +40,5 @@ class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
       io.memPort(i).memWrRsp.ready := Bool(false)
     }
   }
-
-  override def clone = { new GenericAccelerator(p).asInstanceOf[this.type] }
+  */
 }

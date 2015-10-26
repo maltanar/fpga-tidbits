@@ -20,7 +20,6 @@ import scala.collection.mutable.LinkedHashMap
 trait PlatformWrapperParams {
   def numMemPorts: Int
   def platformName: String
-  def accelName: String
   def memAddrBits: Int
   def memDataBits: Int
   def memIDBits: Int
@@ -40,16 +39,17 @@ abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
 val instFxn: PlatformWrapperParams => GenericAccelerator)
 extends Module {
-  val fullName: String = p.accelName+p.platformName
-  setName(fullName)
-
   type RegFileMap = LinkedHashMap[String, Int]
 
   // instantiate the accelerators
-  val accel = Module(instFxn(p)).io
+  val accel = Module(instFxn(p))
+
+  val fullName: String = accel.name+p.platformName
+  setName(fullName)
+
   // separate out the mem port signals, won't map the to the regfile
   val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
-  val ownIO = accel.flatten.filter(ownFilter)
+  val ownIO = accel.io.flatten.filter(ownFilter)
   // TODO for now, each i/o is one register in the regfile
   val numRegs = ownIO.size
 

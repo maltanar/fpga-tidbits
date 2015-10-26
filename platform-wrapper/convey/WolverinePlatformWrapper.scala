@@ -8,22 +8,25 @@ import ConveyInterfaces._
 // Wrapper for the Convey Wolverine hardware platform
 // (made for WX690T, may work for others)
 
-trait WX690TParams extends PlatformWrapperParams {
+object WX690TParams extends PlatformWrapperParams {
   val platformName = "wx690t"
   val memAddrBits = 48
   val memDataBits = 64
   val memIDBits = 32
   val memMetaBits = 1
   val csrDataBits = 64
-  val useAEGforRegFile = false
+  val numMemPorts = 1
 }
 
-class WolverinePlatformWrapper(p: WX690TParams,
-instFxn: PlatformWrapperParams => GenericAccelerator)
-extends PlatformWrapper(p, instFxn) {
+// TODO plug unused platform ports if accel has less mem ports
+
+class WolverinePlatformWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+extends PlatformWrapper(WX690TParams, instFxn) {
+  val useAEGforRegFile = false
+
   val driverRegType = "AccelReg"
-  val driverBaseHeader = if(p.useAEGforRegFile) "wolverineregdriverdebug.h" else "wolverineregdriver.h"
-  val driverBaseClass = if(p.useAEGforRegFile) "WolverineRegDriverDebug" else "WolverineRegDriver"
+  val driverBaseHeader = if(useAEGforRegFile) "wolverineregdriverdebug.h" else "wolverineregdriver.h"
+  val driverBaseClass = if(useAEGforRegFile) "WolverineRegDriverDebug" else "WolverineRegDriver"
   val driverConstructor = fullName + "() : "+driverBaseClass+"(\""+fullName+"\") {}"
 
   // the Convey wrapper itself always expects at least one memory port
@@ -48,7 +51,7 @@ extends PlatformWrapper(p, instFxn) {
   io.dispIdle := !regBusy
   io.dispStall := regBusy
 
-  if(p.useAEGforRegFile) {
+  if(useAEGforRegFile) {
     // use the Convey AEG interface for controlling the register file
     // useful mostly for debugging in simulation, since the Convey simulation
     // infrastructure does not seem to support CSR r/w
@@ -100,15 +103,17 @@ extends PlatformWrapper(p, instFxn) {
   io.mcReqFlush := UInt(0)
 
   // wire up memory port adapters
-  // TODO also enable the write channels -- use simplex generic channel
-  // TODO use adapter modules instead of manual adapting
   // TODO add support for write flush
-  if (p.numMemPorts != 0) {
+  if (accel.numMemPorts != 0) {
+    if(accel.numMemPorts != p.numMemPorts) {
+      throw new Exception("Wolverine wrapper needs matching # mem ports")
+    }
+
     val adps = Vec.fill(p.numMemPorts) {
       Module(new ConveyGenericMemAdapter(p.toMemReqParams())).io
     }
 
-    for(i <- 0 until p.numMemPorts) { accel.memPort(i) <> adps(i).genericMem }
+    for(i <- 0 until p.numMemPorts) { accel.io.memPort(i) <> adps(i).genericMem }
 
     // Convey's interface semantics (stall-valid) are a bit more different than
     // just a decoupled (inverted ready)-valid:

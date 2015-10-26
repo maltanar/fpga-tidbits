@@ -1,5 +1,5 @@
 package TidbitsTestbenches
-
+/*
 import Chisel._
 import TidbitsPlatformWrapper._
 import TidbitsDMA._
@@ -15,7 +15,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
   // TODO generate signature with digest function
   io.signature := UInt(20151020)
-  
+
   val rg = Module(new ReadReqGen(p.toMemReqParams(), 0, 8)).io
   val red = Module(new StreamReducer(p.memDataBits, 0, {_+_})).io
 
@@ -49,3 +49,4 @@ object TestSumMain {
     chiselMain(Array("--v"), () => Module(new WolverinePlatformWrapper(TestSumParamsWolverine, instFxn)))
   }
 }
+*/

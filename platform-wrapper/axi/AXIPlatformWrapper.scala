@@ -25,34 +25,35 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   for(i <- 0 until p.numMemPorts) {io.mem(i).renameSignals(s"mem$i")}
 
   // memory port adapters and connections
-  for(i <- 0 until p.numMemPorts) {
+  // TODO use accel numMemPorts and plug unused
+  for(i <- 0 until accel.numMemPorts) {
     // instantiate AXI request and response adapters for the mem interface
     val mrp = p.toMemReqParams()
     // read requests
     val readReqAdp = Module(new AXIMemReqAdp(mrp)).io
-    readReqAdp.genericReqIn <> accel.memPort(i).memRdReq
+    readReqAdp.genericReqIn <> accel.io.memPort(i).memRdReq
     readReqAdp.axiReqOut <> io.mem(i).readAddr
     // read responses
     val readRspAdp = Module(new AXIReadRspAdp(mrp)).io
     readRspAdp.axiReadRspIn <> io.mem(i).readData
-    readRspAdp.genericRspOut <> accel.memPort(i).memRdRsp
+    readRspAdp.genericRspOut <> accel.io.memPort(i).memRdRsp
     // write requests
     val writeReqAdp = Module(new AXIMemReqAdp(mrp)).io
-    writeReqAdp.genericReqIn <> accel.memPort(i).memWrReq
+    writeReqAdp.genericReqIn <> accel.io.memPort(i).memWrReq
     writeReqAdp.axiReqOut <> io.mem(i).writeAddr
     // write data
     // TODO handle this with own adapter?
-    io.mem(i).writeData.bits.data := accel.memPort(i).memWrDat.bits
+    io.mem(i).writeData.bits.data := accel.io.memPort(i).memWrDat.bits
     // TODO fix this: forces all writes bytelanes valid!
     io.mem(i).writeData.bits.strb := ~UInt(0, width=p.memDataBits/8)
     // TODO fix this: write bursts won't work properly!
     io.mem(i).writeData.bits.last := Bool(true)
-    io.mem(i).writeData.valid := accel.memPort(i).memWrDat.valid
-    accel.memPort(i).memWrDat.ready := io.mem(i).writeData.ready
+    io.mem(i).writeData.valid := accel.io.memPort(i).memWrDat.valid
+    accel.io.memPort(i).memWrDat.ready := io.mem(i).writeData.ready
     // write responses
     val writeRspAdp = Module(new AXIWriteRspAdp(mrp)).io
     writeRspAdp.axiWriteRspIn <> io.mem(i).writeResp
-    writeRspAdp.genericRspOut <> accel.memPort(i).memWrRsp
+    writeRspAdp.genericRspOut <> accel.io.memPort(i).memWrRsp
   }
 
   // AXI regfile read/write logic
