@@ -21,3 +21,12 @@ object StreamFilter {
       sf.out
     }
 }
+
+import TidbitsDMA._
+
+object ReadRespFilter {
+  def apply(in: DecoupledIO[GenericMemoryResponse]) = {
+    val filterFxn = {r: GenericMemoryResponse => r.readData}
+    StreamFilter(in, in.bits.readData, filterFxn)
+  }
+}
