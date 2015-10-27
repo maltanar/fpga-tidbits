@@ -47,8 +47,20 @@ object MainObj {
     platformInst(accInst).generateRegDriver(".")
   }
 
+  def showHelp() = {
+    println("Usage: run <op> <accel> <platform>")
+    println("where:")
+    println("<op> = verilog driver")
+    println("<accel> = " + accelMap.keys.reduce({_ + " " +_}))
+    println("<platform> = " + platformMap.keys.reduce({_ + " " +_}))
+  }
 
   def main(args: Array[String]): Unit = {
+    if (args.size != 2) {
+      showHelp()
+      return
+    }
+
     val op = args(0)
     val rst = args.drop(1)
 
@@ -57,7 +69,8 @@ object MainObj {
     } else if (op == "driver" || op == "d") {
       makeDriver(rst)
     } else {
-      throw new Exception("Unrecognized operation")
+      showHelp()
+      return
     }
   }
 }
