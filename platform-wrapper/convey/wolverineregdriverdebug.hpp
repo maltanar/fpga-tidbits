@@ -27,12 +27,12 @@ typedef uint64_t AccelReg;
 // variant of WolverineRegDriver that uses AEGs instead of CSRs
 // - cannot read registers while coprocessor is busy
 // - useful for Convey Verilog simulation (since no CSR support there)
-// must call start() after all registers are set up
+// - must call start() after all registers are set up
 
 class WolverineRegDriverDebug : public WrapperRegDriver<AccelReg>
 {
 public:
-  WolverineRegDriverDebug(const char * persName) {
+  virtual void attach(const char * name) {
     m_coproc = WDM_INVALID;
 
     // reserve and attach to the coprocessor
@@ -43,18 +43,18 @@ public:
         return;
     }
 
-    if (wdm_attach(m_coproc, persName)) {
+    if (wdm_attach(m_coproc, name)) {
       throw "Unable to load personality";
       return;
     }
   }
 
-  ~WolverineRegDriverDebug() {
+  virtual void deattach() {
     // close firmware daemon connection and release coprocessor
     wdm_detach(m_coproc);
     wdm_release(m_coproc);
   }
-  
+
   void start() {
     // do an instruction dispatch, should never return
     wdm_dispatch_t ds;
@@ -83,32 +83,34 @@ public:
     return accelBuf;
   }
 
-protected:
-  wdm_coproc_t m_coproc;
-
   // register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
     wdm_dispatch_t ds;
     memset((void *)&ds, 0, sizeof(ds));
-    ds.ae[0].aeg_ptr_s = &regValue;
+    uint64_t reg = regValue;
+    ds.ae[0].aeg_ptr_s = &reg;
     ds.ae[0].aeg_cnt_s = 1;
     ds.ae[0].aeg_base_s = regInd;
-    if(wdm_aeg_write_read(m_coproc, &ds) != 0) 
+    if(wdm_aeg_write_read(m_coproc, &ds) != 0)
       throw "wdm_aeg_write_read failed in writeReg";
   }
 
   virtual AccelReg readReg(unsigned int regInd) {
-    AccelReg ret;
+    uint64_t ret;
     wdm_dispatch_t ds;
     memset((void *)&ds, 0, sizeof(ds));
     ds.ae[0].aeg_ptr_r = &ret;
     ds.ae[0].aeg_cnt_r = 1;
     ds.ae[0].aeg_base_r = regInd;
-    if(wdm_aeg_write_read(m_coproc, &ds) != 0) 
+    if(wdm_aeg_write_read(m_coproc, &ds) != 0)
       throw "wdm_aeg_write_read failed in readReg";
-    
-    return ret;
+
+    return (AccelReg) ret;
   }
+
+protected:
+  wdm_coproc_t m_coproc;
+
 };
 
 #endif // WOLVERINEREGDRIVERDEBUG_H

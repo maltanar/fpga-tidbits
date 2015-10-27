@@ -14,7 +14,6 @@ object WX690TParams extends PlatformWrapperParams {
   val memDataBits = 64
   val memIDBits = 32
   val memMetaBits = 1
-  val csrDataBits = 64
   val numMemPorts = 1
 }
 

@@ -24,7 +24,7 @@ trait PlatformWrapperParams {
   def memDataBits: Int
   def memIDBits: Int
   def memMetaBits: Int
-  def csrDataBits: Int
+  val csrDataBits: Int = 32 // TODO let platforms configure own CSR width
 
   def toMemReqParams(): MemReqParams = {
     new MemReqParams(memAddrBits, memDataBits, memIDBits, memMetaBits)
@@ -87,34 +87,31 @@ extends Module {
     allocReg += 1
   }
 
-  def driverBaseHeader: String
-  def driverBaseClass: String
-  def driverConstructor: String
-  def driverRegType: String
-
   def makeRegReadFxn(regName: String): String = {
     var fxnStr: String = ""
-    fxnStr += "  " + driverRegType + " get_" + regName + "()"
+    fxnStr += "  AccelReg get_" + regName + "()"
     fxnStr += " {return readReg(" + regFileMap(regName).toString + ");} "
     return fxnStr
   }
 
   def makeRegWriteFxn(regName: String): String = {
     var fxnStr: String = ""
-    fxnStr += "  void set_" + regName + "(" + driverRegType +" value)"
+    fxnStr += "  void set_" + regName + "(AccelReg value)"
     fxnStr += " {writeReg(" + regFileMap(regName).toString + ", value);} "
     return fxnStr
   }
 
   def generateRegDriver(targetDir: String) = {
     var driverStr: String = ""
-    val driverName: String = fullName
+    val driverName: String = accel.getClass.getSimpleName
     driverStr += ("#ifndef " + driverName + "_H") + "\n"
     driverStr += ("#define " + driverName + "_H") + "\n"
-    driverStr += "#include \""+driverBaseHeader + "\"\n"
-    driverStr += "class " + driverName + ": public " + driverBaseClass + " {\n"
+    driverStr += "#include \"wrapperregdriver.h\"\n\n"
+    driverStr += "class " + driverName + " {\n"
     driverStr += "public:" + "\n"
-    driverStr += driverConstructor + "\n"
+    driverStr += driverName + "(WrapperRegDriver * platform) {" + "\n"
+    driverStr += "m_platform = platform; attach();}\n"
+    driverStr += "~" + driverName + "() {detach();}\n\n"
     for((name, bits) <- ownIO) {
       if(bits.dir == INPUT) {
         driverStr += makeRegWriteFxn(name) + "\n"
@@ -122,6 +119,14 @@ extends Module {
         driverStr += makeRegReadFxn(name) + "\n"
       }
     }
+    driverStr += "\nprotected: " + "\n"
+    driverStr += "WrapperRegDriver * m_platform;" + "\n"
+    driverStr += "AccelReg readReg(unsigned int i) {return m_platform->readReg(i);}\n"
+    driverStr += "void writeReg(unsigned int i, AccelReg v) {\n"
+    driverStr += "m_platform->writeReg(i,v);}\n"
+    driverStr += "void attach() {m_platform->attach(\"" + driverName + "\");}\n"
+    driverStr += "void detach() {m_platform->detach();}\n"
+
     driverStr += "};\n"
     driverStr += ("#endif") + "\n"
 
@@ -131,6 +136,4 @@ extends Module {
     writer.close()
     println("=======> Driver written to "+driverName+".hpp")
   }
-
-
 }

@@ -4,24 +4,23 @@
 #include <stdint.h>
 #include "wrapperregdriver.h"
 
-typedef uint32_t AccelReg;
+class AXIRegDriver :  public WrapperRegDriver {
+public:
+  AXIRegDriver(void *baseAddr) {
+    m_baseAddr = (AccelReg *) baseAddr;
+  }
 
-class AXIRegDriver :  public WrapperRegDriver<AccelReg> {
-  public:
-    AXIRegDriver(void *baseAddr) {
-      m_baseAddr = (AccelReg *) baseAddr;
-    }
+  virtual void writeReg(unsigned int regInd, AccelReg regValue) {
+    m_baseAddr[regInd] = regValue;
+  }
 
-  protected:
-    AccelReg * m_baseAddr;
+  virtual AccelReg readReg(unsigned int regInd) {
+    return m_baseAddr[regInd];
+  }
 
-    virtual void writeReg(unsigned int regInd, AccelReg regValue) {
-      m_baseAddr[regInd] = regValue;
-    }
+protected:
+  AccelReg * m_baseAddr;
 
-    virtual AccelReg readReg(unsigned int regInd) {
-      return m_baseAddr[regInd];
-    }
 };
 
 #endif

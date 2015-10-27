@@ -22,15 +22,12 @@ void *memset(void *dst, int c, size_t n)
   return dst;
 }
 
-
-typedef uint64_t AccelReg;
-
 // TODO add error checks on all cny_fwd* functions
 
-class WolverineRegDriver : public WrapperRegDriver<AccelReg>
+class WolverineRegDriver : public WrapperRegDriver
 {
 public:
-  WolverineRegDriver(const char * persName) {
+  virtual void attach(const char * name) {
     m_coproc = WDM_INVALID;
 
     // reserve and attach to the coprocessor
@@ -41,7 +38,7 @@ public:
         return;
     }
 
-    if (wdm_attach(m_coproc, persName)) {
+    if (wdm_attach(m_coproc, name)) {
       throw "Unable to load personality";
       return;
     }
@@ -62,7 +59,7 @@ public:
     }
   }
 
-  ~WolverineRegDriver() {
+  virtual void detach() {
     // close firmware daemon connection and release coprocessor
     cny_fwd_close();
     wdm_detach(m_coproc);
@@ -87,20 +84,21 @@ public:
     return accelBuf;
   }
 
-protected:
-  wdm_coproc_t m_coproc;
-
   // register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
     // TODO support finer-grained writes by adjusting mask
-    cny_fwd_write((char *)"aemc0", 0x30000 + 0x8 * regInd, regValue, 0xffffffffffffffff);
+    uint64_t v = regValue;
+    cny_fwd_write((char *)"aemc0", 0x30000 + 0x8 * regInd, v, 0xffffffffffffffff);
   }
 
   virtual AccelReg readReg(unsigned int regInd) {
-    AccelReg ret;
+    uint64_t ret = 0;
     cny_fwd_read((char *)"aemc0", 0x30000 + 0x8*regInd, &ret);
-    return ret;
+    return (AccelReg) ret;
   }
+
+protected:
+  wdm_coproc_t m_coproc;
 };
 
 #endif // WOLVERINEREGDRIVER_H
