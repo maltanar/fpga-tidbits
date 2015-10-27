@@ -10,6 +10,8 @@ public:
     m_baseAddr = (AccelReg *) baseAddr;
   }
 
+  virtual ~AXIRegDriver() {}
+
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
     m_baseAddr[regInd] = regValue;
   }
