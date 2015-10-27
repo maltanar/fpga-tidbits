@@ -10,14 +10,14 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
-    val baseAddr = UInt(INPUT, width = p.csrDataBits)
-    val byteCount = UInt(INPUT, width = p.csrDataBits)
-    val sum = UInt(OUTPUT, width = p.csrDataBits)
+    val baseAddr = UInt(INPUT, width = 32)
+    val byteCount = UInt(INPUT, width = 32)
+    val sum = UInt(OUTPUT, width = 32)
   }
   io.signature := makeDefaultSignature()
 
-  val rg = Module(new ReadReqGen(p.toMemReqParams(), 0, 8)).io
-  val red = Module(new StreamReducer(p.memDataBits, 0, {_+_})).io
+  val rg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
+  val red = Module(new StreamReducer(32, 0, {_+_})).io
 
   rg.ctrl.start := io.start
   rg.ctrl.throttle := Bool(false)
@@ -31,7 +31,15 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.finished := red.finished
 
   rg.reqs <> io.memPort(0).memRdReq
-  red.streamIn.valid := io.memPort(0).memRdRsp.valid
-  red.streamIn.bits := io.memPort(0).memRdRsp.bits.readData
-  io.memPort(0).memRdRsp.ready := red.streamIn.ready
+
+  val readStream = ReadRespFilter(io.memPort(0).memRdRsp)
+
+  if(p.memDataBits > 32) {
+    // use a downsizer
+    red.streamIn <> StreamDownsizer(readStream, 32)
+  } else if(p.memDataBits == 32) {
+    // connect memory read responses directly to reducer
+    red.streamIn <> readStream
+  } else throw new Exception("Sub-32 bit data buses not supported")
+
 }

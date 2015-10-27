@@ -3,6 +3,8 @@ package TidbitsTestbenches
 import Chisel._
 import TidbitsPlatformWrapper._
 
+// test for register reads and writes:
+// add two 32-bit values
 class TestRegOps(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 0
   val io = new GenericAcceleratorIF(numMemPorts, p) {
