@@ -2,13 +2,13 @@
 // note that this assumes the peripheral lives at address 0x43c00000
 
 #include "platform.h"
-#include "axiregdriver.hpp"
+#include "zedboardregdriver.hpp"
 
-AXIRegDriver * platform = 0;
+ZedBoardRegDriver * platform = 0;
 
 WrapperRegDriver * initPlatform() {
   if(!platform) {
-    platform = new AXIRegDriver((void *) 0x43c00000);
+    platform = new ZedBoardRegDriver((void *) 0x43c00000);
   }
   return (WrapperRegDriver *) platform;
 }
