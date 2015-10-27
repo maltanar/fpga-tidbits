@@ -10,19 +10,18 @@ object ZedBoardParams extends PlatformWrapperParams {
   val memDataBits = 64
   val memIDBits = 6
   val memMetaBits = 1
-  val csrDataBits = 64
-  val numMemPorts = 2
+  val csrDataBits = 32
+  val numMemPorts = 4
 }
 
 
 class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
 
-  val driverRegType = "unsigned int"
-  val driverBaseHeader = "zedboardregdriver.h"
-  val driverBaseClass = "ZedBoardRegDriver"
-  val driverConstructor =   fullName + "(unsigned int baseAddr) : " +
-                            driverBaseClass+"(\""+fullName+"\") {" +
-                            "m_baseAddr = baseAddr; }"
+  val driverRegType = "AccelReg"
+  val driverBaseHeader = "axiregdriver.hpp"
+  val driverBaseClass = "AXIRegDriver"
+  val driverConstructor =   fullName + "(void* baseAddr) : " +
+                            driverBaseClass+"(baseAddr) {}"
 
 }
