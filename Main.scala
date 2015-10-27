@@ -56,7 +56,7 @@ object MainObj {
   }
 
   def main(args: Array[String]): Unit = {
-    if (args.size != 2) {
+    if (args.size != 3) {
       showHelp()
       return
     }
