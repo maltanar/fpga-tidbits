@@ -10,10 +10,10 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
-    val indsBase = UInt(INPUT, p.csrDataBits)
-    val valsBase = UInt(INPUT, p.csrDataBits)
-    val count = UInt(INPUT, p.csrDataBits)
-    val sum = UInt(OUTPUT, p.csrDataBits)
+    val indsBase = UInt(INPUT, 32)
+    val valsBase = UInt(INPUT, 32)
+    val count = UInt(INPUT, 32)
+    val sum = UInt(OUTPUT, 32)
   }
   io.signature := makeDefaultSignature()
 

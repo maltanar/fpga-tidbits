@@ -11,10 +11,10 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
-    val srcAddr = UInt(INPUT, width = p.csrDataBits)
-    val dstAddr = UInt(INPUT, width = p.csrDataBits)
-    val byteCount = UInt(INPUT, width = p.csrDataBits)
-    val finBytes = UInt(OUTPUT, width = p.csrDataBits)
+    val srcAddr = UInt(INPUT, width = 32)
+    val dstAddr = UInt(INPUT, width = 32)
+    val byteCount = UInt(INPUT, width = 32)
+    val finBytes = UInt(OUTPUT, width = 32)
   }
   io.signature := makeDefaultSignature()
 
