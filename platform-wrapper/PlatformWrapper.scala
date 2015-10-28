@@ -50,6 +50,9 @@ extends Module {
   // separate out the mem port signals, won't map the to the regfile
   val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
   val ownIO = accel.io.flatten.filter(ownFilter)
+
+  val bigIOFilter = {x: (String, Bits) => (x._2.getWidth() > p.csrDataBits)}
+  val numBigIOs = ownIO.filter(bigIOFilter).size
   // TODO for now, each i/o is one register in the regfile
   val numRegs = ownIO.size
 
