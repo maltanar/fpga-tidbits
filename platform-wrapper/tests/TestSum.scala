@@ -5,6 +5,7 @@ import TidbitsPlatformWrapper._
 import TidbitsDMA._
 import TidbitsStreams._
 
+// read and sum a contiguous stream of 32-bit uints from main memory
 class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val io = new GenericAcceleratorIF(numMemPorts, p) {
@@ -16,13 +17,17 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
   io.signature := makeDefaultSignature()
 
-  val rg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
+  val rdP = new StreamReaderParams(
+    streamWidth = 32, fifoElems = 8, mem = p.toMemReqParams(),
+    maxBeats = 1, chanID = 0
+  )
+
+  val reader = Module(new StreamReader(rdP)).io
   val red = Module(new StreamReducer(32, 0, {_+_})).io
 
-  rg.ctrl.start := io.start
-  rg.ctrl.throttle := Bool(false)
-  rg.ctrl.baseAddr := io.baseAddr
-  rg.ctrl.byteCount := io.byteCount
+  reader.start := io.start
+  reader.baseAddr := io.baseAddr
+  reader.byteCount := io.byteCount
 
   red.start := io.start
   red.byteCount := io.byteCount
@@ -30,16 +35,8 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.sum := red.reduced
   io.finished := red.finished
 
-  rg.reqs <> io.memPort(0).memRdReq
+  reader.req <> io.memPort(0).memRdReq
+  io.memPort(0).memRdRsp <> reader.rsp
 
-  val readStream = ReadRespFilter(io.memPort(0).memRdRsp)
-
-  if(p.memDataBits > 32) {
-    // use a downsizer
-    red.streamIn <> StreamDownsizer(readStream, 32)
-  } else if(p.memDataBits == 32) {
-    // connect memory read responses directly to reducer
-    red.streamIn <> readStream
-  } else throw new Exception("Sub-32 bit data buses not supported")
-
+  reader.out <> red.streamIn
 }
