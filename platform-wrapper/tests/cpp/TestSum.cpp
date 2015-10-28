@@ -41,9 +41,7 @@ int main()
 {
 	WrapperRegDriver * platform = initPlatform();
 
-  // TODO could autodetect correct test based on signature
-  // for now, must be manually uncommented
-	// Run_TestSum(platform);
+	Run_TestSum(platform);
 
 	deinitPlatform(platform);
 
