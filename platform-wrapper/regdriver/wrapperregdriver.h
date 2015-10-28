@@ -1,8 +1,11 @@
 #ifndef WRAPPERREGDRIVER_H
 #define WRAPPERREGDRIVER_H
 
+#include <stdint.h>
+
 // TODO wrapper driver should be a singleton
 typedef unsigned int AccelReg;
+typedef uint64_t AccelDblReg;
 
 class WrapperRegDriver
 {

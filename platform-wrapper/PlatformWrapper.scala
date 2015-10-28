@@ -39,7 +39,7 @@ abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
 val instFxn: PlatformWrapperParams => GenericAccelerator)
 extends Module {
-  type RegFileMap = LinkedHashMap[String, Int]
+  type RegFileMap = LinkedHashMap[String, Array[Int]]
 
   // instantiate the accelerators
   val accel = Module(instFxn(p))
@@ -51,56 +51,101 @@ extends Module {
   val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
   val ownIO = accel.io.flatten.filter(ownFilter)
 
-  val bigIOFilter = {x: (String, Bits) => (x._2.getWidth() > p.csrDataBits)}
-  val numBigIOs = ownIO.filter(bigIOFilter).size
-  // TODO for now, each i/o is one register in the regfile
-  val numRegs = ownIO.size
+  // each I/O is assigned to at least one register index, possibly more if wide
+  // round each I/O width to nearest csrWidth multiple, sum, divide by csrWidth
+  val wCSR = p.csrDataBits
+  def roundMultiple(n: Int, m: Int) = { (n + m-1) / m * m}
+  val fxn = {x: (String, Bits) => (roundMultiple(x._2.getWidth(), wCSR))}
+  val numRegs = ownIO.map(fxn).reduce({_+_}) / wCSR
 
   // instantiate the register file
   val regAddrBits = log2Up(numRegs)
-  val regFile = Module(new RegFile(numRegs, regAddrBits, p.csrDataBits)).io
+  val regFile = Module(new RegFile(numRegs, regAddrBits, wCSR)).io
 
   println("Generating register file mappings...")
   // traverse the accel I/Os and connect to the register file
   var allocReg = 0
   var regFileMap = new RegFileMap
   for((name, bits) <- ownIO) {
-    // TODO add support for wide signals
-    if(bits.getWidth() > p.csrDataBits) {
-      throw new Exception("GenericAccelerator I/O " + name + " is too wide")
+    val w = bits.getWidth()
+    if(w > wCSR) {
+      // signal is wide, maps to several registers
+      val numRegsToAlloc = roundMultiple(w, wCSR) / wCSR
+      regFileMap(name) = (allocReg until allocReg + numRegsToAlloc).toArray
+      // connect the I/O signal to the register file appropriately
+      if(bits.dir == INPUT) {
+        // concatanate all assigned registers, connect to input
+        bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
+        for(i <- 0 until numRegsToAlloc) {
+          regFile.regIn(allocReg + i).valid := Bool(false)
+        }
+      } else if(bits.dir == OUTPUT) {
+        for(i <- 0 until numRegsToAlloc) {
+          regFile.regIn(allocReg + i).valid := Bool(true)
+          regFile.regIn(allocReg + i).bits := bits(i*wCSR+wCSR-1, i*wCSR)
+        }
+      } else { throw new Exception("Wire in IO: "+name) }
+
+      println("Signal " + name + " mapped to regs " + regFileMap(name).map(_.toString).reduce(_+" "+_))
+      allocReg += numRegsToAlloc
+    } else {
+      // signal is narrow enough, maps to a single register
+      regFileMap(name) = Array(allocReg)
+      // connect the I/O signal to the register file appropriately
+      if(bits.dir == INPUT) {
+        // handle Bool input cases,"multi-bit signal to Bool" error
+        if(bits.getWidth() == 1) {
+          bits := regFile.regOut(allocReg)(0)
+        } else { bits := regFile.regOut(allocReg) }
+        // disable internal write for this register
+        regFile.regIn(allocReg).valid := Bool(false)
+
+      } else if(bits.dir == OUTPUT) {
+        // TODO don't always write (change detect?)
+        regFile.regIn(allocReg).valid := Bool(true)
+        regFile.regIn(allocReg).bits := bits
+      } else { throw new Exception("Wire in IO: "+name) }
+
+      println("Signal " + name + " mapped to single reg " + allocReg.toString)
+      allocReg += 1
     }
-    regFileMap(name) = allocReg
-    // connect the I/O signal to the register file appropriately
-    if(bits.dir == INPUT) {
-      // handle Bool input cases,"multi-bit signal to Bool" error
-      if(bits.getWidth() == 1) {
-        bits := regFile.regOut(allocReg)(0)
-      } else { bits := regFile.regOut(allocReg) }
-      // disable internal write for this register
-      regFile.regIn(allocReg).valid := Bool(false)
-
-    } else if(bits.dir == OUTPUT) {
-      // TODO don't always write (change detect?)
-      regFile.regIn(allocReg).valid := Bool(true)
-      regFile.regIn(allocReg).bits := bits
-    } else { throw new Exception("Wire in IO: "+name) }
-
-    println("Signal " + name + " mapped to reg " + allocReg.toString)
-
-    allocReg += 1
   }
 
   def makeRegReadFxn(regName: String): String = {
     var fxnStr: String = ""
-    fxnStr += "  AccelReg get_" + regName + "()"
-    fxnStr += " {return readReg(" + regFileMap(regName).toString + ");} "
+    val regs = regFileMap(regName)
+    if(regs.size == 1) {
+      // single register read
+      fxnStr += "  AccelReg get_" + regName + "()"
+      fxnStr += " {return readReg(" + regs(0).toString + ");} "
+    } else if(regs.size == 2) {
+      // two-register read
+      // TODO this uses a hardcoded assumption about wCSR=32
+      if(wCSR != 32) throw new Exception("Violating assumption on wCSR=32")
+      fxnStr += "  AccelDblReg get_" + regName + "() "
+      fxnStr += "{ return (AccelDblReg)readReg("+regs(1).toString+") << 32 "
+      fxnStr += "| (AccelDblReg)readReg("+regs(0).toString+"); }"
+    } else { throw new Exception("Multi-reg reads not yet implemented") }
+
     return fxnStr
   }
 
   def makeRegWriteFxn(regName: String): String = {
     var fxnStr: String = ""
-    fxnStr += "  void set_" + regName + "(AccelReg value)"
-    fxnStr += " {writeReg(" + regFileMap(regName).toString + ", value);} "
+    val regs = regFileMap(regName)
+    if(regs.size == 1) {
+      // single register write
+      fxnStr += "  void set_" + regName + "(AccelReg value)"
+      fxnStr += " {writeReg(" + regs(0).toString + ", value);} "
+    } else if(regs.size == 2) {
+      // two-register write
+      // TODO this uses a hardcoded assumption about wCSR=32
+      if(wCSR != 32) throw new Exception("Violating assumption on wCSR=32")
+      fxnStr += "  void set_" + regName + "(AccelDblReg value)"
+      fxnStr += " { writeReg("+regs(0).toString+", (AccelReg)(value >> 32)); "
+      fxnStr += "writeReg("+regs(1).toString+", (AccelReg)(value & 0xffffffff)); }"
+    } else { throw new Exception("Multi-reg writes not yet implemented") }
+
     return fxnStr
   }
 
