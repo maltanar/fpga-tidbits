@@ -25,6 +25,20 @@ class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
   val rsp = Decoupled(new GenericMemoryResponse(p)).flip
 }
 
+// size alignment in hardware
+// if lower bits are not zero (=not aligned), increment upper bits by one,
+// concatenate zeroes as the lower bits and return
+object RoundUpAlign {
+  def apply(align: Int, x: UInt): UInt = {
+    val numZeroAddrBits = log2Up(align)
+    val numOtherBits = x.getWidth()-numZeroAddrBits
+    val lower = x(numZeroAddrBits-1, 0)
+    val upper = x(x.getWidth()-1, numZeroAddrBits)
+    val isAligned = (lower === UInt(0))
+    return Mux(isAligned, x, Cat(upper+UInt(1), UInt(0, width = numZeroAddrBits)))
+  }
+}
+
 class StreamReader(val p: StreamReaderParams) extends Module {
   val io = new StreamReaderIF(p.streamWidth, p.mem)
   val StreamElem = UInt(width = p.streamWidth)
@@ -37,9 +51,11 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   rg.ctrl.start := io.start
   // TODO add throttling logic based on FIFO level
   rg.ctrl.throttle := Bool(false)
-  // TODO add pointer/size aligners here?
   rg.ctrl.baseAddr := io.baseAddr
-  rg.ctrl.byteCount := io.byteCount
+  // make sure byte count is a multiple of the mem data width,
+  // otherwise the request generator will never finish
+  // the superflous (alignment) bytes will be removed later
+  rg.ctrl.byteCount := RoundUpAlign(p.mem.dataWidth/8, io.byteCount)
 
   // active and finished are generated based not only on the status
   // of the req.gen but also if all responses are finished (FIFO empty)
@@ -50,13 +66,18 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // push out memory requests to memRdReq channel
   rg.reqs <> io.req
 
-  // TODO add StreamLimiter here?
+  // create a StreamLimiter that lets only the first byteCount bytes pass
+  // this gets rid of any alignment bytes introduced by RoundUpAlign
+  def lim(in: DecoupledIO[UInt]): DecoupledIO[UInt] = {
+    StreamLimiter(in, io.start, io.byteCount)
+  }
+
   // read data responses (id etc filtered out)
   val rsp = ReadRespFilter(io.rsp)
   // TODO add a StreamResizer to handle all 3 cases
-  if (p.mem.dataWidth == p.streamWidth) { rsp <> fifo.enq }
+  if (p.mem.dataWidth == p.streamWidth) { lim(rsp) <> fifo.enq }
   else if (p.mem.dataWidth > p.streamWidth) {
-    StreamDownsizer(rsp, p.streamWidth) <> fifo.enq
+    lim(StreamDownsizer(rsp, p.streamWidth)) <> fifo.enq
   } else if (p.mem.dataWidth < p.streamWidth) {
     // TODO implement upsizing
     throw new Exception("StreamUpsizer not yet implemented")
