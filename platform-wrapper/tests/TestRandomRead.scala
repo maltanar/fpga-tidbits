@@ -10,8 +10,8 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
-    val indsBase = UInt(INPUT, 32)
-    val valsBase = UInt(INPUT, 32)
+    val indsBase = UInt(INPUT, 64)
+    val valsBase = UInt(INPUT, 64)
     val count = UInt(INPUT, 32)
     val sum = UInt(OUTPUT, 32)
   }

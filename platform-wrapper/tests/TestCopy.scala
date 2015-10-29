@@ -11,8 +11,8 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
-    val srcAddr = UInt(INPUT, width = 32)
-    val dstAddr = UInt(INPUT, width = 32)
+    val srcAddr = UInt(INPUT, width = 64)
+    val dstAddr = UInt(INPUT, width = 64)
     val byteCount = UInt(INPUT, width = 32)
     val finBytes = UInt(OUTPUT, width = 32)
   }

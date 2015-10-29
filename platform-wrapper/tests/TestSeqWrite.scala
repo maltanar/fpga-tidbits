@@ -10,7 +10,7 @@ class TestSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val status = UInt(OUTPUT, 3)
-    val baseAddr = UInt(INPUT, width = 32)
+    val baseAddr = UInt(INPUT, width = 64)
     val count = UInt(INPUT, width = 32)
   }
   plugMemReadPort(0)  // read port not used

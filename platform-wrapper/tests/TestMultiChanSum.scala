@@ -11,19 +11,25 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numChans = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
-    val baseAddr = Vec.fill(numChans) {UInt(INPUT, width=32)}
+    val baseAddr = Vec.fill(numChans) {UInt(INPUT, width=64)}
     val byteCount = Vec.fill(numChans) {UInt(INPUT, width=32)}
     val sum = Vec.fill(numChans) {UInt(OUTPUT, width=32)}
     val status = Bool(OUTPUT)
   }
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()
-
   val mrp = p.toMemReqParams()
-  val reqGens = Vec.tabulate(numChans) {i:Int => Module(new ReadReqGen(mrp, i, 1)).io}
-  val redFxn = {(a: UInt, b: UInt) => a+b}
+
+  def makeReader(id: Int) = {
+    Module(new StreamReader(new StreamReaderParams(
+      streamWidth = 32, fifoElems = 8, mem = mrp,
+      maxBeats = 1, chanID = id
+    ))).io
+  }
+
+  val readers = Vec.tabulate(numChans) {i:Int => makeReader(i)}
   val reducers = Vec.fill(numChans) {
-    Module(new StreamReducer(32, 0, redFxn)).io
+    Module(new StreamReducer(32, 0, {_+_})).io
   }
 
   val intl = Module(new ReqInterleaver(numChans, mrp)).io
@@ -32,19 +38,13 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // regGen -> intl -> (memRdReq) -> (memRdRsp) -> deintl -> reducer
 
   for(i <- 0 until numChans) {
-    reqGens(i).reqs <> intl.reqIn(i)
-    reqGens(i).ctrl.start := io.start
-    reqGens(i).ctrl.throttle := Bool(false)
-    reqGens(i).ctrl.baseAddr := io.baseAddr(i)
-    reqGens(i).ctrl.byteCount := io.byteCount(i)
+    readers(i).start := io.start
+    readers(i).baseAddr := io.baseAddr(i)
+    readers(i).byteCount := io.byteCount(i)
 
-    val respStream = ReadRespFilter(deintl.rspOut(i))
-
-    if (p.memDataBits > 32) {
-      reducers(i).streamIn <> StreamDownsizer(respStream, 32)
-    } else if (p.memDataBits == 32) {
-      reducers(i).streamIn <> respStream
-    } else throw new Exception("Sub-32 bit data buses not supported")
+    readers(i).req <> intl.reqIn(i)
+    deintl.rspOut(i) <> readers(i).rsp
+    readers(i).out <> reducers(i).streamIn
 
     reducers(i).start := io.start
     reducers(i).byteCount := io.byteCount(i)
