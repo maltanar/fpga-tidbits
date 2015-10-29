@@ -1,4 +1,4 @@
-package TidbitsSimUtils
+package TidbitsPlatformWrapper
 
 import Chisel._
 import TidbitsAXI._
@@ -8,46 +8,46 @@ import java.nio.file.{Files, Paths}
 import java.nio.ByteBuffer
 import java.io.FileOutputStream
 
-// testing infrastructure for wrappable accelerators
-// provides "main memory" simulation and a convenient way of setting up the
-// control/status registers for setting up the accelerator --
-// just like how a CPU would in an SoC-like setting
+// testing infrastructure for GenericAccelerator
+// providing something like a virtual platform that can be used for testing the
+// accelerator in Chisel simulation. provides "main memory" simulation and a
+// convenient way of setting up the control/status registers for setting up
+// the accelerator.
 
+object TesterWrapperParams extends PlatformWrapperParams {
+  val platformName = "Tester"
+  val memAddrBits = 48
+  val memDataBits = 64
+  val memIDBits = 32
+  val memMetaBits = 1
+  val numMemPorts = 0 // not really, just taken from the accelerator
+}
 
-class WrappableAccelHarness(
-  fxn: () => AXIWrappableAccel,
-  memWords: Int) extends Module {
-  val accel = Module(fxn())
-  lazy val p = accel.p
-  val rfAddrBits = log2Up(p.numRegs)
+class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+extends PlatformWrapper(TesterWrapperParams, instFxn) {
+  val memWords = 64 * 1024 * 1024
+  val mrp = p.toMemReqParams()
   val memAddrBits = log2Up(memWords)
-  val memUnitBytes = UInt(p.memDataWidth/8)
+  val memUnitBytes = UInt(p.memDataBits/8)
   val io = new Bundle {
     // register file access
-    val regFileIF = new RegFileSlaveIF(rfAddrBits, p.csrDataWidth)
+    val regFileIF = new RegFileSlaveIF(regAddrBits, p.csrDataBits)
     // memory access for the testbench
-    val memAddr = UInt(INPUT, p.addrWidth)
+    val memAddr = UInt(INPUT, p.memAddrBits)
     val memWriteEn = Bool(INPUT)
-    val memWriteData = UInt(INPUT, p.memDataWidth)
-    val memReadData = UInt(OUTPUT, p.memDataWidth)
+    val memWriteData = UInt(INPUT, p.memDataBits)
+    val memReadData = UInt(OUTPUT, p.memDataBits)
   }
   val accio = accel.io
 
-  // instantiate regfile
-  val regFile = Module(new RegFile(p.numRegs, rfAddrBits, p.csrDataWidth)).io
-
-  // connect regfile to accel ports
-  for(i <- 0 until p.numRegs) {
-    regFile.regIn(i) <> accel.io.regOut(i)
-    accel.io.regIn(i) := regFile.regOut(i)
-  }
-  // expose regfile interface
+  // expose regfile interface for testbench
   io.regFileIF <> regFile.extIF
 
-  val mem = Mem(UInt(width=p.memDataWidth), memWords)
+  // instantiate the "main memory"
+  val mem = Mem(UInt(width=p.memDataBits), memWords)
 
   // testbench memory access
-  def addrToWord(x: UInt) = {x >> UInt(log2Up(p.memDataWidth/8))}
+  def addrToWord(x: UInt) = {x >> UInt(log2Up(p.memDataBits/8))}
   val memWord = addrToWord(io.memAddr)
   io.memReadData := mem(memWord)
 
@@ -55,13 +55,13 @@ class WrappableAccelHarness(
 
   // accelerator memory access ports
   // one FSM per port, rather simple, but supports bursts
-  for(i <- 0 until p.numMemPorts) {
+  for(i <- 0 until accel.numMemPorts) {
     // reads
     val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
     val regStateRead = Reg(init = UInt(sWaitRd))
-    val regReadRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+    val regReadRequest = Reg(init = GenericMemoryRequest(mrp))
 
-    val accmp = accio.mp(i)
+    val accmp = accio.memPort(i)
 
     accmp.memRdReq.ready := Bool(false)
     accmp.memRdRsp.valid := Bool(false)
@@ -93,14 +93,14 @@ class WrappableAccelHarness(
     // writes
     val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
     val regStateWrite = Reg(init = UInt(sWaitWr))
-    val regWriteRequest = Reg(init = GenericMemoryRequest(p.toMRP()))
+    val regWriteRequest = Reg(init = GenericMemoryRequest(mrp))
     // write data queue to avoid deadlocks (state machine expects rspQ and data
     // available simultaneously)
-    val wrDatQ = Module(new Queue(UInt(width = p.memDataWidth), 16)).io
+    val wrDatQ = Module(new Queue(UInt(width = p.memDataBits), 16)).io
     wrDatQ.enq <> accmp.memWrDat
 
     // queue on write response port (to avoid combinational loops)
-    val wrRspQ = Module(new Queue(GenericMemoryResponse(p.toMRP()), 16)).io
+    val wrRspQ = Module(new Queue(GenericMemoryResponse(mrp), 16)).io
     wrRspQ.deq <> accmp.memWrRsp
 
     accmp.memWrReq.ready := Bool(false)
@@ -134,12 +134,12 @@ class WrappableAccelHarness(
   }
 }
 
-class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
+class GenericAccelTester(c: TesterWrapper) extends Tester(c) {
   // TODO add functions for initializing memory
   val memUnitBytes = c.memUnitBytes.litValue()
   val regFile = c.io.regFileIF
   def nameToRegInd(regName: String): Int = {
-    return c.accel.regMap(regName).toInt
+    return c.regFileMap(regName)(0).toInt
   }
   type HookFxn = () => Unit
   var hooks = scala.collection.mutable.Map[String, HookFxn]()
@@ -150,7 +150,7 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
   }
 
   def printAllRegs() = {
-    val ks = c.accel.regMap.keys
+    val ks = c.regFileMap.keys
     var regVals = scala.collection.mutable.Map[String, BigInt]()
     for(k <- ks) {
       regVals(k) = readReg(k)
@@ -223,7 +223,7 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
       System.exit(-1)
     }
     var i: Int = 0
-    for(b <- buf.grouped(c.p.memDataWidth/8)) {
+    for(b <- buf.grouped(c.p.memDataBits/8)) {
       val w : BigInt = new BigInt(new java.math.BigInteger(b.reverse))
 
       //println("Read: " + valueOf(w.toByteArray))
@@ -253,6 +253,5 @@ class WrappableAccelTester(c: WrappableAccelHarness) extends Tester(c) {
 
   // let the accelerator do internal init (such as writing to the regfile)
   step(10)
-  // launch the default test, as defined by the accelerator
-  c.accel.defaultTest(this)
+  // TODO launch the default test, as defined by the accelerator
 }
