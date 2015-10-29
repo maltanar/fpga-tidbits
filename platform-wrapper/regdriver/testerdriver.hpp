@@ -7,6 +7,10 @@ using namespace std;
 #include "wrapperregdriver.h"
 #include "TesterWrapper.h"
 
+// uncomment the second line here to enable verbose reg read/writes
+//#define __TESTERDRIVER_DEBUG(x) (cout << x)
+#define __TESTERDRIVER_DEBUG(x) (0)
+
 // register driver for the Tester platform, using the Chisel-generated C++ model to
 // interface with the accelerator model
 // note that TesterWrapper.h must be generated for each new accelerator, it is the
@@ -84,6 +88,8 @@ public:
 
   // register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
+    __TESTERDRIVER_DEBUG("writeReg(" << regInd << ", " << regValue  << ") "<< endl);
+
     m_inst->TesterWrapper__io_regFileIF_cmd_bits_writeData = regValue;
     m_inst->TesterWrapper__io_regFileIF_cmd_bits_write  = 1;
     m_inst->TesterWrapper__io_regFileIF_cmd_bits_regID = regInd;
@@ -109,6 +115,8 @@ public:
     m_inst->TesterWrapper__io_regFileIF_cmd_bits_read = 0;
 
     ret = m_inst->TesterWrapper__io_regFileIF_readData_bits.to_ulong();
+
+    __TESTERDRIVER_DEBUG("readReg(" << regInd << ") = " << ret << endl);
 
     step(5);  // extra delay on read completion to be realistic
 
