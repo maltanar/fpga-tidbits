@@ -13,6 +13,8 @@ using namespace std;
 
 class TesterRegDriver : public WrapperRegDriver {
 public:
+  TesterRegDriver() {m_freePtr = 0;}
+
   virtual void attach(const char * name) {
     m_inst = new TesterWrapper_t();
     // get # words in the memory
@@ -26,16 +28,36 @@ public:
   virtual void detach() { delete m_inst; }
 
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
-    // TODO implement memory writes
+    // copy from host to accel = write data to accel memory
+    if(numBytes % 8 != 0) throw "Write size must be divisable by 8";
+    uint64_t * host_buf = (uint64_t *) hostBuffer;
+    uint64_t accelBufBase = (uint64_t) accelBuffer;
+    if(accelBufBase % 8 != 0) throw "Accelerator buf.adr. must be divisable by 8";
+    for(unsigned int i = 0; i < numBytes/8; i++)
+        memWrite(accelBufBase + i*8, host_buf[i]);
   }
 
   virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
-    // TODO implement memory reads
+    if(numBytes % 8 != 0) throw "Read size must be divisable by 8";
+    uint64_t accelBufBase = (uint64_t) accelBuffer;
+    if(accelBufBase % 8 != 0) throw "Accelerator buf.adr. must be divisable by 8";
+
+    uint64_t * readBuf = (uint64_t *) hostBuffer;
+    for(unsigned int i = 0; i < numBytes/8; i++)
+      readBuf[i] = memRead(accelBufBase + i*8);
   }
 
   virtual void * allocAccelBuffer(unsigned int numBytes) {
-    // TODO implement simple memory bookkeeping + return buffer
-    return 0;
+    // all this assumes allocation and mem word size of 8 bytes
+    // round requested size to nearest multiple of 8
+    unsigned int actualAllocSize = numBytes + 7 / 8 * 8;
+    void * accelBuf = (void *) m_freePtr;
+    // update free pointer and sanity check
+    m_freePtr += actualAllocSize;
+    if(m_freePtr > m_memWords * 8)
+      throw "Not enough memory in allocAccelBuffer";
+
+    return accelBuf;
   }
 
   // register access methods for the platform wrapper
@@ -83,6 +105,7 @@ protected:
   TesterWrapper_t * m_inst;
   unsigned int m_memWords;
   unsigned int m_regCount;
+  uint64_t m_freePtr;
 
   void reset() {
     m_inst->clock(1);
@@ -97,6 +120,21 @@ protected:
       // Chisel c++ backend requires this workaround to get out the correct values
       m_inst->clock_lo(0);
     }
+  }
+
+  void memWrite(uint64_t addr, uint64_t value) {
+    m_inst->TesterWrapper__io_memAddr = addr;
+    m_inst->TesterWrapper__io_memWriteData = value;
+    m_inst->TesterWrapper__io_memWriteEn = 1;
+    step();
+    m_inst->TesterWrapper__io_memWriteEn = 0;
+  }
+
+  uint64_t memRead(uint64_t addr) {
+    m_inst->TesterWrapper__io_memAddr = addr;
+    step();
+    uint64_t ret = m_inst->TesterWrapper__io_memReadData[0];
+    return ret;
   }
 };
 
