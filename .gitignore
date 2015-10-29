@@ -24,3 +24,6 @@ verilogOutput/
 
 # Qt
 *.pro.user
+
+# other
+emulator/
