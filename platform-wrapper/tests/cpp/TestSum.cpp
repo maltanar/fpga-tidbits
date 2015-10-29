@@ -21,7 +21,7 @@ bool Run_TestSum(WrapperRegDriver * platform) {
 	void * accelBuf = platform->allocAccelBuffer(bufsize);
 	platform->copyBufferHostToAccel(hostBuf, accelBuf, bufsize);
 
-	t.set_baseAddr((AccelReg) accelBuf);
+	t.set_baseAddr((AccelDblReg) accelBuf);
 	t.set_byteCount(bufsize);
 
 	t.set_start(1);
@@ -41,9 +41,7 @@ int main()
 {
 	WrapperRegDriver * platform = initPlatform();
 
-  // TODO could autodetect correct test based on signature
-  // for now, must be manually uncommented
-	// Run_TestSum(platform);
+	Run_TestSum(platform);
 
 	deinitPlatform(platform);
 

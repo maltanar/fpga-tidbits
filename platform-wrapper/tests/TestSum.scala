@@ -11,7 +11,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
-    val baseAddr = UInt(INPUT, width = 32)
+    val baseAddr = UInt(INPUT, width = 64)
     val byteCount = UInt(INPUT, width = 32)
     val sum = UInt(OUTPUT, width = 32)
   }
