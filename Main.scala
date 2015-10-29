@@ -25,7 +25,8 @@ object MainObj {
 
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
-    "WX690T" -> {f => new WolverinePlatformWrapper(f)}
+    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
+    "Tester" -> {f => new TesterWrapper(f)}
   )
 
   def makeVerilog(args: Array[String]) = {
@@ -34,6 +35,16 @@ object MainObj {
     val accInst = accelMap(accelName)
     val platformInst = platformMap(platformName)
     val chiselArgs = Array("--v")
+
+    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+  }
+
+  def makeEmulator(args: Array[String]) = {
+    val accelName = args(0)
+    val platformName = args(1)
+    val accInst = accelMap(accelName)
+    val platformInst = platformMap(platformName)
+    val chiselArgs = Array("--backend","c","--targetDir", "emulator")
 
     chiselMain(chiselArgs, () => Module(platformInst(accInst)))
   }
@@ -50,7 +61,7 @@ object MainObj {
   def showHelp() = {
     println("Usage: run <op> <accel> <platform>")
     println("where:")
-    println("<op> = verilog driver")
+    println("<op> = verilog driver emulator")
     println("<accel> = " + accelMap.keys.reduce({_ + " " +_}))
     println("<platform> = " + platformMap.keys.reduce({_ + " " +_}))
   }
@@ -68,6 +79,8 @@ object MainObj {
       makeVerilog(rst)
     } else if (op == "driver" || op == "d") {
       makeDriver(rst)
+    } else if (op == "emulator" || op == "e") {
+      makeEmulator(rst)
     } else {
       showHelp()
       return
