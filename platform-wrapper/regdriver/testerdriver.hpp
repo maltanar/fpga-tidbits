@@ -2,6 +2,7 @@
 #define TESTERDRIVER_H
 
 #include <iostream>
+#include <string.h>
 using namespace std;
 #include "wrapperregdriver.h"
 #include "TesterWrapper.h"
@@ -28,23 +29,44 @@ public:
   virtual void detach() { delete m_inst; }
 
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
-    // copy from host to accel = write data to accel memory
-    if(numBytes % 8 != 0) throw "Write size must be divisable by 8";
-    uint64_t * host_buf = (uint64_t *) hostBuffer;
     uint64_t accelBufBase = (uint64_t) accelBuffer;
-    if(accelBufBase % 8 != 0) throw "Accelerator buf.adr. must be divisable by 8";
-    for(unsigned int i = 0; i < numBytes/8; i++)
-        memWrite(accelBufBase + i*8, host_buf[i]);
+
+    if((numBytes % 8 == 0) && (accelBufBase % 8 == 0))
+      alignedCopyBufferHostToAccel(hostBuffer, accelBuffer, numBytes);
+    else {
+      // align base and size
+      uint64_t alignedBase = accelBufBase - (accelBufBase % 8);
+      uint64_t startDiff = accelBufBase - alignedBase;
+      unsigned int alignedSize = (startDiff + numBytes + 7) / 8 * 8;
+      // copy containing block into host memory
+      char * tmp = new char[alignedSize];
+      alignedCopyBufferAccelToHost((void *)alignedBase, (void *) tmp, alignedSize);
+      // do host-to-host unaligned copy
+      memcpy((void *)&tmp[startDiff], hostBuffer, numBytes);
+      // write containing block back to accel memory
+      alignedCopyBufferHostToAccel((void *)tmp, (void *)alignedBase, alignedSize);
+      delete [] tmp;
+    }
   }
 
   virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
-    if(numBytes % 8 != 0) throw "Read size must be divisable by 8";
     uint64_t accelBufBase = (uint64_t) accelBuffer;
-    if(accelBufBase % 8 != 0) throw "Accelerator buf.adr. must be divisable by 8";
 
-    uint64_t * readBuf = (uint64_t *) hostBuffer;
-    for(unsigned int i = 0; i < numBytes/8; i++)
-      readBuf[i] = memRead(accelBufBase + i*8);
+    if((numBytes % 8 == 0) && (accelBufBase % 8 == 0))
+      alignedCopyBufferAccelToHost(hostBuffer, accelBuffer, numBytes);
+    else {
+      // implement unaligned accel-to-host
+      // align base and size
+      uint64_t alignedBase = accelBufBase - (accelBufBase % 8);
+      uint64_t startDiff = accelBufBase - alignedBase;
+      unsigned int alignedSize = (startDiff + numBytes + 7) / 8 * 8;
+      // copy containing block into host memory
+      char * tmp = new char[alignedSize];
+      alignedCopyBufferAccelToHost((void *)alignedBase, (void *) tmp, alignedSize);
+      // do host-to-host unaligned copy
+      memcpy(hostBuffer, (void *)&tmp[startDiff],numBytes);
+      delete [] tmp;
+    }
   }
 
   virtual void * allocAccelBuffer(unsigned int numBytes) {
@@ -135,6 +157,21 @@ protected:
     step();
     uint64_t ret = m_inst->TesterWrapper__io_memReadData[0];
     return ret;
+  }
+
+  // "aligned" copy functions, where accel ptr start and size are guaranteed to be 8-aligned
+  void alignedCopyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
+    uint64_t * host_buf = (uint64_t *) hostBuffer;
+    uint64_t accelBufBase = (uint64_t) accelBuffer;
+    for(unsigned int i = 0; i < numBytes/8; i++)
+        memWrite(accelBufBase + i*8, host_buf[i]);
+  }
+
+  void alignedCopyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
+    uint64_t accelBufBase = (uint64_t) accelBuffer;
+    uint64_t * readBuf = (uint64_t *) hostBuffer;
+    for(unsigned int i = 0; i < numBytes/8; i++)
+      readBuf[i] = memRead(accelBufBase + i*8);
   }
 };
 
