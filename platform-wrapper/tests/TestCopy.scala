@@ -5,6 +5,7 @@ import TidbitsPlatformWrapper._
 import TidbitsDMA._
 import TidbitsStreams._
 
+// TODO support non-word-aligned sizes in byteCount
 
 class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
