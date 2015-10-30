@@ -35,9 +35,7 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   wrg.reqs <> io.memPort(0).memWrReq
 
   // pull out read response as write data
-  io.memPort(0).memWrDat.valid := io.memPort(0).memRdRsp.valid
-  io.memPort(0).memWrDat.bits := io.memPort(0).memRdRsp.bits.readData
-  io.memPort(0).memRdRsp.ready := io.memPort(0).memWrDat.ready
+  ReadRespFilter(io.memPort(0).memRdRsp) <> io.memPort(0).memWrDat
 
   // count write responses to determine finished
   val regCompletes = Reg(init = UInt(0, 32))
