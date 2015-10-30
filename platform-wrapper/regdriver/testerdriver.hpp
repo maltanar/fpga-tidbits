@@ -59,7 +59,7 @@ public:
     __TESTERDRIVER_DEBUG("accel2host(" << accelBufBase << " -> " << (uint64_t) hostBuffer << " : " << numBytes << " bytes)");
 
     if((numBytes % 8 == 0) && (accelBufBase % 8 == 0))
-      alignedCopyBufferAccelToHost(hostBuffer, accelBuffer, numBytes);
+      alignedCopyBufferAccelToHost(accelBuffer, hostBuffer, numBytes);
     else {
       // implement unaligned accel-to-host
       // align base and size
