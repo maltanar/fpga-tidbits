@@ -20,7 +20,8 @@ object MainObj {
     "TestMultiChanSum" -> {p => new TestMultiChanSum(p)},
     "TestSeqWrite" -> {p => new TestSeqWrite(p)},
     "TestCopy" -> {p => new TestCopy(p)},
-    "TestRandomRead" -> {p => new TestRandomRead(p)}
+    "TestRandomRead" -> {p => new TestRandomRead(p)},
+    "TestBRAM" -> {p => new TestBRAM(p)}
   )
 
   val platformMap: PlatformMap = Map(
@@ -42,7 +43,7 @@ object MainObj {
     val platformName = args(1)
     val accInst = accelMap(accelName)
     val platformInst = platformMap(platformName)
-    val chiselArgs = Array("--v")
+    val chiselArgs = Array("--backend", "v")
 
     chiselMain(chiselArgs, () => Module(platformInst(accInst)))
   }

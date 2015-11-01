@@ -6,6 +6,8 @@ import TidbitsDMA._
 import TidbitsStreams._
 import TidbitsOCM._
 
+// instantiate a 32-wide 1024-deep dual-port BRAM and directly connect its
+// inputs to the module I/O (thus the register file)
 
 class TestBRAM(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 0
@@ -14,8 +16,7 @@ class TestBRAM(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
   io.signature := makeDefaultSignature()
 
-  val mem = Mem(UInt(width = 32), 1024)
-
-  // TODO implement r/w logic
-
+  val mem = Module(new DualPortBRAM(10, 32)).io
+  mem.ports(0) <> io.ports(0)
+  mem.ports(1) <> io.ports(1)
 }
