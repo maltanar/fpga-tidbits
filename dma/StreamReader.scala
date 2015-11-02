@@ -2,13 +2,15 @@ package TidbitsDMA
 
 import Chisel._
 import TidbitsStreams._
+import TidbitsOCM._
 
 class StreamReaderParams(
   val streamWidth: Int,
   val fifoElems: Int,
   val mem: MemReqParams,
   val maxBeats: Int,
-  val chanID: Int
+  val chanID: Int,
+  val disableThrottle: Boolean = false
 )
 
 class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
@@ -46,16 +48,16 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // read request generator
   val rg = Module(new ReadReqGen(p.mem, p.chanID, p.maxBeats)).io
   // FIFO to store read data
-  val fifo = Module(new Queue(StreamElem, p.fifoElems)).io
+  val fifo = Module(new FPGAQueue(StreamElem, p.fifoElems)).io
+  val streamBytes = UInt(p.streamWidth/8)
+  val memWidthBytes = p.mem.dataWidth/8
 
   rg.ctrl.start := io.start
-  // TODO add throttling logic based on FIFO level
-  rg.ctrl.throttle := Bool(false)
   rg.ctrl.baseAddr := io.baseAddr
   // make sure byte count is a multiple of the mem data width,
   // otherwise the request generator will never finish
   // the superflous (alignment) bytes will be removed later
-  rg.ctrl.byteCount := RoundUpAlign(p.mem.dataWidth/8, io.byteCount)
+  rg.ctrl.byteCount := RoundUpAlign(memWidthBytes, io.byteCount)
 
   // active and finished are generated based not only on the status
   // of the req.gen but also if all responses are finished (FIFO empty)
@@ -85,6 +87,22 @@ class StreamReader(val p: StreamReaderParams) extends Module {
 
   // expose FIFO output as the stream output
   fifo.deq <> io.out
+
+  if(p.disableThrottle) { rg.ctrl.throttle := Bool(false) }
+  else {
+    // throttling logic: don't ask more than what we can chew, limit the #
+    // outstanding requested bytes to FIFO capacity
+    val regBytesInFlight = Reg(init = UInt(0, 32))
+    val fifoAvailBytes = (UInt(p.fifoElems+2) - fifo.count) * streamBytes
+    // calculate per-cycle updates to # bytes in flight
+    val outReqBytes = UInt(0)
+    val inRspBytes = UInt(0)
+    when(rsp.valid & rsp.ready) { inRspBytes := UInt(memWidthBytes) }
+    when(io.req.valid & io.req.ready) { outReqBytes := io.req.bits.numBytes }
+    regBytesInFlight := regBytesInFlight + outReqBytes - inRspBytes
+    // throttle when we start getting too many requests
+    rg.ctrl.throttle := Reg(next=regBytesInFlight >= fifoAvailBytes)
+  }
 
   // TODO add support for statistics?
   // - average req, rsp, data consume latencies (histograms?)

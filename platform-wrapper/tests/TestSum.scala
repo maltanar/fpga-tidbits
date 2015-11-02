@@ -19,7 +19,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   val rdP = new StreamReaderParams(
     streamWidth = 32, fifoElems = 8, mem = p.toMemReqParams(),
-    maxBeats = 1, chanID = 0
+    maxBeats = 1, chanID = 0, disableThrottle = true
   )
 
   val reader = Module(new StreamReader(rdP)).io

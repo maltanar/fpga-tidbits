@@ -23,7 +23,7 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   def makeReader(id: Int) = {
     Module(new StreamReader(new StreamReaderParams(
       streamWidth = 32, fifoElems = 8, mem = mrp,
-      maxBeats = 1, chanID = id
+      maxBeats = 1, chanID = id, disableThrottle = true
     ))).io
   }
 
