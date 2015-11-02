@@ -6,8 +6,10 @@ import Chisel._
 // or with FPGA TDP BRAMs as the storage (for larger queues)
 
 class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
-  val io = new QueueIO(gen, entries)
-  if(entries < 32) {
+  val thresholdBigQueue = 32 // threshold for deciding big or small queue impl
+  val actualEntries = if (entries < thresholdBigQueue) entries else entries + 2
+  val io = new QueueIO(gen, actualEntries)
+  if(entries < thresholdBigQueue) {
     // create a regular Chisel queue, should be fine to use LUTRAMs as storage
     val theQueue = Module(new Queue(gen, entries)).io
     theQueue <> io
@@ -21,6 +23,15 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
     val enq_ptr = Counter(entries)
     val deq_ptr = Counter(entries)
     val maybe_full = Reg(init=Bool(false))
+
+    // due to the 1-cycle read latency of BRAMs, we add a small regular
+    // Chisel Queue at the output to correct the interface semantics by
+    // "prefetching" the top two elements ("handshaking across latency")
+    // TODO support higher BRAM latencies with parametrization here
+    val pf = Module(new Queue(gen, 2)).io
+    // will be used as the "ready" signal for the prefetch queue
+    // the threshold here needs to be (pfQueueCap-BRAM latency)
+    val canPrefetch = (pf.count < UInt(1))
 
     val bram = Module(new DualPortBRAM(log2Up(entries), gen.getWidth())).io
     val writePort = bram.ports(0)
@@ -38,7 +49,7 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
     val full = ptr_match && maybe_full
 
     val do_enq = io.enq.ready && io.enq.valid
-    val do_deq = io.deq.ready && io.deq.valid
+    val do_deq = canPrefetch && !empty
     when (do_enq) {
       writePort.req.writeEn := Bool(true)
       enq_ptr.inc()
@@ -50,19 +61,23 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
       maybe_full := do_enq
     }
 
-    io.deq.valid := !empty
     io.enq.ready := !full
-    io.deq.bits := readPort.rsp.readData
 
+    pf.enq.valid := Reg(init = Bool(false), next = do_deq)
+    pf.enq.bits := readPort.rsp.readData
+
+    pf.deq <> io.deq
+
+    // TODO this count may be off by 1 (elem about to enter the pf queue)
     val ptr_diff = enq_ptr.value - deq_ptr.value
     if (isPow2(entries)) {
-      io.count := Cat(maybe_full && ptr_match, ptr_diff)
+      io.count := Cat(maybe_full && ptr_match, ptr_diff) + pf.count
     } else {
       io.count := Mux(ptr_match,
                       Mux(maybe_full,
                         UInt(entries), UInt(0)),
                       Mux(deq_ptr.value > enq_ptr.value,
-                        UInt(entries) + ptr_diff, ptr_diff))
+                        UInt(entries) + ptr_diff, ptr_diff)) + pf.count
     }
   }
 }
