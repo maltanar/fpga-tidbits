@@ -8,6 +8,14 @@ import TidbitsAXI._
 // samples =  A B C D E
 // deltas =   (B-A) (C-B) (D-C) (E-D)
 
+object StreamDelta {
+  def apply(in: DecoupledIO[UInt]): DecoupledIO[UInt] = {
+    val deltagen = Module(new StreamDelta(in.bits.getWidth())).io
+    deltagen.samples <> in
+    deltagen.deltas
+  }
+}
+
 class StreamDelta(dataWidth: Int) extends Module {
   val io = new Bundle {
     val samples = new AXIStreamSlaveIF(UInt(width = dataWidth))

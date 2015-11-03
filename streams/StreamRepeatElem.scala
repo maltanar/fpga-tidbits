@@ -9,6 +9,18 @@ import TidbitsAXI._
 // <element> = A B C D E F
 // <repCnt> = 2 1 0 3
 // <out> = A A B D D D
+
+object StreamRepeatElem {
+  def apply(inElem: DecoupledIO[UInt], inRepCnt: DecoupledIO[UInt]):
+  DecoupledIO[UInt] = {
+    val repgen = Module(new StreamRepeatElem(inElem.bits.getWidth(),
+                        inRepCnt.bits.getWidth())).io
+    repgen.inElem <> inElem
+    repgen.inRepCnt <> inRepCnt
+    repgen.out
+  }
+}
+
 class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
   val io = new Bundle {
     val inElem = new AXIStreamSlaveIF(UInt(width = dataWidth))
