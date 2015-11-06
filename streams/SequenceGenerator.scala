@@ -9,7 +9,7 @@ class SequenceGenerator(w: Int) extends Module {
   val io = new Bundle {
     val start = Bool(INPUT)
     val init = UInt(INPUT, width = w)
-    val count = UInt(INPUT, width = w)
+    val count = UInt(INPUT, width = 32)
     val step = UInt(INPUT, width = w)
     val finished = Bool(OUTPUT)
     val seq = Decoupled(UInt(width = w))

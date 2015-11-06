@@ -23,3 +23,29 @@ class AXIStreamOutputMux(dataWidth: Int) extends Module {
 
   io.strm.ready := Mux(io.sel === UInt(0), io.out0.ready, io.out1.ready)
 }
+
+class DecoupledOutputDemuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {
+  val sel = UInt(INPUT, width = log2Up(numChans))
+  val in = Decoupled(gen).flip
+  val out = Vec.fill(numChans) {Decoupled(gen)}
+}
+
+class DecoupledOutputDemux[T <: Data](gen: T, numChans: Int) extends Module {
+  val io = new DecoupledOutputDemuxIO(gen, numChans)
+
+  io.in.ready := io.out(io.sel).ready
+
+  for(i <- 0 until numChans) {
+    io.out(i).valid := io.in.valid & (io.sel === UInt(i))
+    io.out(i).bits := io.in.bits
+  }
+}
+
+object DecoupledOutputDemux {
+  def apply[T <: Data](sel: UInt, chans: Seq[DecoupledIO[T]]): DecoupledIO[T] = {
+    val inst = Module(new DecoupledOutputDemux(chans(0).bits, chans.size)).io
+    for(i <- 0 until chans.size) {inst.out(i) <> chans(i)}
+    inst.sel := sel
+    inst.in
+  }
+}
