@@ -95,8 +95,10 @@ class StreamReader(val p: StreamReaderParams) extends Module {
     val regBytesInFlight = Reg(init = UInt(0, 32))
     val fifoAvailBytes = (UInt(p.fifoElems+2) - fifo.count) * streamBytes
     // calculate per-cycle updates to # bytes in flight
-    val outReqBytes = UInt(0)
-    val inRspBytes = UInt(0)
+    val outReqBytes = UInt(width = 32)
+    val inRspBytes = UInt(width = 32)
+    outReqBytes := UInt(0)
+    inRspBytes := UInt(0)
     when(rsp.valid & rsp.ready) { inRspBytes := UInt(memWidthBytes) }
     when(io.req.valid & io.req.ready) { outReqBytes := io.req.bits.numBytes }
     regBytesInFlight := regBytesInFlight + outReqBytes - inRspBytes
