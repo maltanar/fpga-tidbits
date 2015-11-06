@@ -16,7 +16,7 @@ class SequenceGenerator(w: Int) extends Module {
   }
 
   val regSeqElem = Reg(init = UInt(0, w))
-  val regElemsLeft = Reg(init = UInt(0, w))
+  val regElemsLeft = Reg(init = UInt(0, 32))
   io.finished := Bool(false)
   io.seq.valid := Bool(false)
   io.seq.bits := regSeqElem
