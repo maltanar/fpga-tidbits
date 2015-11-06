@@ -12,6 +12,9 @@ using namespace std;
 #ifdef DEBUG
 #define __TESTERDRIVER_DEBUG_PRINT(x) (cout << x << endl)
 #define __TESTERDRIVER_DEBUG(x) (x)
+#elif DEBUG_HW
+#define __TESTERDRIVER_DEBUG_PRINT(x) (0)
+#define __TESTERDRIVER_DEBUG(x) (x)
 #else
 #define __TESTERDRIVER_DEBUG_PRINT(x) (0)
 #define __TESTERDRIVER_DEBUG(x) (0)
