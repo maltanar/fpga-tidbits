@@ -7,7 +7,8 @@ using namespace std;
 #include "wrapperregdriver.h"
 #include "TesterWrapper.h"
 
-// uncomment the second line here to enable verbose reg read/writes
+// uncomment the second line here to enable verbose reg read/writes and Chisel HW printfs
+// remember to compile with -std=c++11 for Chisel HW printfs to work
 //#define __TESTERDRIVER_DEBUG(x) (cout << x << endl)
 #define __TESTERDRIVER_DEBUG(x) (0)
 
@@ -152,6 +153,7 @@ protected:
       m_inst->clock(0);
       // Chisel c++ backend requires this workaround to get out the correct values
       m_inst->clock_lo(0);
+      __TESTERDRIVER_DEBUG(m_inst->print(cout));
     }
   }
 
