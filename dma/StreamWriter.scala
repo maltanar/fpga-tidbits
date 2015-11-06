@@ -25,7 +25,7 @@ class StreamWriterIF(w: Int, p: MemReqParams) extends Bundle {
   val in = Decoupled(UInt(width = w)).flip
   // interface towards memory port
   val req = Decoupled(new GenericMemoryRequest(p))
-  val wdat = Decoupled(UInt(width = w))
+  val wdat = Decoupled(UInt(width = p.dataWidth))
   val rsp = Decoupled(new GenericMemoryResponse(p)).flip
 }
 
