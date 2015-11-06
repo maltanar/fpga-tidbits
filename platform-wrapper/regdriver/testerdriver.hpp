@@ -7,10 +7,15 @@ using namespace std;
 #include "wrapperregdriver.h"
 #include "TesterWrapper.h"
 
-// uncomment the second line here to enable verbose reg read/writes and Chisel HW printfs
+// enable verbose reg read/writes and Chisel HW printfs
 // remember to compile with -std=c++11 for Chisel HW printfs to work
-//#define __TESTERDRIVER_DEBUG(x) (cout << x << endl)
+#ifdef DEBUG
+#define __TESTERDRIVER_DEBUG_PRINT(x) (cout << x << endl)
+#define __TESTERDRIVER_DEBUG(x) (x)
+#else
+#define __TESTERDRIVER_DEBUG_PRINT(x) (0)
 #define __TESTERDRIVER_DEBUG(x) (0)
+#endif
 
 // register driver for the Tester platform, using the Chisel-generated C++ model to
 // interface with the accelerator model
@@ -35,7 +40,7 @@ public:
 
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
-    __TESTERDRIVER_DEBUG("host2accel(" << (uint64_t) hostBuffer << " -> " << accelBufBase << " : " << numBytes << " bytes)");
+    __TESTERDRIVER_DEBUG_PRINT("host2accel(" << (uint64_t) hostBuffer << " -> " << accelBufBase << " : " << numBytes << " bytes)");
 
     if((numBytes % 8 == 0) && (accelBufBase % 8 == 0))
       alignedCopyBufferHostToAccel(hostBuffer, accelBuffer, numBytes);
@@ -57,7 +62,7 @@ public:
 
   virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
-    __TESTERDRIVER_DEBUG("accel2host(" << accelBufBase << " -> " << (uint64_t) hostBuffer << " : " << numBytes << " bytes)");
+    __TESTERDRIVER_DEBUG_PRINT("accel2host(" << accelBufBase << " -> " << (uint64_t) hostBuffer << " : " << numBytes << " bytes)");
 
     if((numBytes % 8 == 0) && (accelBufBase % 8 == 0))
       alignedCopyBufferAccelToHost(accelBuffer, hostBuffer, numBytes);
@@ -85,14 +90,14 @@ public:
     m_freePtr += actualAllocSize;
     if(m_freePtr > m_memWords * 8)
       throw "Not enough memory in allocAccelBuffer";
-    __TESTERDRIVER_DEBUG("allocAccelBuffer(" << numBytes << ", alloc " << actualAllocSize <<") = " << (uint64_t) accelBuf);
+    __TESTERDRIVER_DEBUG_PRINT("allocAccelBuffer(" << numBytes << ", alloc " << actualAllocSize <<") = " << (uint64_t) accelBuf);
 
     return accelBuf;
   }
 
   // register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
-    __TESTERDRIVER_DEBUG("writeReg(" << regInd << ", " << regValue  << ") ");
+    __TESTERDRIVER_DEBUG_PRINT("writeReg(" << regInd << ", " << regValue  << ") ");
 
     m_inst->TesterWrapper__io_regFileIF_cmd_bits_writeData = regValue;
     m_inst->TesterWrapper__io_regFileIF_cmd_bits_write  = 1;
@@ -120,7 +125,7 @@ public:
 
     ret = m_inst->TesterWrapper__io_regFileIF_readData_bits.to_ulong();
 
-    __TESTERDRIVER_DEBUG("readReg(" << regInd << ") = " << ret);
+    __TESTERDRIVER_DEBUG_PRINT("readReg(" << regInd << ") = " << ret);
 
     step(5);  // extra delay on read completion to be realistic
 
