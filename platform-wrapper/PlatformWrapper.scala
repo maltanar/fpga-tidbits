@@ -151,7 +151,7 @@ extends Module {
 
   def generateRegDriver(targetDir: String) = {
     var driverStr: String = ""
-    val driverName: String = accel.getClass.getSimpleName
+    val driverName: String = accel.name
     driverStr += ("#ifndef " + driverName + "_H") + "\n"
     driverStr += ("#define " + driverName + "_H") + "\n"
     driverStr += "#include \"wrapperregdriver.h\"\n\n"

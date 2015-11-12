@@ -54,4 +54,7 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
     io.memPort(i).memWrDat.bits := UInt(0)
     io.memPort(i).memWrRsp.ready := Bool(false)
   }
+  // use the class name as the accel name
+  // just set to something else in derived class if needed
+  setName(this.getClass.getSimpleName)
 }
