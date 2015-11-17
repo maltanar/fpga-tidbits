@@ -88,6 +88,53 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
   }
 }
 
+// turn a stream of UInts into a stream of memory requests, treating the
+// input stream UInt values as array indices
+// the width of each element in the array is assumed to be equal to the
+// memory data width
+class IndsToMemReq(p: MemReqParams) extends Module {
+  val io = new Bundle {
+    // base address of the array start
+    val base = UInt(INPUT, width = p.addrWidth)
+    val isWrite = Bool(INPUT)
+    val chanID = UInt(INPUT, width = p.idWidth)
+    // array indices in
+    val inds = Decoupled(UInt(width = p.dataWidth)).flip
+    // memory requests out
+    val reqs = Decoupled(GenericMemoryRequest(p))
+  }
+  io.reqs.valid := io.inds.valid
+  io.inds.ready := io.reqs.ready
+
+  io.reqs.bits.channelID := io.chanID
+  io.reqs.bits.isWrite := io.isWrite
+  io.reqs.bits.addr := io.base + UInt(p.dataWidth/8) * io.inds.bits
+  io.reqs.bits.numBytes := UInt(p.dataWidth/8)
+  io.reqs.bits.metaData := UInt(0)
+}
+
+object ReadArray {
+  def apply(inds: DecoupledIO[UInt], base: UInt, id: UInt, p: MemReqParams) = {
+    val arrayReadGen = Module(new IndsToMemReq(p)).io
+    arrayReadGen.base := base
+    arrayReadGen.isWrite := Bool(false)
+    arrayReadGen.chanID := id
+    inds <> arrayReadGen.inds
+    arrayReadGen.reqs
+  }
+}
+
+object WriteArray {
+  def apply(inds: DecoupledIO[UInt], base: UInt, id: UInt, p: MemReqParams) = {
+    val arrayReadGen = Module(new IndsToMemReq(p)).io
+    arrayReadGen.base := base
+    arrayReadGen.isWrite := Bool(true)
+    arrayReadGen.chanID := id
+    inds <> arrayReadGen.inds
+    arrayReadGen.reqs
+  }
+}
+
 class TestReadReqGenWrapper() extends Module {
   val p = new MemReqParams(48, 64, 4, 1)
 
