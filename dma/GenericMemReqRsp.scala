@@ -132,26 +132,29 @@ class SimplexAdapter(p: MemReqParams) extends Module {
   val wrReqQ = Queue(io.duplex.memWrReq, 2)
   val wrDatQ = Queue(io.duplex.memWrDat, 2)
 
+  val simplexReqQ = Module(new Queue(GenericMemoryRequest(p), 2)).io
+  val simplexWDQ = Module(new Queue(UInt(width = p.dataWidth), 2)).io
+
   // simply interleave the read-write reqs onto common req channel
   val mux = Module(new ReqInterleaver(2, p)).io
   rdReqQ <> mux.reqIn(0)
-  wrReqQ <> mux.reqIn(1)
-  mux.reqOut <> io.simplex.req
+  mux.reqOut <> simplexReqQ.enq
+  simplexReqQ.deq <> io.simplex.req
+  simplexWDQ.deq <> io.simplex.wrdat
 
-  // deprioritize writes whose data is not yet ready -- otherwise,
-  // writes whose requests are issued before the write data is available
-  // will block the head of request queue, potentially causing deadlock
-  // how? make sure write data has arrived before sending out write req
-  // TODO is there a better way to handle this?
+  // to prevent head-of-line blocking from write requests whose data is not
+  // yet ready, sync the write request-data streams
   // TODO this won't work for write bursts!
-  mux.reqIn(1).valid := wrReqQ.valid & wrDatQ.valid
-  wrReqQ.ready := mux.reqIn(1).ready & wrDatQ.valid
+  mux.reqIn(1).valid := wrReqQ.valid & wrDatQ.valid & simplexWDQ.enq.ready
+  simplexWDQ.enq.valid := wrReqQ.valid & wrDatQ.valid & mux.reqIn(1).ready
+  wrReqQ.ready := wrDatQ.valid & simplexWDQ.enq.ready & mux.reqIn(1).ready
+  wrDatQ.ready := wrReqQ.valid &  simplexWDQ.enq.ready & mux.reqIn(1).ready
+
+  mux.reqIn(1).bits := wrReqQ.bits
+  simplexWDQ.enq.bits := wrDatQ.bits
 
   val demux = Module(new QueuedRdWrDeinterleaver(p)).io
   io.simplex.rsp <> demux.rspIn
   demux.rspOut(0) <> io.duplex.memRdRsp
   demux.rspOut(1) <> io.duplex.memWrRsp
-
-  // connect write data channel directly
-  wrDatQ <> io.simplex.wrdat
 }
