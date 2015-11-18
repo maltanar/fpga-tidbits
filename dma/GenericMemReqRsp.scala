@@ -128,10 +128,14 @@ class SimplexAdapter(p: MemReqParams) extends Module {
     val simplex = new SimplexMemoryMasterPort(p)
   }
 
+  val rdReqQ = Queue(io.duplex.memRdReq, 2)
+  val wrReqQ = Queue(io.duplex.memWrReq, 2)
+  val wrDatQ = Queue(io.duplex.memWrDat, 2)
+
   // simply interleave the read-write reqs onto common req channel
   val mux = Module(new ReqInterleaver(2, p)).io
-  io.duplex.memRdReq <> mux.reqIn(0)
-  io.duplex.memWrReq <> mux.reqIn(1)
+  rdReqQ <> mux.reqIn(0)
+  wrReqQ <> mux.reqIn(1)
   mux.reqOut <> io.simplex.req
 
   // deprioritize writes whose data is not yet ready -- otherwise,
@@ -139,9 +143,9 @@ class SimplexAdapter(p: MemReqParams) extends Module {
   // will block the head of request queue, potentially causing deadlock
   // how? make sure write data has arrived before sending out write req
   // TODO is there a better way to handle this?
-  // TODO how does this affect write bursts?
-  mux.reqIn(1).valid := io.duplex.memWrReq.valid & io.duplex.memWrDat.valid
-  io.duplex.memWrReq.ready := mux.reqIn(1).ready & io.duplex.memWrDat.valid
+  // TODO this won't work for write bursts!
+  mux.reqIn(1).valid := wrReqQ.valid & wrDatQ.valid
+  wrReqQ.ready := mux.reqIn(1).ready & wrDatQ.valid
 
   val demux = Module(new QueuedRdWrDeinterleaver(p)).io
   io.simplex.rsp <> demux.rspIn
@@ -149,5 +153,5 @@ class SimplexAdapter(p: MemReqParams) extends Module {
   demux.rspOut(1) <> io.duplex.memWrRsp
 
   // connect write data channel directly
-  io.duplex.memWrDat <> io.simplex.wrdat
+  wrDatQ <> io.simplex.wrdat
 }
