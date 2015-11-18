@@ -42,14 +42,17 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     writeReqAdp.genericReqIn <> accel.io.memPort(i).memWrReq
     writeReqAdp.axiReqOut <> io.mem(i).writeAddr
     // write data
+    // add a small write data queue to ensure we can provide both req ready and
+    // data ready at the same time (otherwise this is up to the AXI slave)
+    val wrDataQ = Queue(accel.io.memPort(i).memWrDat, 2)
     // TODO handle this with own adapter?
-    io.mem(i).writeData.bits.data := accel.io.memPort(i).memWrDat.bits
+    io.mem(i).writeData.bits.data := wrDataQ.bits
     // TODO fix this: forces all writes bytelanes valid!
     io.mem(i).writeData.bits.strb := ~UInt(0, width=p.memDataBits/8)
     // TODO fix this: write bursts won't work properly!
     io.mem(i).writeData.bits.last := Bool(true)
-    io.mem(i).writeData.valid := accel.io.memPort(i).memWrDat.valid
-    accel.io.memPort(i).memWrDat.ready := io.mem(i).writeData.ready
+    io.mem(i).writeData.valid := wrDataQ.valid
+    wrDataQ.ready := io.mem(i).writeData.ready
     // write responses
     val writeRspAdp = Module(new AXIWriteRspAdp(mrp)).io
     writeRspAdp.axiWriteRspIn <> io.mem(i).writeResp
