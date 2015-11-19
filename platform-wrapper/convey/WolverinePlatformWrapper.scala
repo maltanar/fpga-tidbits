@@ -68,9 +68,11 @@ extends PlatformWrapper(WX690TParams, instFxn) {
 
     // hack: special treatment for the "start" register
     // accelerator must not start issuing memreqs before dispatch comes
+    // TODO add platform-level start-active-finished signals
     if(regFileMap.contains("start")) {
       println("====> Rewiring start to Convey instruction dispatch")
       accel("start") := regBusy
+      when (regBusy) {regBusy := !(accel("finished").toBool())}
     }
     println("====> RegFile is using the Convey AEG interface")
   } else {
