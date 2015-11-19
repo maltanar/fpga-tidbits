@@ -94,11 +94,12 @@ class StreamReader(val p: StreamReaderParams) extends Module {
     // outstanding requested bytes to FIFO capacity
     val regBytesInFlight = Reg(init = UInt(0, 32))
     val fifoCount = UInt(width = 32)
-    if(p.fifoElems < 32)
-      throw new Exception("Too few FIFO elems in StreamReader")
-    // cap the FIFO capacity at size-16 to have some slack; might overflow
+    val maxElemsInReq = (memWidthBytes * p.maxBeats / (p.streamWidth/8))
+    if(p.fifoElems < 2*maxElemsInReq)
+      throw new Exception("Too small FIFO in StreamReader")
+    // cap the FIFO capacity at size-2*burst to have some slack; might overflow
     // due to stale feedback
-    val fifoMax = UInt(p.fifoElems-16, width = 32)
+    val fifoMax = UInt(p.fifoElems-2*maxElemsInReq, width = 32)
     // cap off the returned count at fifoMax to prevent underflows
     fifoCount := Mux(fifo.count > fifoMax, fifoMax, fifo.count)
     val fifoAvailBytes = (fifoMax - fifoCount) * streamBytes
