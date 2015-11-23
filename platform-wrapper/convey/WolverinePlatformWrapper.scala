@@ -14,7 +14,8 @@ object WX690TParams extends PlatformWrapperParams {
   val memDataBits = 64
   val memIDBits = 32
   val memMetaBits = 1
-  val numMemPorts = 1
+  val numMemPorts = 32 // max possible ports,
+                       // will be adjusted to match accelerator
 }
 
 // TODO plug unused platform ports if accel has less mem ports
@@ -30,9 +31,9 @@ extends PlatformWrapper(WX690TParams, instFxn) {
 
   // the Convey wrapper itself always expects at least one memory port
   // if no mem ports are desired, we still create one and drive outputs to 0
-  val numCalculatedMemPorts = if(p.numMemPorts == 0) 1 else p.numMemPorts
+  val nmp = if(accel.numMemPorts == 0) 1 else accel.numMemPorts
 
-  val io = new ConveyPersonalityVerilogIF(numCalculatedMemPorts, p.memIDBits)
+  val io = new ConveyPersonalityVerilogIF(nmp, p.memIDBits)
   // rename io signals to be compatible with Verilog template
   io.renameSignals()
 
@@ -106,15 +107,15 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   // wire up memory port adapters
   // TODO add support for write flush
   if (accel.numMemPorts != 0) {
-    if(accel.numMemPorts != p.numMemPorts) {
-      throw new Exception("Wolverine wrapper needs matching # mem ports")
+    if(nmp > p.numMemPorts) {
+      throw new Exception("Too many mem ports in accelerator")
     }
 
-    val adps = Vec.fill(p.numMemPorts) {
+    val adps = Vec.fill(nmp) {
       Module(new ConveyGenericMemAdapter(p.toMemReqParams())).io
     }
 
-    for(i <- 0 until p.numMemPorts) { accel.io.memPort(i) <> adps(i).genericMem }
+    for(i <- 0 until nmp) { accel.io.memPort(i) <> adps(i).genericMem }
 
     // Convey's interface semantics (stall-valid) are a bit more different than
     // just a decoupled (inverted ready)-valid:
@@ -141,7 +142,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // - Convey mem.port's stall is driven by "almost full" from queue
     // TODO generalize this idea into an interface adapter + use for reqs too
     val respQueElems = 8
-    val respQueues = Vec.fill(p.numMemPorts) {
+    val respQueues = Vec.fill(nmp) {
       Module(
           new Queue(new ConveyMemResponse(p.memIDBits, p.memDataBits), respQueElems)
         ).io
@@ -156,7 +157,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     io.mcResStall := Reverse(respStall)
 
     // drive personality inputs
-    for(i <- 0 until p.numMemPorts) {
+    for(i <- 0 until nmp) {
       respQueues(i).enq.valid := io.mcResValid(i)
       respQueues(i).enq.bits.rtnCtl := io.mcResRtnCtl(32*(i+1)-1, 32*i)
       respQueues(i).enq.bits.readData := io.mcResData(64*(i+1)-1, 64*i)
@@ -178,10 +179,10 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     io.mcReqValid := mpHelper({mp => mp.req.valid & mp.req.ready})
   }
 
-  // print some warnings to remind the user to change the cae_pers.v values
-  println(s"====> Remember to set NUM_MC_PORTS=$numCalculatedMemPorts in cae_pers.v")
+  // print some warnings to remind the user to change the Makefile values
+  println(s"====> Remember to set NUM_MC_PORTS=$nmp in Makefile.include")
   val numRtnCtlBits = p.memIDBits
-  println(s"====> Remember to set RTNCTL_WIDTH=$numRtnCtlBits in cae_pers.v")
+  println(s"====> Remember to set RTNCTL_WIDTH=$numRtnCtlBits in Makefile.include")
 }
 
 // Convey memory request adapter
