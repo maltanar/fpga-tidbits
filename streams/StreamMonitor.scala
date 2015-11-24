@@ -7,12 +7,13 @@ import Chisel._
 // as well as the total # cycles
 
 object StreamMonitor {
-  def apply[T <: Data](stream: DecoupledIO[T], enable: Bool): StreamMonitorOutIF = {
-    val mon = Module(new StreamMonitor()).io
-    mon.enable := enable
-    mon.validIn := stream.valid
-    mon.readyIn := stream.ready
-    return mon.out
+  def apply[T <: Data](stream: DecoupledIO[T], enable: Bool,
+    streamName: String = "stream"): StreamMonitorOutIF = {
+    val mon = Module(new StreamMonitor(streamName))
+    mon.io.enable := enable
+    mon.io.validIn := stream.valid
+    mon.io.readyIn := stream.ready
+    return mon.io.out
   }
 }
 
@@ -23,7 +24,7 @@ class StreamMonitorOutIF() extends Bundle {
   val noReadyButValid = UInt(OUTPUT, 32)
 }
 
-class StreamMonitor() extends Module {
+class StreamMonitor(streamName: String = "stream") extends Module {
   val io = new Bundle {
     val enable = Bool(INPUT)
     val validIn = Bool(INPUT)
@@ -66,6 +67,8 @@ class StreamMonitor() extends Module {
           }
           when (io.validIn & io.readyIn) {
             regActiveCycles := regActiveCycles + UInt(1)
+            // printf only active in Chisel C++ emulator
+            printf(streamName + " txn: %d \n", regActiveCycles)
           }
         }
       }
