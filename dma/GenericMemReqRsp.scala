@@ -113,13 +113,8 @@ class SimplexMemorySlavePort(p: MemReqParams) extends SimplexMemoryMasterPort(p)
 }
 
 // derive a read-write deinterleaver for handling the responses
-class RdWrDeinterleaver(p: MemReqParams) extends RespDeinterleaver(2, p) {
-  override lazy val destPipe = Mux(io.rspIn.bits.isWrite, UInt(1), UInt(0))
-}
-
-class QueuedRdWrDeinterleaver(p: MemReqParams) extends QueuedDeinterleaver(2, p, 4) {
-  override lazy val deint = Module(new RdWrDeinterleaver(p)).io
-}
+class QueuedRdWrDeinterleaver(p: MemReqParams) extends QueuedDeinterleaver(2, p, 4,
+ routeFxn = {x: GenericMemoryResponse => Mux(x.isWrite, UInt(1), UInt(0))})
 
 // adapter for duplex <> simplex
 class SimplexAdapter(p: MemReqParams) extends Module {

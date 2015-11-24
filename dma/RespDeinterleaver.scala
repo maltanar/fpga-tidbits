@@ -15,12 +15,12 @@ class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
   }
 }
 
-class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int) extends Module {
-  lazy val routeFxn = {x: UInt => x: UInt}
+class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int,
+  routeFxn: GenericMemoryResponse => UInt = {x: GenericMemoryResponse => x.channelID}
+) extends Module {
+
   val io = new RespDeinterleaverIF(numPipes,p)
-  lazy val deint = Module(new RespDeinterleaver(numPipes, p) {
-    override lazy val idToPipe = routeFxn
-  }).io
+  val deint = Module(new RespDeinterleaver(numPipes, p, routeFxn)).io
   deint.rspIn <> io.rspIn
   io.decodeErrors := deint.decodeErrors
 
@@ -32,12 +32,12 @@ class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int) extends Module
   }
 }
 
-
-class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
+class RespDeinterleaver(numPipes: Int, p: MemReqParams,
+  routeFxn: GenericMemoryResponse => UInt = {x: GenericMemoryResponse => x.channelID}
+) extends Module {
   val io = new RespDeinterleaverIF(numPipes, p)
 
   val regDecodeErrors = Reg(init = UInt(0, 32))
-  lazy val idToPipe = {x: UInt => x: UInt}
 
   // TODO the current implementation is likely to cause timing problems
   // due to high-fanout signals and combinational paths
@@ -51,7 +51,7 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams) extends Module {
   io.rspIn.ready := Bool(false)
   io.decodeErrors := regDecodeErrors
 
-  lazy val destPipe = idToPipe(io.rspIn.bits.channelID)
+  val destPipe = routeFxn(io.rspIn.bits)
   val invalidChannel = (destPipe >= UInt(numPipes))
   val canProceed = io.rspIn.valid && io.rspOut(destPipe).ready
 
