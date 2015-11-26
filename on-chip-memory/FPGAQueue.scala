@@ -32,7 +32,17 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox {
   renameClock(Driver.implicitClock, "clock")
   addResetPin(Driver.implicitReset)
 
-  // TODO add simulation model
+  // TODO add a proper simulation model -- for now we just instantiate a
+  // regular Chisel Queue as mock SRL queue "behavioral model"
+  val mockQ = Module(new Queue(UInt(width = widthBits), depthElems)).io
+  io.count := mockQ.count
+  mockQ.enq.valid := io.iValid
+  mockQ.enq.bits := io.iData
+  io.oData := mockQ.deq.bits
+  io.oValid := mockQ.deq.valid
+  // ready signals connected to backpressure and vice versa
+  io.iBackPressure := !mockQ.enq.ready
+  mockQ.deq.ready := !io.oBackPressure
 }
 
 class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
