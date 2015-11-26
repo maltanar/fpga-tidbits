@@ -41,9 +41,9 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
   io.count := srlQ.count
   srlQ.iValid := io.enq.valid
-  srlQ.iData := io.enq.bits
+  srlQ.iData := io.enq.bits.toBits
   io.deq.valid := srlQ.oValid
-  io.deq.bits := srlQ.oData
+  io.deq.bits := io.deq.bits.fromBits(srlQ.oData)
   // Q_srl uses backpressure, while Chisel queues use "ready"
   // invert signals while connecting
   srlQ.oBackPressure := !io.deq.ready
@@ -56,12 +56,12 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
 // or with FPGA TDP BRAMs as the storage (for larger queues)
 
 class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
-  val thresholdBigQueue = 32 // threshold for deciding big or small queue impl
-  val actualEntries = if (entries < thresholdBigQueue) entries else entries + 2
+  val thresholdBigQueue = 64 // threshold for deciding big or small queue impl
+  val actualEntries = entries + 2
   val io = new QueueIO(gen, actualEntries)
   if(entries < thresholdBigQueue) {
-    // create a regular Chisel queue, should be fine to use LUTRAMs as storage
-    val theQueue = Module(new Queue(gen, entries)).io
+    // create a shift register (SRL)-based queue
+    val theQueue = Module(new SRLQueue(gen, entries)).io
     theQueue <> io
   } else {
     // create a big queue that will use FPGA BRAMs as storage
