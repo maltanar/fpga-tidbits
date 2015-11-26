@@ -2,6 +2,56 @@ package TidbitsOCM
 
 import Chisel._
 
+class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox {
+  val io = new Bundle {
+    val iValid = Bool(INPUT)
+    val iData = UInt(INPUT, width = widthBits)
+    val iBackPressure = Bool(OUTPUT)
+    val oValid = Bool(OUTPUT)
+    val oData = UInt(OUTPUT, width = widthBits)
+    val oBackPressure = Bool(INPUT)
+    val count = UInt(OUTPUT, width = log2Up(depthElems))
+
+    iValid.setName("i_v")
+    iData.setName("i_d")
+    iBackPressure.setName("i_b")
+    oValid.setName("o_v")
+    oData.setName("o_d")
+    oBackPressure.setName("o_b")
+    count.setName("count")
+  }
+
+  setVerilogParameters(new VerilogParameters {
+    val depth = depthElems
+    val width = widthBits
+  })
+
+  // the clock/reset does not get added to the BlackBox interface by default
+  // add clock and reset, rename as needed
+  addClock(Driver.implicitClock)
+  renameClock(Driver.implicitClock, "clock")
+  addResetPin(Driver.implicitReset)
+
+  // TODO add simulation model
+}
+
+class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
+  val io = new QueueIO(gen, entries)
+  val srlQ = Module(new Q_srl(entries, gen.getWidth())).io
+
+  io.count := srlQ.count
+  srlQ.iValid := io.enq.valid
+  srlQ.iData := io.enq.bits
+  io.deq.valid := srlQ.oValid
+  io.deq.bits := srlQ.oData
+  // Q_srl uses backpressure, while Chisel queues use "ready"
+  // invert signals while connecting
+  srlQ.oBackPressure := !io.deq.ready
+  io.enq.ready := !srlQ.iBackPressure
+}
+
+
+
 // creates a queue either using standard Chisel queues (for smaller queues)
 // or with FPGA TDP BRAMs as the storage (for larger queues)
 
