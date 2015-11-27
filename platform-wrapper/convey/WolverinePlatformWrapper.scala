@@ -3,6 +3,7 @@ package TidbitsPlatformWrapper
 import Chisel._
 import TidbitsDMA._
 import TidbitsRegFile._
+import TidbitsOCM._
 import ConveyInterfaces._
 
 // Wrapper for the Convey Wolverine hardware platform
@@ -144,7 +145,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     val respQueElems = 8
     val respQueues = Vec.fill(nmp) {
       Module(
-          new Queue(new ConveyMemResponse(p.memIDBits, p.memDataBits), respQueElems)
+          new FPGAQueue(new ConveyMemResponse(p.memIDBits, p.memDataBits), respQueElems)
         ).io
     }
 

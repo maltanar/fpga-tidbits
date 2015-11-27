@@ -85,10 +85,10 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
     val maybe_full = Reg(init=Bool(false))
 
     // due to the 1-cycle read latency of BRAMs, we add a small regular
-    // Chisel Queue at the output to correct the interface semantics by
+    // SRLQueue at the output to correct the interface semantics by
     // "prefetching" the top two elements ("handshaking across latency")
     // TODO support higher BRAM latencies with parametrization here
-    val pf = Module(new Queue(gen, 2)).io
+    val pf = Module(new SRLQueue(gen, 2)).io
     // will be used as the "ready" signal for the prefetch queue
     // the threshold here needs to be (pfQueueCap-BRAM latency)
     val canPrefetch = (pf.count < UInt(1))

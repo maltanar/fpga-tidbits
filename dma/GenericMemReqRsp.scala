@@ -1,6 +1,7 @@
 package TidbitsDMA
 
 import Chisel._
+import TidbitsOCM._
 
 class MemReqParams(aW: Int, dW: Int, iW: Int, mW: Int) {
   // all units are "number of bits"
@@ -123,12 +124,12 @@ class SimplexAdapter(p: MemReqParams) extends Module {
     val simplex = new SimplexMemoryMasterPort(p)
   }
 
-  val rdReqQ = Queue(io.duplex.memRdReq, 2)
-  val wrReqQ = Queue(io.duplex.memWrReq, 2)
-  val wrDatQ = Queue(io.duplex.memWrDat, 2)
+  val rdReqQ = FPGAQueue(io.duplex.memRdReq, 2)
+  val wrReqQ = FPGAQueue(io.duplex.memWrReq, 2)
+  val wrDatQ = FPGAQueue(io.duplex.memWrDat, 2)
 
-  val simplexReqQ = Module(new Queue(GenericMemoryRequest(p), 2)).io
-  val simplexWDQ = Module(new Queue(UInt(width = p.dataWidth), 2)).io
+  val simplexReqQ = Module(new FPGAQueue(GenericMemoryRequest(p), 2)).io
+  val simplexWDQ = Module(new FPGAQueue(UInt(width = p.dataWidth), 2)).io
 
   // simply interleave the read-write reqs onto common req channel
   val mux = Module(new ReqInterleaver(2, p)).io

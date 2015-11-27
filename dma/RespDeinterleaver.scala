@@ -1,6 +1,7 @@
 package TidbitsDMA
 
 import Chisel._
+import TidbitsOCM._
 
 class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
   // interleaved responses in
@@ -26,7 +27,7 @@ class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int,
 
 
   for(i <- 0 until numPipes) {
-    val rspQ = Module(new Queue(new GenericMemoryResponse(p), n)).io
+    val rspQ = Module(new FPGAQueue(new GenericMemoryResponse(p), n)).io
     rspQ.deq <> io.rspOut(i)
     rspQ.enq <> deint.rspOut(i)
   }

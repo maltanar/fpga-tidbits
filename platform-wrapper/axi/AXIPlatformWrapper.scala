@@ -4,6 +4,7 @@ import Chisel._
 import TidbitsDMA._
 import TidbitsRegFile._
 import TidbitsAXI._
+import TidbitsOCM._
 
 // wrapper for AXI platforms
 
@@ -44,7 +45,7 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     // write data
     // add a small write data queue to ensure we can provide both req ready and
     // data ready at the same time (otherwise this is up to the AXI slave)
-    val wrDataQ = Queue(accel.io.memPort(i).memWrDat, 2)
+    val wrDataQ = FPGAQueue(accel.io.memPort(i).memWrDat, 2)
     // TODO handle this with own adapter?
     io.mem(i).writeData.bits.data := wrDataQ.bits
     // TODO fix this: forces all writes bytelanes valid!
