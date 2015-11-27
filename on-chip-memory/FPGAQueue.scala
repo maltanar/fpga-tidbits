@@ -10,7 +10,7 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox {
     val oValid = Bool(OUTPUT)
     val oData = UInt(OUTPUT, width = widthBits)
     val oBackPressure = Bool(INPUT)
-    val count = UInt(OUTPUT, width = log2Up(depthElems))
+    val count = UInt(OUTPUT, width = log2Up(depthElems+1))
 
     iValid.setName("i_v")
     iData.setName("i_d")
@@ -67,8 +67,7 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
 class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val thresholdBigQueue = 64 // threshold for deciding big or small queue impl
-  val actualEntries = entries + 2
-  val io = new QueueIO(gen, actualEntries)
+  val io = new QueueIO(gen, entries)
   if(entries < thresholdBigQueue) {
     // create a shift register (SRL)-based queue
     val theQueue = Module(new SRLQueue(gen, entries)).io
@@ -88,7 +87,7 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
     // SRLQueue at the output to correct the interface semantics by
     // "prefetching" the top two elements ("handshaking across latency")
     // TODO support higher BRAM latencies with parametrization here
-    val pf = Module(new SRLQueue(gen, 2)).io
+    val pf = Module(new FPGAQueue(gen, 2)).io
     // will be used as the "ready" signal for the prefetch queue
     // the threshold here needs to be (pfQueueCap-BRAM latency)
     val canPrefetch = (pf.count < UInt(1))
