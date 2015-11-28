@@ -67,17 +67,20 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   io.finished := rg.stat.finished & (fifo.count === UInt(0))
   io.error := rg.stat.error
 
-  val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
-    mrp = p.mem, maxBurst = p.maxBeats, outstandingReqs = p.readOrderTxns,
-    chanIDBase = p.chanID, outputStreamID = 0
-  ))).io
+  var orderedResponses = io.rsp
 
   if(p.readOrderCache) {
+    val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
+      mrp = p.mem, maxBurst = p.maxBeats, outstandingReqs = p.readOrderTxns,
+      chanIDBase = p.chanID, outputStreamID = 0
+    ))).io
+
     // push requests to read order cache
     rg.reqs <> roc.reqOrdered
     roc.reqMem <> io.req
     // receive ordered responses from the read order cache
     io.rsp <> roc.rspMem
+    orderedResponses = roc.rspOrdered
   } else {
     // push out memory requests directly to memory channel
     rg.reqs <> io.req
@@ -91,7 +94,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
 
   // read data responses (id etc filtered out)
   val rsp = ReadRespFilter(
-    if(p.readOrderCache) roc.rspOrdered else io.rsp
+    orderedResponses
   )
   // TODO add a StreamResizer to handle all 3 cases
   if (p.mem.dataWidth == p.streamWidth) { lim(rsp) <> fifo.enq }
