@@ -14,6 +14,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val baseAddr = UInt(INPUT, width = 64)
     val byteCount = UInt(INPUT, width = 32)
     val sum = UInt(OUTPUT, width = 32)
+    val cycleCount = UInt(OUTPUT, width = 32)
   }
   io.signature := makeDefaultSignature()
 
@@ -39,4 +40,9 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.memPort(0).memRdRsp <> reader.rsp
 
   reader.out <> red.streamIn
+
+  val regCycleCount = Reg(init = UInt(0, 32))
+  io.cycleCount := regCycleCount
+  when(!io.start) {regCycleCount := UInt(0)}
+  .elsewhen(io.start & !io.finished) {regCycleCount := regCycleCount + UInt(1)}
 }

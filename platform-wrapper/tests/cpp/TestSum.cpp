@@ -33,6 +33,8 @@ bool Run_TestSum(WrapperRegDriver * platform) {
 
 	AccelReg res = t.get_sum();
 	cout << "Result = " << res << " expected " << golden << endl;
+	unsigned int cc = t.get_cycleCount();
+	cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
 	t.set_start(0);
 	return res == golden;
 }
