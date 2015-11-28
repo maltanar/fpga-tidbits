@@ -13,10 +13,6 @@ class ReadOrderCacheParams (
 )
 
 class ReadOrderCacheIO(p: MemReqParams, maxBurst: Int) extends Bundle {
-  // control-status
-  val initStart = Bool(INPUT)
-  val initFinished = Bool(OUTPUT)
-
   // interface towards in-order processing elements
   val reqOrdered = Decoupled(new GenericMemoryRequest(p)).flip
   val rspOrdered = Decoupled(new GenericMemoryResponse(p))
@@ -35,8 +31,6 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // queue with pool of available request IDs
   val freeReqID = Module(new ReqIDQueue(
     p.mrp.idWidth, p.outstandingReqs, p.chanIDBase)).io
-  freeReqID.initStart := io.initStart
-  io.initFinished := freeReqID.initFinished
 
   // queue with issued requests
   val busyReqs = Module(new FPGAQueue(mreq, p.outstandingReqs)).io
@@ -49,10 +43,13 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // issue new requests: sync freeReqID and incoming reqs
   val readyReqs = StreamJoin(
     inA = freeReqID.idOut, inB = io.reqOrdered, genO = mreq,
-    join = {(freeID: UInt, r: GenericMemoryRequest) => r}
+    join = {(freeID: UInt, r: GenericMemoryRequest) => GenericMemoryRequest(
+      p = p.mrp, addr = r.addr, write = Bool(false), id = freeID,
+      numBytes = r.numBytes
+    )}
   )
-  // use bits from freeReqID as the read req bits
-  readyReqs.bits.channelID := freeReqID.idOut.bits
+
+  //StreamMonitor(readyReqs, Bool(true), "readyReqs")
 
   // issued requests go to both mem req channel and busyReqs queue
   val reqIssueFork = Module(new StreamFork(
@@ -60,12 +57,13 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
     forkA = {x: GenericMemoryRequest => x},
     forkB = {x: GenericMemoryRequest => x}
   )).io
+
   readyReqs <> reqIssueFork.in
   reqIssueFork.outA <> io.reqMem
   reqIssueFork.outB <> busyReqs.enq
 
   // buffer incoming responses into appropriate storageQ
-  io.rspMem <> DecoupledOutputDemux(
+  ReadRespFilter(io.rspMem) <> DecoupledOutputDemux(
     sel = io.rspMem.bits.channelID - UInt(p.chanIDBase),
     chans = storageQ.map({x: QueueIO[UInt] => x.enq})
   )
@@ -136,19 +134,20 @@ class ReqIDQueue(idWidth: Int, entries: Int, startID: Int) extends Module {
   val io = new Bundle {
     val idIn = Decoupled(idElem).flip
     val idOut = Decoupled(idElem)
-    val initStart = Bool(INPUT)
-    val initFinished = Bool(OUTPUT)
   }
+  val initGen = Module(new SequenceGenerator(idWidth)).io
+  // initialize contents once upon reset
+  val regDoInit = Reg(init = Bool(true))
+  when(regDoInit & initGen.finished) {regDoInit := Bool(false)}
+
   val idQ = Module(new FPGAQueue(idElem, entries)).io
   idQ.deq <> io.idOut
 
-  val initGen = Module(new SequenceGenerator(idWidth)).io
-  initGen.start := io.initStart
-  io.initFinished := initGen.finished
+  initGen.start := regDoInit
   initGen.count := UInt(entries)
   initGen.step := UInt(1)
   initGen.init := UInt(startID)
 
   val idSources = Seq(io.idIn, initGen.seq)
-  DecoupledInputMux(io.initStart, idSources) <> idQ.enq
+  DecoupledInputMux(regDoInit, idSources) <> idQ.enq
 }

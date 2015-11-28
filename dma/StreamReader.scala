@@ -10,7 +10,9 @@ class StreamReaderParams(
   val mem: MemReqParams,
   val maxBeats: Int,
   val chanID: Int,
-  val disableThrottle: Boolean = false
+  val disableThrottle: Boolean = false,
+  val readOrderCache: Boolean = false,
+  val readOrderTxns: Int = 4
 )
 
 class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
@@ -65,8 +67,21 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   io.finished := rg.stat.finished & (fifo.count === UInt(0))
   io.error := rg.stat.error
 
-  // push out memory requests to memRdReq channel
-  rg.reqs <> io.req
+  val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
+    mrp = p.mem, maxBurst = p.maxBeats, outstandingReqs = p.readOrderTxns,
+    chanIDBase = p.chanID, outputStreamID = 0
+  ))).io
+
+  if(p.readOrderCache) {
+    // push requests to read order cache
+    rg.reqs <> roc.reqOrdered
+    roc.reqMem <> io.req
+    // receive ordered responses from the read order cache
+    io.rsp <> roc.rspMem
+  } else {
+    // push out memory requests directly to memory channel
+    rg.reqs <> io.req
+  }
 
   // create a StreamLimiter that lets only the first byteCount bytes pass
   // this gets rid of any alignment bytes introduced by RoundUpAlign
@@ -75,7 +90,9 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   }
 
   // read data responses (id etc filtered out)
-  val rsp = ReadRespFilter(io.rsp)
+  val rsp = ReadRespFilter(
+    if(p.readOrderCache) roc.rspOrdered else io.rsp
+  )
   // TODO add a StreamResizer to handle all 3 cases
   if (p.mem.dataWidth == p.streamWidth) { lim(rsp) <> fifo.enq }
   else if (p.mem.dataWidth > p.streamWidth) {

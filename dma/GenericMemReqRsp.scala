@@ -47,6 +47,17 @@ object GenericMemoryRequest {
     n.driveDefaults
     n
   }
+
+  def apply(p: MemReqParams, addr: UInt, write:Bool,
+    id: UInt, numBytes: UInt): GenericMemoryRequest = {
+    val n = new GenericMemoryRequest(p)
+    n.metaData := UInt(0)
+    n.addr := addr
+    n.isWrite := write
+    n.channelID := id
+    n.numBytes := numBytes
+    n
+  }
 }
 
 // a generic memory response structure
