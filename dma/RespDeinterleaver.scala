@@ -61,6 +61,9 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams,
     // increment error counter and move on
     regDecodeErrors := regDecodeErrors + UInt(1)
     io.rspIn.ready := Bool(true)
+    printf("RespDeinterleaver decode error! chanID = %d dest = %d \n",
+      io.rspIn.bits.channelID, destPipe
+    )
   }
   .elsewhen (canProceed) {
     io.rspIn.ready := Bool(true)
