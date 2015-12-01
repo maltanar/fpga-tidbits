@@ -19,6 +19,7 @@ unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
     base / "platform-wrapper",
     base / "platform-wrapper/convey",
     base / "platform-wrapper/axi",
-    base / "platform-wrapper/tests"
+    base / "platform-wrapper/tests",
+    base / "math"
   )
 }
