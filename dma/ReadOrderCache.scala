@@ -20,6 +20,10 @@ class ReadOrderCacheIO(p: MemReqParams, maxBurst: Int) extends Bundle {
   // unordered interface towards out-of-order memory system
   val reqMem = Decoupled(new GenericMemoryRequest(p))
   val rspMem = Decoupled(new GenericMemoryResponse(p)).flip
+
+  // controls for ID queue reinit
+  val doInit = Bool(INPUT)                // re-initialize queue
+  val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
 }
 
 class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
@@ -31,6 +35,8 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // queue with pool of available request IDs
   val freeReqID = Module(new ReqIDQueue(
     p.mrp.idWidth, p.outstandingReqs, p.chanIDBase)).io
+  freeReqID.doInit := io.doInit
+  freeReqID.initCount := io.initCount
 
   // queue with issued requests
   val busyReqs = Module(new FPGAQueue(mreq, p.outstandingReqs)).io
@@ -127,24 +133,37 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
 }
 
 // a queue for storing the available request IDs, plus a little initializer
-// to initially fill it with the range of available IDs
-// essentially the "pool of available request IDs"
-class ReqIDQueue(idWidth: Int, entries: Int, startID: Int) extends Module {
+// to initially fill it with the range of available IDs --
+// essentially the "pool of available request IDs". supports auto on-reset
+// intialization (just fills with max # IDs) as well as manual re-init
+// to limit the # of IDs in the pool further (requester becomes less aggressive)
+// NOTE: make sure all IDs have been returned to the pool before doing
+// manual re-initialization, weird things will happen otherwise
+class ReqIDQueue(idWidth: Int, maxEntries: Int, startID: Int) extends Module {
   val idElem = UInt(width = idWidth)
   val io = new Bundle {
-    val idIn = Decoupled(idElem).flip
-    val idOut = Decoupled(idElem)
+    val doInit = Bool(INPUT)                // re-initialize queue
+    val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
+    val idIn = Decoupled(idElem).flip       // recycled IDs into the pool
+    val idOut = Decoupled(idElem)           // available IDs from the pool
   }
   val initGen = Module(new SequenceGenerator(idWidth)).io
-  // initialize contents once upon reset
+  // initialize contents once upon reset, and when requested afterwards
+  val regFirstInit = Reg(init = Bool(true))  // distinguish reset & manual init
   val regDoInit = Reg(init = Bool(true))
-  when(regDoInit & initGen.finished) {regDoInit := Bool(false)}
-
-  val idQ = Module(new FPGAQueue(idElem, entries)).io
+  when(io.doInit) { regDoInit := Bool(true) } // trigger manual reinit
+  when(regDoInit & initGen.finished) {
+    regDoInit := Bool(false)
+    regFirstInit := Bool(false)
+  }
+  // clear queue contents prior to manual reinit
+  val resetQueue = reset | (io.doInit & !regDoInit)
+  val idQ = Module(new Queue(idElem, maxEntries, _reset=resetQueue)).io
   idQ.deq <> io.idOut
 
   initGen.start := regDoInit
-  initGen.count := UInt(entries)
+  // on-reset init fills the queue with max # elements
+  initGen.count := Mux(regFirstInit, UInt(maxEntries), io.initCount)
   initGen.step := UInt(1)
   initGen.init := UInt(startID)
 

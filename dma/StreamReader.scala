@@ -27,6 +27,9 @@ class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
   // interface towards memory port
   val req = Decoupled(new GenericMemoryRequest(p))
   val rsp = Decoupled(new GenericMemoryResponse(p)).flip
+  // controls for ID queue reinit
+  val doInit = Bool(INPUT)                // re-initialize queue
+  val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
 }
 
 // size alignment in hardware
@@ -74,6 +77,9 @@ class StreamReader(val p: StreamReaderParams) extends Module {
       mrp = p.mem, maxBurst = p.maxBeats, outstandingReqs = p.readOrderTxns,
       chanIDBase = p.chanID, outputStreamID = 0
     ))).io
+
+    roc.doInit := io.doInit
+    roc.initCount := io.initCount
 
     // push requests to read order cache
     rg.reqs <> roc.reqOrdered
