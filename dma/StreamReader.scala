@@ -47,19 +47,20 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   val io = new StreamReaderIF(p.streamWidth, p.mem)
   val StreamElem = UInt(width = p.streamWidth)
 
-  // read request generator
-  val rg = Module(new ReadReqGen(p.mem, p.chanID, p.maxBeats)).io
+  // read request generator, forced to use bursts
+  val rg = Module(new ReadReqGen(p.mem, p.chanID, p.maxBeats, true)).io
   // FIFO to store read data
   val fifo = Module(new FPGAQueue(StreamElem, p.fifoElems)).io
   val streamBytes = UInt(p.streamWidth/8)
   val memWidthBytes = p.mem.dataWidth/8
+  val burstWidthBytes = memWidthBytes * p.maxBeats
 
   rg.ctrl.start := io.start
   rg.ctrl.baseAddr := io.baseAddr
   // make sure byte count is a multiple of the mem data width,
   // otherwise the request generator will never finish
   // the superflous (alignment) bytes will be removed later
-  rg.ctrl.byteCount := RoundUpAlign(memWidthBytes, io.byteCount)
+  rg.ctrl.byteCount := RoundUpAlign(burstWidthBytes, io.byteCount)
 
   // active and finished are generated based not only on the status
   // of the req.gen but also if all responses are finished (FIFO empty)
@@ -112,20 +113,21 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   else {
     // throttling logic: don't ask more than what we can chew, limit the #
     // outstanding requested bytes to FIFO capacity
-    val regBytesInFlight = Reg(init = UInt(0, 32))
-    val fifoCount = UInt(width = 32)
+    val wd = log2Up((p.streamWidth/8) * (p.fifoElems + 1))
+    val regBytesInFlight = Reg(init = UInt(0, wd))
+    val fifoCount = UInt(width = wd)
     val maxElemsInReq = (memWidthBytes * p.maxBeats / (p.streamWidth/8))
     if(p.fifoElems < 2*maxElemsInReq)
       throw new Exception("Too small FIFO in StreamReader")
     // cap the FIFO capacity at size-2*burst to have some slack; might overflow
     // due to stale feedback
-    val fifoMax = UInt(p.fifoElems-2*maxElemsInReq, width = 32)
+    val fifoMax = UInt(p.fifoElems-2*maxElemsInReq, width = wd)
     // cap off the returned count at fifoMax to prevent underflows
     fifoCount := Mux(fifo.count > fifoMax, fifoMax, fifo.count)
     val fifoAvailBytes = (fifoMax - fifoCount) * streamBytes
     // calculate per-cycle updates to # bytes in flight
-    val outReqBytes = UInt(width = 32)
-    val inRspBytes = UInt(width = 32)
+    val outReqBytes = UInt(width = wd)
+    val inRspBytes = UInt(width = wd)
     outReqBytes := UInt(0)
     inRspBytes := UInt(0)
     when(rsp.valid & rsp.ready) { inRspBytes := UInt(memWidthBytes) }

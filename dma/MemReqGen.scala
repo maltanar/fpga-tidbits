@@ -22,7 +22,13 @@ class ReqGenStatus() extends Bundle {
 // only burst-aligned addresses (no error checking!)
 // will report error if start address is not word-aligned
 // TODO do we want to support sub-word accesses?
-class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
+class ReadReqGen(
+  p: MemReqParams,  // MRP for platform
+  chanID: Int,      // the request ID to use for generated reqs
+  maxBeats: Int,    // max # burst beats to use
+  alwaysBurst: Boolean = false  // always use burst
+)
+extends Module {
   val reqGenParams = p
   val io = new Bundle {
     // control/status interface
@@ -50,11 +56,21 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
   io.reqs.bits.metaData := UInt(0)
   // decide on length of burst depending on #bytes left
   val doBurst = (regBytesLeft >= UInt(bytesPerBurst))
-  val burstLen = Mux(doBurst, UInt(bytesPerBurst), UInt(bytesPerBeat))
+  val burstLen = if(alwaysBurst) { UInt(bytesPerBurst) }
+  else { Mux(doBurst, UInt(bytesPerBurst), UInt(bytesPerBeat)) }
   io.reqs.bits.numBytes := burstLen
 
   val numZeroAddrBits = log2Up(bytesPerBeat)
+  // TODO check start addr for burst compatibility?
   val unalignedAddr = (regAddr(numZeroAddrBits-1, 0) != UInt(0))
+  val unalignedCount = if(alwaysBurst) {
+    // ensure byte count is burst-aligned
+    (regBytesLeft(log2Up(bytesPerBurst)-1, 0) != UInt(0))
+  } else {
+    // ensure byte count is word-aligned
+    (regBytesLeft(numZeroAddrBits-1, 0) != UInt(0))
+  }
+
 
   switch(regState) {
       is(sIdle) {
