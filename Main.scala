@@ -21,7 +21,8 @@ object MainObj {
     "TestSeqWrite" -> {p => new TestSeqWrite(p)},
     "TestCopy" -> {p => new TestCopy(p)},
     "TestRandomRead" -> {p => new TestRandomRead(p)},
-    "TestBRAM" -> {p => new TestBRAM(p)}
+    "TestBRAM" -> {p => new TestBRAM(p)},
+    "TestMemLatency" -> {p => new TestMemLatency(p)}
   )
 
   val platformMap: PlatformMap = Map(
