@@ -60,6 +60,12 @@ extends Module {
   }
 
   def getChanParams(name: String): ReadChanParams = {chanMap(name)}
+  def connectChanReqRsp(name: String, req: DecoupledIO[GenericMemoryRequest],
+    rsp: DecoupledIO[GenericMemoryResponse]) = {
+    val pipe = chanMap(name).sysPipeNum
+    req <> io.req(pipe)
+    io.rsp(pipe) <> rsp
+  }
 
   val io = new Bundle {
     // interface towards channels
@@ -76,8 +82,8 @@ extends Module {
   }
 
   for((n,p) <- chanMap) {
-    io.req(p.sysPipeNum) <> portAdps(p.port).req(p.portPipeNum)
-    portAdps(p.port).rsp(p.portPipeNum) <> io.rsp(p.sysPipeNum)
+    io.req(p.sysPipeNum) <> portAdps(p.port).io.req(p.portPipeNum)
+    portAdps(p.port).io.rsp(p.portPipeNum) <> io.rsp(p.sysPipeNum)
   }
 }
 
