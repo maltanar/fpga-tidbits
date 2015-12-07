@@ -17,6 +17,7 @@ object WX690TParams extends PlatformWrapperParams {
   val memMetaBits = 1
   val numMemPorts = 32 // max possible ports,
                        // will be adjusted to match accelerator
+  val sameIDInOrder = false
 }
 
 // TODO plug unused platform ports if accel has less mem ports

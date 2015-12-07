@@ -3,15 +3,20 @@ package TidbitsDMA
 import Chisel._
 import TidbitsOCM._
 
-class MemReqParams(aW: Int, dW: Int, iW: Int, mW: Int) {
+// MemReqParams describes what memory requests look like
+class MemReqParams(
   // all units are "number of bits"
-  val addrWidth: Int = aW       // width of memory addresses
-  val dataWidth: Int = dW       // width of reads/writes
-  val idWidth: Int = iW         // width of channel ID
-  val metaDataWidth: Int = mW   // width of metadata (cache, prot, etc.)
-
+  val addrWidth: Int,       // width of memory addresses
+  val dataWidth: Int,       // width of reads/writes
+  val idWidth: Int,         // width of channel ID
+  val metaDataWidth: Int,   // width of metadata (cache, prot, etc.)
+  val sameIDInOrder: Boolean = true // whether requests with the same
+                                    // ID return in-order, like in AXI
+) {
   override def clone = {
-    new MemReqParams(aW, dW, iW, mW).asInstanceOf[this.type]
+    new MemReqParams(
+      addrWidth, dataWidth, idWidth, metaDataWidth, sameIDInOrder
+    ).asInstanceOf[this.type]
   }
 }
 
