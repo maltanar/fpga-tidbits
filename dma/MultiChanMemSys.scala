@@ -4,13 +4,82 @@ import Chisel._
 import TidbitsStreams._
 import TidbitsOCM._
 
+// convenience modules for creating multichannel memory systems
+// the request interleaver/deinterleavers already permit this, the additions
+// here include automatically assigning chanID values and creating the decoding
+// function for the deinterleaver
+
+// TODO better documentation here
+// MultiChanMultiPort for multiple channels on multiple ports
+// MultiChanReadPort for multiple channels on a single port
+
 class ReadChanParams(
-  val name: String,
   val maxReadTxns: Int,
-  // following will be assigned by MultiChanReadPort
-  val chanBase: Int = 0,
-  val physPipeNum: Int = 0
+  val port: Int,  // not needed for MultiChanReadPort
+  // following will be assigned by MultiChanMultiPort (they are "outputs")
+  var sysPipeNum: Int = 0,  // physical pipe # in the MultiChanMultiPort
+  var portPipeNum: Int = 0, // physical pipe # in the corresponding MultiChanReadPort
+  var chanBaseID: Int = 0   // computed base ID value for the channel
 )
+
+object ReadChanParams {
+  def apply(maxReadTxns: Int, port: Int) = {
+    new ReadChanParams(maxReadTxns, port)
+  }
+}
+
+class MultiChanMultiPort(val mrp: MemReqParams, val numPorts: Int,
+  chans: Map[String, ReadChanParams])
+extends Module {
+  val numChans = chans.size
+  // internal, mutable chan -> chan param mapping
+  var chanMap = scala.collection.mutable.Map[String, ReadChanParams]()
+  //  reverse mapping (port -> chan param sequence)
+  var portMap = scala.collection.mutable.Map[Int, Seq[ReadChanParams]]()
+  var pipeNum: Int = 0
+  // copy to internal mutable map and assign physical pipe numbers
+  for((n, p) <- chans) {
+    if(!portMap.contains(p.port)) portMap(p.port) = Seq[ReadChanParams]()
+    chanMap(n) = new ReadChanParams(p.maxReadTxns, p.port,
+      sysPipeNum = pipeNum, portPipeNum = portMap(p.port).size
+    )
+    portMap(p.port) ++= Seq(chanMap(n))
+    pipeNum += 1
+  }
+
+  // instantiate MultiChanReadPort modules
+  val portAdps = (0 until numPorts).map({
+    i: Int => Module(new MultiChanReadPort(mrp, portMap(i)))
+  })
+
+  // update the chanBaseID values from the MultiChanReadPort outputs
+  for((n, x) <- chans) {
+    var p = chanMap(n)
+    p.chanBaseID = portAdps(p.port).getChanBaseID(p.portPipeNum)
+    chanMap(n) = p
+  }
+
+  def getChanParams(name: String): ReadChanParams = {chanMap(name)}
+
+  val io = new Bundle {
+    // interface towards channels
+    val req = Vec.fill(numChans) { Decoupled(new GenericMemoryRequest(mrp)).flip }
+    val rsp = Vec.fill(numChans) { Decoupled(new GenericMemoryResponse(mrp)) }
+    // interface towards memory port
+    val memReq = Vec.fill(numPorts) {Decoupled(new GenericMemoryRequest(mrp))}
+    val memRsp = Vec.fill(numPorts) {Decoupled(new GenericMemoryResponse(mrp)).flip}
+  }
+
+  for(i <- 0 until numPorts) {
+    portAdps(i).io.memReq <> io.memReq(i)
+    io.memRsp(i) <> portAdps(i).io.memRsp
+  }
+
+  for((n,p) <- chanMap) {
+    io.req(p.sysPipeNum) <> portAdps(p.port).req(p.portPipeNum)
+    portAdps(p.port).rsp(p.portPipeNum) <> io.rsp(p.sysPipeNum)
+  }
+}
 
 class MultiChanReadPort(val mrp: MemReqParams,
   chans: Seq[ReadChanParams]) extends Module {
@@ -25,20 +94,13 @@ class MultiChanReadPort(val mrp: MemReqParams,
   if(chanIDBits + chanReqIDBits > mrp.idWidth)
     throw new Exception("Not enough ID bits to create memory channels")
 
-  // build the channel map, determining the baseID for each channel
-  var chanMap = scala.collection.mutable.Map[String, ReadChanParams]()
-  for(i <- 0 until numChans) {
-    chanMap(chans(i).name) = new ReadChanParams(
-      chans(i).name, chans(i).maxReadTxns, i << chanReqIDBits, i
-    )
-  }
-  def getPipeNum(name: String): Int = { chanMap(name).physPipeNum }
-  def getChanBaseID(name: String): Int = { chanMap(name).chanBase }
-  def getChanReadTxns(name: String): Int = { chanMap(name).maxReadTxns }
+  // build the channel map, determining the baseID for each channel)
+  val chanBaseIDs = (0 until numChans).map(i => i << chanReqIDBits)
+  def getChanBaseID(i: Int): Int = { chanBaseIDs(i)}
 
   val io = new Bundle {
     // interface towards channels
-    val req = Vec.fill(numChans) { Decoupled(new GenericMemoryResponse(mrp)).flip }
+    val req = Vec.fill(numChans) { Decoupled(new GenericMemoryRequest(mrp)).flip }
     val rsp = Vec.fill(numChans) { Decoupled(new GenericMemoryResponse(mrp)) }
     // interface towards memory port
     val memReq = Decoupled(new GenericMemoryRequest(mrp))
