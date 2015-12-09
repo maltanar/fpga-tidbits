@@ -9,6 +9,8 @@ extern "C"
 
 #include <stdint.h>
 #include "wrapperregdriver.h"
+#include <iostream>
+using namespace std;
 
 void *memset(void *dst, int c, size_t n)
 {
@@ -62,7 +64,13 @@ public:
   virtual void detach() {
     // hack: do a write to register 0 to unset the busy flag
     writeReg(0, readReg(0));
-    // TODO wait until returned from dispatch?
+    // wait until returned from dispatch?
+    int stat = 0;
+    while (!(stat = wdm_dispatch_status(m_coproc)));
+
+    if (stat < 0) {
+      throw "Dispatch status error";
+    }
     // close firmware daemon connection and release coprocessor
     cny_fwd_close();
     wdm_detach(m_coproc);
