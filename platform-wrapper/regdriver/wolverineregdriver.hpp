@@ -60,6 +60,9 @@ public:
   }
 
   virtual void detach() {
+    // hack: do a write to register 0 to unset the busy flag
+    writeReg(0, readReg(0));
+    // TODO wait until returned from dispatch?
     // close firmware daemon connection and release coprocessor
     cny_fwd_close();
     wdm_detach(m_coproc);
