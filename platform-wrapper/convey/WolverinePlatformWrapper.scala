@@ -52,10 +52,6 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   when (!regBusy) {regBusy := io.dispInstValid}
   io.dispIdle := !regBusy
   io.dispStall := regBusy
-  // hack: use writes to register 0 to un-busy the accelerator
-  // this allows a clear detach (don't need to reload same bitfile next time)
-  val clearBusyMagic = (io.dispRegID === UInt(0)) & io.dispRegWrite
-  when (regBusy & clearBusyMagic) { regBusy := Bool(false)}
 
   if(useAEGforRegFile) {
     // use the Convey AEG interface for controlling the register file
@@ -83,6 +79,11 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     }
     println("====> RegFile is using the Convey AEG interface")
   } else {
+    // hack: use writes to register 0 to un-busy the accelerator
+    // this allows a clear detach (don't need to reload same bitfile next time)
+    val clearBusyMagic = (io.csrAddr === UInt(0)) & io.csrWrValid
+    when (regBusy & clearBusyMagic) { regBusy := Bool(false)}
+    
     // use the Convey CSR interface for controlling the register file
     // use a single, constant register for the AEGs
     io.dispAegCnt := UInt(1)
