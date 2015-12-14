@@ -6,7 +6,7 @@
 
 BITFILE_PATH="/root/bitfiles/$1.bin"
 
-if [ ! -f /tmp/foo.txt ]; then
+if [ ! -f $BITFILE_PATH ]; then
   echo "File not found!"
   exit 1
 else
