@@ -8,7 +8,7 @@ LinuxPhysRegDriver * platform = 0;
 
 WrapperRegDriver * initPlatform() {
   if(!platform) {
-    platform = new LinuxPhysRegDriver((void *) 0x43c00000);
+    platform = new LinuxPhysRegDriver((void *) 0x43c00000, (void *) 0x17000000);
   }
   return (WrapperRegDriver *) platform;
 }
