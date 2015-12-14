@@ -15,6 +15,8 @@
 #include <string.h>
 using namespace std;
 
+extern void loadBitfile(const char * accelName);
+
 class LinuxPhysRegDriver : public AXIRegDriver {
 public:
   LinuxPhysRegDriver(void * baseAddrPhys, void * memBufBasePhys, unsigned int memBufBytes)
@@ -79,6 +81,11 @@ public:
     (void) buffer;
     // currently does nothing
     // TODO implement a proper dealloc if we have lots of dynamic alloc/delloc
+  }
+
+  virtual void attach(const char * name) {
+    // call loadBitfile, defined in platform*.cpp
+    loadBitfile(name);
   }
 
 protected:
