@@ -78,10 +78,11 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   // SRLQueue at the output to correct the interface semantics by
   // "prefetching" the top two elements ("handshaking across latency")
   // TODO support higher BRAM latencies with parametrization here
-  val pf = Module(new FPGAQueue(gen, 2)).io
+  val readLatency = 1
+  val pf = Module(new FPGAQueue(gen, readLatency + 2)).io
   // will be used as the "ready" signal for the prefetch queue
   // the threshold here needs to be (pfQueueCap-BRAM latency)
-  val canPrefetch = (pf.count < UInt(1))
+  val canPrefetch = (pf.count < UInt(2))
 
   val bram = Module(new DualPortBRAM(log2Up(entries), gen.getWidth())).io
   val writePort = bram.ports(0)
