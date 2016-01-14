@@ -81,12 +81,29 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
       }
 
       is(sRead) {
-        when(regReadRequest.numBytes === UInt(0)) { regStateRead := sWaitRd }
+        when(regReadRequest.numBytes === UInt(0)) {
+          // prefetch the read request if possible to minimize waiting
+          accmp.memRdReq.ready := Bool(true)
+          when (accmp.memRdReq.valid) {
+            regReadRequest := accmp.memRdReq.bits
+            // stay in this state and continue processing
+          } .otherwise {regStateRead := sWaitRd}
+        }
         .otherwise {
           accmp.memRdRsp.valid := Bool(true)
           when (accmp.memRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
             regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
+
+            // was this the last beat of burst transferred?
+            when(regReadRequest.numBytes === memUnitBytes) {
+              // prefetch the read request if possible to minimize waiting
+              accmp.memRdReq.ready := Bool(true)
+              when (accmp.memRdReq.valid) {
+                regReadRequest := accmp.memRdReq.bits
+                // stay in this state and continue processing
+              }
+            }
           }
         }
       }
