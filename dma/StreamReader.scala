@@ -12,7 +12,8 @@ class StreamReaderParams(
   val chanID: Int,
   val disableThrottle: Boolean = false,
   val readOrderCache: Boolean = false,
-  val readOrderTxns: Int = 4
+  val readOrderTxns: Int = 4,
+  val streamName: String = "stream"
 )
 
 class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
@@ -143,4 +144,37 @@ class StreamReader(val p: StreamReaderParams) extends Module {
 
   // TODO add support for statistics?
   // - average req, rsp, data consume latencies (histograms?)
+
+  // uncomment below for performance-debugging StreamReader
+  /*
+  val regCycleCount = Reg(init = UInt(0, 32))
+  val regCycleFifoNotValid = Reg(init = UInt(0, 32))
+  val regCycleMemRspNotValid = Reg(init = UInt(0, 32))
+  val act = io.start & !io.finished
+  val regWasActive = Reg(next = act)
+  when(io.active) {
+    regCycleCount := regCycleCount + UInt(1)
+    when(!fifo.deq.valid) {
+      regCycleFifoNotValid := regCycleFifoNotValid + UInt(1)
+    }
+    when(!rsp.valid) {
+      regCycleMemRspNotValid := regCycleMemRspNotValid + UInt(1)
+      if(p.streamName == "nzdata")
+      printf("mem rsp for " + p.streamName + "not valid: %d \n", regCycleCount)
+    }
+
+  }
+
+  when(regWasActive & !act) {
+    printf("Stats for " + p.streamName + "\n ======================== \n")
+    printf("FIFO not valid cycles: %d \n", regCycleFifoNotValid)
+    printf("MemRsp not valid cycles: %d \n", regCycleMemRspNotValid)
+    printf("Total cycles: %d \n", regCycleCount)
+    printf("\n")
+  }
+
+  when(rg.ctrl.throttle) {
+    printf("throttling " + p.streamName + "\n")
+  }
+  */
 }

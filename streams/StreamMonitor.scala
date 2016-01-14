@@ -68,7 +68,7 @@ class StreamMonitor(streamName: String = "stream") extends Module {
           when (io.validIn & io.readyIn) {
             regActiveCycles := regActiveCycles + UInt(1)
             // printf only active in Chisel C++ emulator
-            printf(streamName + " txn: %d \n", regActiveCycles)
+            //printf(streamName + " txn: %d \n", regActiveCycles)
           }
         }
       }
