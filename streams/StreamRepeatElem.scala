@@ -32,40 +32,40 @@ class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
   io.inRepCnt.ready := Bool(false)
   io.out.valid := Bool(false)
 
-  val sWait :: sEmit :: Nil = Enum(UInt(), 2)
-  val regState = Reg(init = UInt(sWait))
-
   val regElem = Reg(init = UInt(0, dataWidth))
   val regRep = Reg(init = UInt(0, repWidth))
 
   io.out.bits := regElem
 
-  switch(regState) {
-      is(sWait) {
-        val bothValid = io.inElem.valid & io.inRepCnt.valid
-        regElem := io.inElem.bits
-        regRep := io.inRepCnt.bits
+  val bothValid = io.inElem.valid & io.inRepCnt.valid
+
+  when(regRep === UInt(0)) {
+    when (bothValid) {
+      regElem := io.inElem.bits
+      regRep := io.inRepCnt.bits
+      io.inElem.ready := Bool(true)
+      io.inRepCnt.ready := Bool(true)
+    }
+  }
+  .otherwise {
+    io.out.valid := Bool(true)
+    when(io.out.ready) {
+      regRep := regRep - UInt(1)
+      // last repetition? prefetch in read
+      when(regRep === UInt(1)) {
+        // prefetch elem and repcount, if possible
         when (bothValid) {
+          regElem := io.inElem.bits
+          regRep := io.inRepCnt.bits
           io.inElem.ready := Bool(true)
           io.inRepCnt.ready := Bool(true)
-          regState := sEmit
         }
       }
-
-      is(sEmit) {
-        when(regRep === UInt(0)) {regState := sWait}
-        .otherwise {
-          io.out.valid := Bool(true)
-          when(io.out.ready) {
-            regRep := regRep - UInt(1)
-          }
-        }
-      }
+    }
   }
 }
 
 class StreamRepeatElemTester(c: StreamRepeatElem) extends Tester(c) {
-  // TODO add testing code here with peek, poke and step
   var elems = Array(100, 200, 300, 400)
   var reps = Array(3, 0, 2, 1)
   val l = elems.size
