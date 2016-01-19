@@ -53,3 +53,15 @@ class SequenceGenerator(w: Int) extends Module {
       }
   }
 }
+
+// convenience constructor for natural numbers
+object NaturalNumbers {
+  def apply(w: Int, start: Bool, count: UInt) = {
+    val m = Module(new SequenceGenerator(w)).io
+    m.start := start
+    m.init := UInt(0)
+    m.count := count
+    m.step := UInt(1)
+    m.seq
+  }
+}
