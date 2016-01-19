@@ -49,6 +49,7 @@ class CAMIO(entries: Int, addr_bits: Int, tag_bits: Int) extends Bundle {
   val write = Bool(INPUT)
   val write_tag = Bits(INPUT, tag_bits)
   val hasFree = Bool(OUTPUT)
+  val freeInd = UInt(OUTPUT, log2Up(entries))
 }
 
 // TODO make the CAM search/match function customizable?
@@ -65,6 +66,7 @@ class CAM(entries: Int, tag_bits: Int) extends Module {
 
   // index of first free slot in the CAM (least significant first)
   val freeLocation = PriorityEncoder(~vb_array)
+  io.freeInd := freeLocation
   // whether there are any free slots at all
   io.hasFree := orR(~vb_array)
 
