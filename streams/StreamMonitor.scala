@@ -56,7 +56,14 @@ class StreamMonitor(streamName: String = "stream") extends Module {
       }
 
       is(sRun) {
-        when(!io.enable) { regState := sIdle}
+        when(!io.enable) {
+          regState := sIdle
+          printf("Stats from StreamMonitor: " + streamName + "\n")
+          printf("activeCycles = %d\n", regActiveCycles)
+          printf("totalCycles = %d\n", regTotalCycles)
+          printf("noValidButReady = %d\n", regNoValidButReady)
+          printf("noReadyButValid = %d\n", regNoReadyButValid)
+        }
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
           when (io.validIn & !io.readyIn) {
