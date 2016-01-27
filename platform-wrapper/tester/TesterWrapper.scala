@@ -55,6 +55,14 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
 
   when (io.memWriteEn) {mem(memWord) := io.memWriteData}
 
+  def addLatency[T <: Data](n: Int, prod: DecoupledIO[T]): DecoupledIO[T] = {
+    if(n == 1) {
+      return Queue(prod, 2)
+    } else {
+      return addLatency(n-1, Queue(prod, 2))
+    }
+  }
+
   // accelerator memory access ports
   // one FSM per port, rather simple, but supports bursts
   for(i <- 0 until accel.numMemPorts) {
@@ -64,18 +72,20 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
     val regReadRequest = Reg(init = GenericMemoryRequest(mrp))
 
     val accmp = accio.memPort(i)
+    val accRdReq = addLatency(10, accmp.memRdReq)
+    val accRdRsp = accmp.memRdRsp
 
-    accmp.memRdReq.ready := Bool(false)
-    accmp.memRdRsp.valid := Bool(false)
-    accmp.memRdRsp.bits.channelID := regReadRequest.channelID
-    accmp.memRdRsp.bits.metaData := UInt(0)
-    accmp.memRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+    accRdReq.ready := Bool(false)
+    accRdRsp.valid := Bool(false)
+    accRdRsp.bits.channelID := regReadRequest.channelID
+    accRdRsp.bits.metaData := UInt(0)
+    accRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
 
     switch(regStateRead) {
       is(sWaitRd) {
-        accmp.memRdReq.ready := Bool(true)
-        when (accmp.memRdReq.valid) {
-          regReadRequest := accmp.memRdReq.bits
+        accRdReq.ready := Bool(true)
+        when (accRdReq.valid) {
+          regReadRequest := accRdReq.bits
           regStateRead := sRead
         }
       }
@@ -83,24 +93,24 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
       is(sRead) {
         when(regReadRequest.numBytes === UInt(0)) {
           // prefetch the read request if possible to minimize waiting
-          accmp.memRdReq.ready := Bool(true)
-          when (accmp.memRdReq.valid) {
-            regReadRequest := accmp.memRdReq.bits
+          accRdReq.ready := Bool(true)
+          when (accRdReq.valid) {
+            regReadRequest := accRdReq.bits
             // stay in this state and continue processing
           } .otherwise {regStateRead := sWaitRd}
         }
         .otherwise {
-          accmp.memRdRsp.valid := Bool(true)
-          when (accmp.memRdRsp.ready) {
+          accRdRsp.valid := Bool(true)
+          when (accRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
             regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
 
             // was this the last beat of burst transferred?
             when(regReadRequest.numBytes === memUnitBytes) {
               // prefetch the read request if possible to minimize waiting
-              accmp.memRdReq.ready := Bool(true)
-              when (accmp.memRdReq.valid) {
-                regReadRequest := accmp.memRdReq.bits
+              accRdReq.ready := Bool(true)
+              when (accRdReq.valid) {
+                regReadRequest := accRdReq.bits
                 // stay in this state and continue processing
               }
             }
@@ -122,7 +132,9 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
     val wrRspQ = Module(new Queue(GenericMemoryResponse(mrp), 16)).io
     wrRspQ.deq <> accmp.memWrRsp
 
-    accmp.memWrReq.ready := Bool(false)
+    val accWrReq = addLatency(10, accmp.memWrReq)
+
+    accWrReq.ready := Bool(false)
     wrDatQ.deq.ready := Bool(false)
     wrRspQ.enq.valid := Bool(false)
     wrRspQ.enq.bits.driveDefaults()
@@ -130,9 +142,9 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
 
     switch(regStateWrite) {
       is(sWaitWr) {
-        accmp.memWrReq.ready := Bool(true)
-        when(accmp.memWrReq.valid) {
-          regWriteRequest := accmp.memWrReq.bits
+        accWrReq.ready := Bool(true)
+        when(accWrReq.valid) {
+          regWriteRequest := accWrReq.bits
           regStateWrite := sWrite
         }
       }
