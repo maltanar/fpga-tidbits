@@ -153,8 +153,10 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
         when(regWriteRequest.numBytes === UInt(0)) {regStateWrite := sWaitWr}
         .otherwise {
           when(wrRspQ.enq.ready && wrDatQ.deq.valid) {
+            when(regWriteRequest.numBytes === memUnitBytes) {
+              wrRspQ.enq.valid := Bool(true)
+            }
             wrDatQ.deq.ready := Bool(true)
-            wrRspQ.enq.valid := Bool(true)
             mem(addrToWord(regWriteRequest.addr)) := wrDatQ.deq.bits
             regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
             regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
