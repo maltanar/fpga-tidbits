@@ -8,8 +8,8 @@ import Chisel._
 
 object StreamMonitor {
   def apply[T <: Data](stream: DecoupledIO[T], enable: Bool,
-    streamName: String = "stream"): StreamMonitorOutIF = {
-    val mon = Module(new StreamMonitor(streamName))
+    streamName: String = "stream", dbg: Boolean = false): StreamMonitorOutIF = {
+    val mon = Module(new StreamMonitor(streamName, dbg))
     mon.io.enable := enable
     mon.io.validIn := stream.valid
     mon.io.readyIn := stream.ready
@@ -24,7 +24,10 @@ class StreamMonitorOutIF() extends Bundle {
   val noReadyButValid = UInt(OUTPUT, 32)
 }
 
-class StreamMonitor(streamName: String = "stream") extends Module {
+class StreamMonitor(
+  streamName: String = "stream",
+  dbg: Boolean = false
+) extends Module {
   val io = new Bundle {
     val enable = Bool(INPUT)
     val validIn = Bool(INPUT)
@@ -74,8 +77,93 @@ class StreamMonitor(streamName: String = "stream") extends Module {
           }
           when (io.validIn & io.readyIn) {
             regActiveCycles := regActiveCycles + UInt(1)
-            // printf only active in Chisel C++ emulator
-            //printf(streamName + " txn: %d \n", regActiveCycles)
+            if(dbg) {
+              // printf only active in Chisel C++ emulator
+              printf(streamName + " txn: %d \n", regActiveCycles)
+            }
+          }
+        }
+      }
+  }
+}
+
+abstract class PrintableBundle extends Bundle {
+  def printfStr: String
+  def printfElems: () => Seq[Node]
+}
+
+object PrintableBundleStreamMonitor {
+  def apply[T <: PrintableBundle](stream: DecoupledIO[T], enable: Bool,
+    streamName: String = "stream", dbg: Boolean = false): StreamMonitorOutIF = {
+    val mon = Module(new PrintableBundleStreamMonitor(stream.bits, streamName, dbg))
+    mon.io.enable := enable
+    mon.io.validIn := stream.valid
+    mon.io.readyIn := stream.ready
+    mon.io.bitsIn := stream.bits
+    return mon.io.out
+  }
+}
+
+class PrintableBundleStreamMonitor[T <: PrintableBundle](
+  gen: T,
+  streamName: String = "stream",
+  dbg: Boolean = false
+) extends Module {
+  val io = new Bundle {
+    val enable = Bool(INPUT)
+    val validIn = Bool(INPUT)
+    val readyIn = Bool(INPUT)
+    val bitsIn = gen.cloneType.asInput
+    val out = new StreamMonitorOutIF()
+  }
+  val sIdle :: sRun :: Nil = Enum(UInt(), 2)
+  val regState = Reg(init = UInt(sIdle))
+
+  val regActiveCycles = Reg(init = UInt(0, 32))
+  val regTotalCycles = Reg(init = UInt(0, 32))
+  val regNoValidButReady = Reg(init = UInt(0, 32))
+  val regNoReadyButValid = Reg(init = UInt(0, 32))
+
+  io.out.totalCycles := regTotalCycles
+  io.out.activeCycles := regActiveCycles
+  io.out.noValidButReady := regNoValidButReady
+  io.out.noReadyButValid := regNoReadyButValid
+
+  switch(regState) {
+      is(sIdle) {
+        when(io.enable) {
+          regState := sRun
+          regActiveCycles := UInt(0)
+          regTotalCycles := UInt(0)
+          regNoValidButReady := UInt(0)
+          regNoReadyButValid := UInt(0)
+        }
+      }
+
+      is(sRun) {
+        when(!io.enable) {
+          regState := sIdle
+          printf("Stats from StreamMonitor: " + streamName + "\n")
+          printf("activeCycles = %d\n", regActiveCycles)
+          printf("totalCycles = %d\n", regTotalCycles)
+          printf("noValidButReady = %d\n", regNoValidButReady)
+          printf("noReadyButValid = %d\n", regNoReadyButValid)
+        }
+        .otherwise {
+          regTotalCycles := regTotalCycles + UInt(1)
+          when (io.validIn & !io.readyIn) {
+            regNoReadyButValid := regNoReadyButValid + UInt(1)
+          }
+          when (!io.validIn & io.readyIn) {
+            regNoValidButReady := regNoValidButReady + UInt(1)
+          }
+          when (io.validIn & io.readyIn) {
+            regActiveCycles := regActiveCycles + UInt(1)
+            if(dbg) {
+              // printf only active in Chisel C++ emulator
+              printf(streamName + " (%d) ", regActiveCycles)
+              printf(io.bitsIn.printfStr, io.bitsIn.printfElems():_*)
+            }
           }
         }
       }
