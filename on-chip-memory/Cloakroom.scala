@@ -4,6 +4,18 @@ import Chisel._
 import TidbitsStreams._
 import TidbitsDMA._
 
+// consider some system that takes in some input consisting of fields A and B,
+// making use of only field B, but when it emits a response it also
+// has to add the original field A to the response. the "cloakroom" modules
+// aim to make the design of such systems easier.
+
+// extIn -> [cloakroom] -> intOut -> [processing] -> intIn -> [cloakroom] -> extOut
+
+// you wouldn't walk around in an indoors party with your jacket on --
+// you'd go to the cloakroom, leave your cloak and get a ticket. on your way
+// out, you would use the ticket to get back your cloak. this is why this
+// family of modules are named "cloakroom".
+
 
 class CloakroomBundle(num: Int) extends PrintableBundle {
   val id = UInt(width = log2Up(num))
