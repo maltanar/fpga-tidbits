@@ -87,7 +87,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val bram = Module(new DualPortBRAM(log2Up(entries), gen.getWidth())).io
   val writePort = bram.ports(0)
   val readPort = bram.ports(1)
-  writePort.req.writeData := io.enq.bits
+  writePort.req.writeData := io.enq.bits.toBits
   writePort.req.writeEn := Bool(false)
   writePort.req.addr := enq_ptr.value
 
@@ -115,7 +115,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   io.enq.ready := !full
 
   pf.enq.valid := Reg(init = Bool(false), next = do_deq)
-  pf.enq.bits := readPort.rsp.readData
+  pf.enq.bits := pf.enq.bits.fromBits(readPort.rsp.readData)
 
   pf.deq <> io.deq
 
