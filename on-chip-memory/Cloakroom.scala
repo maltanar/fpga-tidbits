@@ -45,7 +45,7 @@ class CloakroomLUTRAM
 [TA <: Data, TB <: CloakroomBundle, TC <: CloakroomBundle, TD <: Data]
 (num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
 extends Module {
-  val io = new CloakroomIF(genA.cloneType, undress, genC, dress)
+  val io = new CloakroomIF(genA.cloneType, undress, genC.cloneType, dress)
 
   // context store (where the "cloaks" will be kept)
   val ctxStore = Mem(genA.cloneType, num)
@@ -86,4 +86,77 @@ extends Module {
   io.extOut.valid := readyResps.outB.valid
   io.extOut.bits := dress(readyRespCtx, readyResps.outB.bits)
   readyResps.outB.ready := io.extOut.ready
+}
+
+// cloakroom using BRAM as the context store, can be scaled to larger windows
+class CloakroomBRAM
+[TA <: Data, TB <: CloakroomBundle, TC <: CloakroomBundle, TD <: Data]
+(num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
+extends Module {
+  val io = new CloakroomIF(genA.cloneType, undress, genC.cloneType, dress)
+
+  // context store (where the "cloaks" will be kept)
+  val ctxSize = genA.getWidth()
+  val ctxLat = 1  // latency to read context
+  val ctxStore = Module(new DualPortBRAM(log2Up(num), ctxSize)).io
+  val ctxWrite = ctxStore.ports(0)
+  val ctxRead = ctxStore.ports(1)
+
+  // pool of available request IDs ("tickets" in the cloakrooms)
+  val idPool = Module(new ReqIDQueueBRAM(log2Up(num), num, 0)).io
+
+  // define join fnuction based on the undress function
+  def joinFxn(a: TA, b: UInt): TB = {
+    val ret = undress(a)
+    ret.id := b
+    ret
+  }
+
+  // join up available IDs with incoming requests, expose as intOut
+   StreamJoin(inA = io.extIn, inB = idPool.idOut,
+    genO = io.intOut.bits.cloneType, join = joinFxn
+  ) <> io.intOut
+
+  // add to context store when intOut is ready to go
+  ctxWrite.req.writeEn := Bool(false)
+  ctxWrite.req.writeData := io.extIn.bits.toBits
+  ctxWrite.req.addr := idPool.idOut.bits
+
+  when(io.intOut.ready & io.intOut.valid) {
+    ctxWrite.req.writeEn := Bool(true)
+  }
+
+  // load context for incoming intIn
+  // define a type for keeping the incoming intIn and its context bundled
+  class IntInWithCtx extends Bundle {
+    val intIn = genC.cloneType
+    val ctx = genA.cloneType
+    override def cloneType: this.type = new IntInWithCtx().asInstanceOf[this.type]
+  }
+  val intInWithCtx = new IntInWithCtx()
+
+  // handshake over latency to retrieve the context
+  // put both the context and the incoming intIn into a queue
+  val intInWithCtxQ = Module(new FPGAQueue(intInWithCtx, ctxLat + 2)).io
+  val canDoRead = (intInWithCtxQ.count < UInt(2))
+
+  ctxRead.req.writeEn := Bool(false)
+  ctxRead.req.addr := io.intIn.bits.id
+
+  intInWithCtxQ.enq.valid := ShiftRegister(io.intIn.valid & canDoRead, ctxLat)
+  intInWithCtxQ.enq.bits.ctx := genA.fromBits(ctxRead.rsp.readData)
+  intInWithCtxQ.enq.bits.intIn := ShiftRegister(io.intIn.bits, ctxLat)
+  io.intIn.ready := canDoRead
+
+  // feed queue through StreamFork to recycle IDs and generate responses
+  val readyResps = Module(new StreamFork(
+    genIn = intInWithCtx.cloneType, genA = UInt(width = log2Up(num)),
+    genB = io.extOut.bits.cloneType,
+    forkA = {x: IntInWithCtx => x.intIn.id},
+    forkB = {x: IntInWithCtx => dress(x.ctx, x.intIn)}
+  )).io
+
+  intInWithCtxQ.deq <> readyResps.in
+  readyResps.outA <> idPool.idIn  // recycle used tickets back into the pool
+  readyResps.outB <> io.extOut
 }

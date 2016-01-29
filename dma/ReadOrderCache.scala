@@ -170,3 +170,31 @@ class ReqIDQueue(idWidth: Int, maxEntries: Int, startID: Int) extends Module {
   val idSources = Seq(io.idIn, initGen.seq)
   DecoupledInputMux(regDoInit, idSources) <> idQ.enq
 }
+
+// BRAM-based reqID queue, suitable for larger ID pools. does not support
+// reinitialization with a smaller pool of elements
+class ReqIDQueueBRAM(idWidth: Int, maxEntries: Int, startID: Int) extends Module {
+  val idElem = UInt(width = idWidth)
+  val io = new Bundle {
+    val idIn = Decoupled(idElem).flip       // recycled IDs into the pool
+    val idOut = Decoupled(idElem)           // available IDs from the pool
+  }
+  val initGen = Module(new SequenceGenerator(idWidth)).io
+  // initialize contents once upon reset, and when requested afterwards
+  val regDoInit = Reg(init = Bool(true))
+  when(regDoInit & initGen.finished) {
+    regDoInit := Bool(false)
+  }
+
+  val idQ = Module(new BRAMQueue(idElem, maxEntries)).io
+  idQ.deq <> io.idOut
+
+  initGen.start := regDoInit
+  // on-reset init fills the queue with max # elements
+  initGen.count := UInt(maxEntries)
+  initGen.step := UInt(1)
+  initGen.init := UInt(startID)
+
+  val idSources = Seq(io.idIn, initGen.seq)
+  DecoupledInputMux(regDoInit, idSources) <> idQ.enq
+}
