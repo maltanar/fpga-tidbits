@@ -43,7 +43,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val busyReqs = Module(new FPGAQueue(mreq, p.outstandingReqs)).io
 
   // multichannel queue for buffering received read data
-  val storage = Module(new MultiChanQueueBRAM(
+  val storage = Module(new MultiChanQueueSimple(
     gen = mrsp, chans = p.outstandingReqs, elemsPerChan = p.maxBurst,
     getChan = {x: GenericMemoryResponse => x.channelID - UInt(p.chanIDBase)}
   )).io
@@ -70,62 +70,46 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   reqIssueFork.outA <> io.reqMem
   reqIssueFork.outB <> busyReqs.enq
 
-  // finite state machine to drain the storage queues in-order
-  val regBurstQueueID = Reg(init = UInt(0, width = p.mrp.idWidth))
-  val regBurstBytesLeft = Reg(init = UInt(0, width = 8))
 
   // buffer incoming responses in the multichannel queue
   io.rspMem <> storage.in
-  storage.outSel := regBurstQueueID
-  val targetQ = storage.out
 
   // ordered response data comes from the appropriate storage queue
-  io.rspOrdered.bits.readData := targetQ.bits.readData
+  io.rspOrdered.bits.readData := storage.out.bits.readData
   io.rspOrdered.bits.channelID := UInt(p.outputStreamID)
   io.rspOrdered.bits.isWrite := Bool(false)
   io.rspOrdered.bits.metaData := UInt(0)
 
-  // FSM will set the control flow flags as appropriate
-  io.rspOrdered.valid := Bool(false)
-  targetQ.ready := Bool(false)
-  busyReqs.deq.ready := Bool(false)
+  // create a "repeated" version of the head of the busy queue -- each repeat
+  // corresponds to one burst beat
+  val repBitWidth = 1 + log2Up(p.maxBurst)
+  val busyRep = Module(new StreamRepeatElem(mreq.getWidth(), repBitWidth)).io
+  val bytesInBeat = UInt(p.mrp.dataWidth/8) // TODO correct for sub-word reads?
+  busyRep.inElem.valid := busyReqs.deq.valid
+  busyRep.inRepCnt.valid := busyReqs.deq.valid
+  busyRep.inElem.bits := busyReqs.deq.bits.toBits
+  busyRep.inRepCnt.bits := busyReqs.deq.bits.numBytes / bytesInBeat
+  busyReqs.deq.ready := busyRep.inElem.ready
+
+  val busyRepHead = mreq.fromBits(busyRep.out.bits)
+  storage.outSel := busyRepHead.channelID - UInt(p.chanIDBase)
+
+  // join the storage.out and busyRep.out streams
+  io.rspOrdered.valid := storage.out.valid & busyRep.out.valid
+  storage.out.ready := io.rspOrdered.ready & busyRep.out.valid
+  busyRep.out.ready := io.rspOrdered.ready & storage.out.valid
 
   // the head-of-line ID will be recycled when we are done with it
   freeReqID.idIn.valid := Bool(false)
-  freeReqID.idIn.bits := regBurstQueueID + UInt(p.chanIDBase)
+  freeReqID.idIn.bits := busyRepHead.channelID
 
-  // TODO correct for sub-word reads, if needed
-  val bytesInBeat = UInt(p.mrp.dataWidth/8)
-
-  val sWaitReq :: sWaitData :: sRecycleID :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sWaitReq))
-
-  switch(regState) {
-      is(sWaitReq) {
-        regBurstQueueID := busyReqs.deq.bits.channelID - UInt(p.chanIDBase)
-        regBurstBytesLeft := busyReqs.deq.bits.numBytes
-        busyReqs.deq.ready := Bool(true)
-        when(busyReqs.deq.valid) {regState := sWaitData}
-      }
-
-      is(sWaitData) {
-        // connect storageQ output to ordered response output
-        io.rspOrdered.valid := targetQ.valid
-        targetQ.ready := io.rspOrdered.ready
-        // watch for transactions and decrement counter
-        when(targetQ.ready & targetQ.valid) {
-          regBurstBytesLeft := regBurstBytesLeft - bytesInBeat
-        }
-        // when no more bytes left in burst, go to recycle ID state
-        when (regBurstBytesLeft === UInt(0)) {regState := sRecycleID}
-      }
-
-      is(sRecycleID) {
-        // we are finished handling a burst --
-        // recycle request id back into the free pool
-        freeReqID.idIn.valid := Bool(true)
-        when(freeReqID.idIn.ready) {regState := sWaitReq}
-      }
+  val regBeatCounter = Reg(init = UInt(0, repBitWidth))
+  when(busyRep.out.valid & busyRep.out.ready) {
+    regBeatCounter := regBeatCounter + UInt(1)
+    when(regBeatCounter === (busyRepHead.numBytes / bytesInBeat) - UInt(1)) {
+      regBeatCounter := UInt(0)
+      freeReqID.idIn.valid := Bool(true) // always room in the ID pool
+    }
   }
 }
 
