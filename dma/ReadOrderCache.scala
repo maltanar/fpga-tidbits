@@ -31,6 +31,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val beat = UInt(0, width = p.mrp.dataWidth)
   val rid = UInt(0, width = p.mrp.idWidth)
   val mreq = new GenericMemoryRequest(p.mrp)
+  val mrsp = new GenericMemoryResponse(p.mrp)
 
   // queue with pool of available request IDs
   val freeReqID = Module(new ReqIDQueue(
@@ -41,10 +42,11 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // queue with issued requests
   val busyReqs = Module(new FPGAQueue(mreq, p.outstandingReqs)).io
 
-  // storage queues for buffering received read data
-  val storageQ = Vec.fill(p.outstandingReqs) {
-    Module(new FPGAQueue(beat, p.maxBurst)).io
-  }
+  // multichannel queue for buffering received read data
+  val storage = Module(new MultiChanQueueSimple(
+    gen = mrsp, chans = p.outstandingReqs, elemsPerChan = p.maxBurst,
+    getChan = {x: GenericMemoryResponse => x.channelID - UInt(p.chanIDBase)}
+  )).io
 
   // issue new requests: sync freeReqID and incoming reqs
   val readyReqs = StreamJoin(
@@ -68,22 +70,20 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   reqIssueFork.outA <> io.reqMem
   reqIssueFork.outB <> busyReqs.enq
 
-  // buffer incoming responses into appropriate storageQ
-  ReadRespFilter(io.rspMem) <> DecoupledOutputDemux(
-    sel = io.rspMem.bits.channelID - UInt(p.chanIDBase),
-    chans = storageQ.map({x: QueueIO[UInt] => x.enq})
-  )
+
+
 
   // finite state machine to drain the storage queues in-order
   val regBurstQueueID = Reg(init = UInt(0, width = p.mrp.idWidth))
   val regBurstBytesLeft = Reg(init = UInt(0, width = 8))
 
-  val targetQ = DecoupledInputMux(
-    sel = regBurstQueueID,
-    chans = storageQ.map({x: QueueIO[UInt] => x.deq})
-  )
+  // buffer incoming responses in the multichannel queue
+  io.rspMem <> storage.in
+  storage.outSel := regBurstQueueID
+  val targetQ = storage.out
+
   // ordered response data comes from the appropriate storage queue
-  io.rspOrdered.bits.readData := targetQ.bits
+  io.rspOrdered.bits.readData := targetQ.bits.readData
   io.rspOrdered.bits.channelID := UInt(p.outputStreamID)
   io.rspOrdered.bits.isWrite := Bool(false)
   io.rspOrdered.bits.metaData := UInt(0)
