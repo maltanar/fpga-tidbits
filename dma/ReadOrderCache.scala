@@ -43,7 +43,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val busyReqs = Module(new FPGAQueue(mreq, p.outstandingReqs)).io
 
   // multichannel queue for buffering received read data
-  val storage = Module(new MultiChanQueueSimple(
+  val storage = Module(new MultiChanQueueBRAM(
     gen = mrsp, chans = p.outstandingReqs, elemsPerChan = p.maxBurst,
     getChan = {x: GenericMemoryResponse => x.channelID - UInt(p.chanIDBase)}
   )).io
@@ -69,9 +69,6 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   readyReqs <> reqIssueFork.in
   reqIssueFork.outA <> io.reqMem
   reqIssueFork.outB <> busyReqs.enq
-
-
-
 
   // finite state machine to drain the storage queues in-order
   val regBurstQueueID = Reg(init = UInt(0, width = p.mrp.idWidth))
