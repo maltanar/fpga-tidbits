@@ -19,6 +19,23 @@ object StreamRepeatElem {
     repgen.inRepCnt <> inRepCnt
     repgen.out
   }
+
+  def apply[Te <: Data](gen: Te, inElem: DecoupledIO[Te], inRepCnt: DecoupledIO[UInt]):
+  DecoupledIO[Te] = {
+    val repgen = Module(new StreamRepeatElem(gen.getWidth(),
+                        inRepCnt.bits.getWidth())).io
+    val ret = Decoupled(gen)
+    repgen.inElem.bits := inElem.bits.toBits
+    repgen.inElem.valid := inElem.valid
+    inElem.ready := repgen.inElem.ready
+
+    repgen.inRepCnt <> inRepCnt
+    ret.valid := repgen.out.valid
+    ret.bits := gen.fromBits(repgen.out.bits)
+    repgen.out.ready := ret.ready
+
+    ret
+  }
 }
 
 class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
