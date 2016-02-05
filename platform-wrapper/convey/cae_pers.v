@@ -77,9 +77,13 @@ module cae_pers #(
 
 `include "pdk_fpga_param.vh"
 
+  // Convey-recommended way of registering the global reset signal
+  wire r_reset;
+  FDSE rst (.C(clk),.S(i_reset),.CE(r_reset),.D(!r_reset),.Q(r_reset));
+
    WolverinePlatformWrapper pers(
     .clk(clk),
-    .reset(i_reset),
+    .reset(r_reset),
     .disp_inst_vld(disp_inst_vld),
     .disp_inst(disp_inst),
     .disp_aeg_idx(disp_aeg_idx),

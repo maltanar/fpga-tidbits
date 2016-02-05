@@ -63,7 +63,7 @@ public:
 
   virtual void detach() {
     // hack: do a write to register 0 to unset the busy flag
-    writeReg(0, readReg(0));
+    writeReg(0, 2);
     // wait until returned from dispatch?
     int stat = 0;
     while (!(stat = wdm_dispatch_status(m_coproc)));

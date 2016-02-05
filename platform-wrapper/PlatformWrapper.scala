@@ -63,6 +63,14 @@ extends Module {
   val regAddrBits = log2Up(numRegs)
   val regFile = Module(new RegFile(numRegs, regAddrBits, wCSR)).io
 
+  // hack: detect writes to register 0 to control accelerator reset
+  val regWrapperReset = Reg(init = Bool(false))
+  val rfcmd = regFile.extIF.cmd
+  when(rfcmd.valid & rfcmd.bits.write & rfcmd.bits.regID === UInt(0)) {
+    regWrapperReset := rfcmd.bits.writeData(0)
+  }
+  accel.reset := reset | regWrapperReset
+
   println("Generating register file mappings...")
   // traverse the accel I/Os and connect to the register file
   var allocReg = 0
