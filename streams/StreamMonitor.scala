@@ -61,11 +61,9 @@ class StreamMonitor(
       is(sRun) {
         when(!io.enable) {
           regState := sIdle
-          printf("Stats from StreamMonitor: " + streamName + "\n")
-          printf("activeCycles = %d\n", regActiveCycles)
-          printf("totalCycles = %d\n", regTotalCycles)
-          printf("noValidButReady = %d\n", regNoValidButReady)
-          printf("noReadyButValid = %d\n", regNoReadyButValid)
+          printf("Stream " + streamName + ": act %d - tot %d - nvr %d - vnr %d \n",
+            regActiveCycles, regTotalCycles, regNoValidButReady, regNoReadyButValid
+          )
         }
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
@@ -143,11 +141,9 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
       is(sRun) {
         when(!io.enable) {
           regState := sIdle
-          printf("Stats from StreamMonitor: " + streamName + "\n")
-          printf("activeCycles = %d\n", regActiveCycles)
-          printf("totalCycles = %d\n", regTotalCycles)
-          printf("noValidButReady = %d\n", regNoValidButReady)
-          printf("noReadyButValid = %d\n", regNoReadyButValid)
+          printf("Stream " + streamName + ": act %d - tot %d - nvr %d - vnr %d \n",
+            regActiveCycles, regTotalCycles, regNoValidButReady, regNoReadyButValid
+          )
         }
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
