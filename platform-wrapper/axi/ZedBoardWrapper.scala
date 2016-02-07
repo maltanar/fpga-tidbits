@@ -17,5 +17,14 @@ object ZedBoardParams extends PlatformWrapperParams {
 
 class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
+  val platformDriverFiles = baseDriverFiles ++ Array[String](
+    "platform-zedboard.cpp", "zedboardregdriver.hpp", "axiregdriver.hpp"
+  )
+}
 
+class ZedBoardLinuxWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
+  val platformDriverFiles = baseDriverFiles ++ Array[String](
+    "platform-zedboard-linux.cpp", "linuxphysregdriver.hpp", "axiregdriver.hpp"
+  )
 }

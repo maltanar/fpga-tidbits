@@ -26,6 +26,15 @@ class WolverinePlatformWrapper(instFxn: PlatformWrapperParams => GenericAccelera
 extends PlatformWrapper(WX690TParams, instFxn) {
   val useAEGforRegFile = false
 
+  val wolverineDriverFiles = if(useAEGforRegFile) {
+    Array[String]("platform-wolverine-debug.cpp", "wolverineregdriverdebug.hpp")
+  } else {
+    Array[String]("platform-wolverine.cpp", "wolverineregdriver.hpp")
+  }
+  
+  val platformDriverFiles = baseDriverFiles ++ wolverineDriverFiles
+
+
   val driverRegType = "AccelReg"
   val driverBaseHeader = if(useAEGforRegFile) "wolverineregdriverdebug.h" else "wolverineregdriver.h"
   val driverBaseClass = if(useAEGforRegFile) "WolverineRegDriverDebug" else "WolverineRegDriver"

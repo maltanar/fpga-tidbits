@@ -27,6 +27,11 @@ object TesterWrapperParams extends PlatformWrapperParams {
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(TesterWrapperParams, instFxn) {
   setName("TesterWrapper")
+
+  val platformDriverFiles = baseDriverFiles ++ Array[String](
+    "platform-tester.cpp", "testerdriver.hpp"
+  )
+
   val memWords = 64 * 1024 * 1024
   val mrp = p.toMemReqParams()
   val memAddrBits = log2Up(memWords)

@@ -42,6 +42,12 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)
 extends Module {
   type RegFileMap = LinkedHashMap[String, Array[Int]]
 
+  // a list of files that will be needed for compiling drivers for platform
+  val baseDriverFiles: Array[String] = Array[String](
+    "platform.h", "wrapperregdriver.h"
+  )
+  def platformDriverFiles: Array[String]  // additional files
+
   // instantiate the accelerators
   val accel = Module(instFxn(p))
 
