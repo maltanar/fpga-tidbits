@@ -22,6 +22,24 @@ class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
   ports(1).rsp.readData.setName("b_dout")
 }
 
+// variant of DualPortBRAM with the desired number of registers at input and
+// output. should help achieve higher Fmax with large BRAMs, at the cost of
+// latency.
+class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
+  regIn: Int,   // number of registers at input
+  regOut: Int   // number of registers at output
+) extends Module {
+  val io = new DualPortBRAMIO(addrBits, dataBits)
+  // instantiate the desired BRAM
+  val bram = Module(new DualPortBRAM(addrBits, dataBits)).io
+
+  bram.ports(0).req := ShiftRegister(io.ports(0).req, regIn)
+  bram.ports(1).req := ShiftRegister(io.ports(1).req, regIn)
+
+  io.ports(0).rsp := ShiftRegister(bram.ports(0), regOut)
+  io.ports(1).rsp := ShiftRegister(bram.ports(1), regOut)
+}
+
 class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox {
   val io = new DualPortBRAMIO(addrBits, dataBits)
   setVerilogParameters(new VerilogParameters {
