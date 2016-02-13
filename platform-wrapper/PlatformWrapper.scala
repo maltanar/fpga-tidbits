@@ -48,8 +48,12 @@ extends Module {
   )
   def platformDriverFiles: Array[String]  // additional files
 
-  // instantiate the accelerators
+  // instantiate the accelerator
+  val regWrapperReset = Reg(init = Bool(false), clock = Driver.implicitClock)
   val accel = Module(instFxn(p))
+  // permits controlling the accelerator's reset from both the wrapper's reset,
+  // and by using a special register file command (see hack further down :)
+  accel.reset := reset | regWrapperReset
 
   val fullName: String = accel.getClass.getSimpleName+p.platformName
   setName(fullName)
@@ -70,12 +74,10 @@ extends Module {
   val regFile = Module(new RegFile(numRegs, regAddrBits, wCSR)).io
 
   // hack: detect writes to register 0 to control accelerator reset
-  val regWrapperReset = Reg(init = Bool(false))
   val rfcmd = regFile.extIF.cmd
   when(rfcmd.valid & rfcmd.bits.write & rfcmd.bits.regID === UInt(0)) {
     regWrapperReset := rfcmd.bits.writeData(0)
   }
-  accel.reset := reset | regWrapperReset
 
   println("Generating register file mappings...")
   // traverse the accel I/Os and connect to the register file
