@@ -84,6 +84,8 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
     accRdRsp.valid := Bool(false)
     accRdRsp.bits.channelID := regReadRequest.channelID
     accRdRsp.bits.metaData := UInt(0)
+    accRdRsp.bits.isWrite := Bool(false)
+    accRdRsp.bits.isLast := Bool(false)
     accRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
 
     switch(regStateRead) {
@@ -106,6 +108,7 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
         }
         .otherwise {
           accRdRsp.valid := Bool(true)
+          accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
           when (accRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
             regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
