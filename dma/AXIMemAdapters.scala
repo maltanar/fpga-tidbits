@@ -41,7 +41,9 @@ class AXIReadRspAdp(p: MemReqParams) extends Module {
 
   rspOut.readData := axiIn.data
   rspOut.channelID := axiIn.id
-  rspOut.metaData := UInt(0) // TODO add last/resp from AXI response?
+  rspOut.metaData := UInt(0) // TODO add resp code from AXI response?
+  rspOut.isWrite := Bool(false)
+  rspOut.isLast := axiIn.last
 }
 
 class AXIWriteRspAdp(p: MemReqParams) extends Module {
@@ -58,4 +60,6 @@ class AXIWriteRspAdp(p: MemReqParams) extends Module {
   rspOut.readData := UInt(0)
   rspOut.channelID := axiIn.id
   rspOut.metaData := UInt(0) // TODO add resp from AXI response?
+  rspOut.isWrite := Bool(true)
+  rspOut.isLast := Bool(false)  // not applicable for write responses
 }

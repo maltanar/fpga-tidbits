@@ -74,6 +74,8 @@ class GenericMemoryResponse(p: MemReqParams) extends Bundle {
   val readData = UInt(width = p.dataWidth)
   // is this response from a write?
   val isWrite = Bool()
+  // is this response the last one in a burst of responses?
+  val isLast = Bool()
   // metadata information (can be status/error bits, etc.)
   val metaData = UInt(width = p.metaDataWidth)
 
@@ -85,6 +87,7 @@ class GenericMemoryResponse(p: MemReqParams) extends Bundle {
     channelID := UInt(0)
     readData := UInt(0)
     metaData := UInt(0)
+    isLast := Bool(false)
     isWrite := Bool(false)
   }
 }

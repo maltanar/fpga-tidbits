@@ -31,7 +31,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   } else {
     Array[String]("platform-wolverine.cpp", "wolverineregdriver.hpp")
   }
-  
+
   val platformDriverFiles = baseDriverFiles ++ wolverineDriverFiles
 
 
@@ -266,6 +266,9 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
   // TODO handle Convey atomics correctly?
   // this works for reads, writes and bursts, but not atomics
   io.genericRspOut.bits.isWrite := (io.conveyRspIn.bits.cmd === UInt(3))
+  // only supports 8-beat bursts, so a isLast response is always nr 7
+  // (first response is #0) TODO Convey atomics won't work with this!
+  io.genericRspOut.bits.isLast := (io.conveyRspIn.bits.scmd === UInt(7))
 
   // TODO carry cmd and scmd here
   io.genericRspOut.bits.metaData := UInt(0)
