@@ -36,8 +36,8 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
   bram.ports(0).req := ShiftRegister(io.ports(0).req, regIn)
   bram.ports(1).req := ShiftRegister(io.ports(1).req, regIn)
 
-  io.ports(0).rsp := ShiftRegister(bram.ports(0), regOut)
-  io.ports(1).rsp := ShiftRegister(bram.ports(1), regOut)
+  io.ports(0).rsp := ShiftRegister(bram.ports(0).rsp, regOut)
+  io.ports(1).rsp := ShiftRegister(bram.ports(1).rsp, regOut)
 }
 
 class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox {
