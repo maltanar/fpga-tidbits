@@ -8,8 +8,7 @@ class ReadOrderCacheParams (
   val mrp: MemReqParams,
   val maxBurst: Int,        // largest burst size (in beats) to handle
   val outstandingReqs: Int, // max # of simultaneous outstanding requests
-  val chanIDBase: Int,      // base channel id value for output mem reqs
-  val outputStreamID: Int   // channel id value for the ordered responses
+  val chanIDBase: Int      // base channel id value for output mem reqs
 )
 
 class ReadOrderCacheIO(p: MemReqParams, maxBurst: Int) extends Bundle {
@@ -57,6 +56,13 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
     )}
   )
 
+  // save original request ID upon entry
+  // TODO should replace this with Cloakroom structure
+  val origReqID = Mem(mreq.channelID.cloneType, p.outstandingReqs)
+  when(readyReqs.ready & readyReqs.valid) {
+    origReqID(freeReqID.idOut.bits) := io.reqOrdered.bits.channelID
+  }
+
   //StreamMonitor(readyReqs, Bool(true), "readyReqs")
 
   // issued requests go to both mem req channel and busyReqs queue
@@ -76,7 +82,6 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
 
   // ordered response data comes from the appropriate storage queue
   io.rspOrdered.bits.readData := storage.out.bits.readData
-  io.rspOrdered.bits.channelID := UInt(p.outputStreamID)
   io.rspOrdered.bits.isWrite := Bool(false)
   io.rspOrdered.bits.metaData := UInt(0)
 
@@ -102,6 +107,9 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // the head-of-line ID will be recycled when we are done with it
   freeReqID.idIn.valid := Bool(false)
   freeReqID.idIn.bits := busyRepHead.channelID
+
+  // restore the original request's channel ID with lookup
+  io.rspOrdered.bits.channelID := origReqID(busyRepHead.channelID)
 
   val regBeatCounter = Reg(init = UInt(0, repBitWidth))
   when(busyRep.out.valid & busyRep.out.ready) {

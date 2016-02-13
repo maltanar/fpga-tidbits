@@ -76,7 +76,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   if(p.readOrderCache) {
     val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
       mrp = p.mem, maxBurst = p.maxBeats, outstandingReqs = p.readOrderTxns,
-      chanIDBase = p.chanID, outputStreamID = 0
+      chanIDBase = p.chanID
     ))).io
 
     roc.doInit := io.doInit
