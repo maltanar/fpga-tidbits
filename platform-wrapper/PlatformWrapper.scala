@@ -30,6 +30,15 @@ trait PlatformWrapperParams {
   def toMemReqParams(): MemReqParams = {
     new MemReqParams(memAddrBits, memDataBits, memIDBits, memMetaBits, sameIDInOrder)
   }
+
+  // the values below are useful for characterizing memory system performance,
+  // for instance, when deciding how many outstanding txns are needed to hide
+  // the memory latency for a big, sequential stream of data
+  // TODO latency in cycles depends on clock freq, should use ns and specify fclk
+  def typicalMemLatencyCycles: Int
+  // TODO expose a list of supported burst sizes instead of a single preferred one
+  def burstBeats: Int
+  def seqStreamTxns(): Int = { typicalMemLatencyCycles / burstBeats }
 }
 
 // actual wrappers must derive from this class and implement the following:

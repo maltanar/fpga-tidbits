@@ -22,6 +22,8 @@ object TesterWrapperParams extends PlatformWrapperParams {
   val memMetaBits = 1
   val numMemPorts = 0 // not really, just taken from the accelerator
   val sameIDInOrder = true
+  val typicalMemLatencyCycles = 10
+  val burstBeats = 8
 }
 
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
