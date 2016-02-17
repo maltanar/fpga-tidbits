@@ -51,6 +51,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   gather.in.bits.ind := inds.out.bits
   gather.in.bits.tag := inds.out.bits
 
+  gather.base := io.valsBase
+
   // wire up the memory system
   inds.req <> io.memPort(0).memRdReq
   io.memPort(0).memRdRsp <> inds.rsp
