@@ -13,7 +13,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val indsBase = UInt(INPUT, 64)
     val valsBase = UInt(INPUT, 64)
     val count = UInt(INPUT, 32)
-    val sum = UInt(OUTPUT, 32)
+    val resultsOK = UInt(OUTPUT, 32)
+    val resultsNotOK = UInt(OUTPUT, 32)
   }
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
@@ -21,7 +22,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // # bits per index, 32-bit integers are generally enough
   val indWidth = 32
   val datWidth = 64
-  val bytesPerVal = UInt(datWidth/8)
+  val bytesPerInd = UInt(indWidth/8)
+
+  val regIndCount = Reg(next = io.count)
 
   // instantiate a StreamReader to read out the indices array
   val inds = Module(new StreamReader(new StreamReaderParams(
@@ -32,7 +35,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   inds.start := io.start
   inds.baseAddr := io.indsBase
-  inds.byteCount := bytesPerVal
+  inds.byteCount := bytesPerInd * regIndCount
 
   // instantiate the gather accelerator to be tested
   /* TODO parametrize choice of gather accel */
@@ -52,4 +55,37 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   inds.req <> io.memPort(0).memRdReq
   io.memPort(0).memRdRsp <> inds.rsp
   io.memPort(1) <> gather
+
+  // examine incoming results from gatherer
+  // -- compare against known good value
+  val regResultsOK = Reg(init = UInt(0, 32))
+  val regResultsNotOK = Reg(init = UInt(0, 32))
+  val regActive = Reg(init = Bool(false))
+
+  gather.out.ready := Bool(true)
+  io.finished := Bool(false)
+
+  when(!regActive) {
+    regResultsOK := UInt(0)
+    regResultsNotOK := UInt(0)
+    regActive := io.start
+  } .otherwise {
+    // watch incoming gather responses
+    when(gather.out.ready & gather.out.valid) {
+      val expVal = gather.out.bits.tag
+      when(expVal === gather.out.bits.dat) {
+        regResultsOK := regResultsOK + UInt(1)
+      } .otherwise {
+        regResultsNotOK := regResultsNotOK + UInt(1)
+      }
+    }
+    val totalResps = regResultsOK + regResultsNotOK
+    when(totalResps === regIndCount) {
+      io.finished := Bool(true)
+      when(!io.start) {regActive := Bool(false)}
+    }
+  }
+
+  io.resultsOK := regResultsOK
+  io.resultsNotOK := regResultsNotOK
 }
