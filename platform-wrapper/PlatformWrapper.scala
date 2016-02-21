@@ -178,31 +178,63 @@ extends Module {
   def generateRegDriver(targetDir: String) = {
     var driverStr: String = ""
     val driverName: String = accel.name
-    driverStr += ("#ifndef " + driverName + "_H") + "\n"
-    driverStr += ("#define " + driverName + "_H") + "\n"
-    driverStr += "#include \"wrapperregdriver.h\"\n\n"
-    driverStr += "class " + driverName + " {\n"
-    driverStr += "public:" + "\n"
-    driverStr += driverName + "(WrapperRegDriver * platform) {" + "\n"
-    driverStr += "m_platform = platform; attach();}\n"
-    driverStr += "~" + driverName + "() {detach();}\n\n"
+    var readWriteFxns: String = ""
     for((name, bits) <- ownIO) {
       if(bits.dir == INPUT) {
-        driverStr += makeRegWriteFxn(name) + "\n"
+        readWriteFxns += makeRegWriteFxn(name) + "\n"
       } else if(bits.dir == OUTPUT) {
-        driverStr += makeRegReadFxn(name) + "\n"
+        readWriteFxns += makeRegReadFxn(name) + "\n"
       }
     }
-    driverStr += "\nprotected: " + "\n"
-    driverStr += "WrapperRegDriver * m_platform;" + "\n"
-    driverStr += "AccelReg readReg(unsigned int i) {return m_platform->readReg(i);}\n"
-    driverStr += "void writeReg(unsigned int i, AccelReg v) {\n"
-    driverStr += "m_platform->writeReg(i,v);}\n"
-    driverStr += "void attach() {m_platform->attach(\"" + driverName + "\");}\n"
-    driverStr += "void detach() {m_platform->detach();}\n"
 
-    driverStr += "};\n"
-    driverStr += ("#endif") + "\n"
+    def statRegToCPPMapEntry(regName: String): String = {
+      val inds = regFileMap(regName).map(_.toString).reduce(_ + ", " + _)
+      return s""" {"$regName", {$inds}} """
+    }
+    val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
+    val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
+
+    driverStr += s"""
+#ifndef ${driverName}_H
+#define ${driverName}_H
+#include "wrapperregdriver.h"
+#include <map>
+#include <string>
+#include <vector>
+
+using namespace std;
+class $driverName {
+public:
+  $driverName(WrapperRegDriver * platform) {
+    m_platform = platform;
+    attach();
+  }
+  ~$driverName() {
+    detach();
+  }
+
+  $readWriteFxns
+
+  map<string, vector<unsigned int>> getStatusRegs() {
+    map<string, vector<unsigned int>> ret = {$statRegMap};
+    return ret;
+  }
+
+  AccelReg readStatusReg(string regName) {
+    map<string, vector<unsigned int>> statRegMap = getStatusRegs();
+    if(statRegMap[regName].size() != 1) throw ">32 bit status regs are not yet supported from readStatusReg";
+    return readReg(statRegMap[regName][0]);
+  }
+
+protected:
+  WrapperRegDriver * m_platform;
+  AccelReg readReg(unsigned int i) {return m_platform->readReg(i);}
+  void writeReg(unsigned int i, AccelReg v) {m_platform->writeReg(i,v);}
+  void attach() {m_platform->attach("$driverName");}
+  void detach() {m_platform->detach();}
+};
+#endif
+    """
 
     import java.io._
     val writer = new PrintWriter(new File(targetDir+"/"+driverName+".hpp" ))
