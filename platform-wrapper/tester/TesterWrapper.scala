@@ -22,7 +22,7 @@ object TesterWrapperParams extends PlatformWrapperParams {
   val memMetaBits = 1
   val numMemPorts = 0 // not really, just taken from the accelerator
   val sameIDInOrder = true
-  val typicalMemLatencyCycles = 10
+  val typicalMemLatencyCycles = 16
   val burstBeats = 8
 }
 
@@ -79,7 +79,7 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
     val regReadRequest = Reg(init = GenericMemoryRequest(mrp))
 
     val accmp = accio.memPort(i)
-    val accRdReq = addLatency(10, accmp.memRdReq)
+    val accRdReq = addLatency(15, accmp.memRdReq)
     val accRdRsp = accmp.memRdRsp
 
     accRdReq.ready := Bool(false)

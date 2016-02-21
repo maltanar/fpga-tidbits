@@ -17,6 +17,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val resultsNotOK = UInt(OUTPUT, 32)
     val perf = new Bundle {
       val cycles = UInt(OUTPUT, 32)
+      val monInds = new StreamMonitorOutIF()
     }
   }
   io.signature := makeDefaultSignature()
@@ -98,5 +99,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   io.resultsOK := regResultsOK
   io.resultsNotOK := regResultsNotOK
+
+  // performance counters and monitors
+  val doMon = io.start & !io.finished
   io.perf.cycles := regCycles
+  io.perf.monInds := StreamMonitor(inds.out, doMon, "inds")
 }
