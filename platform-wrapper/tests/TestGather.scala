@@ -18,6 +18,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val perf = new Bundle {
       val cycles = UInt(OUTPUT, 32)
       val monInds = new StreamMonitorOutIF()
+      val monRdReq = new StreamMonitorOutIF()
+      val monRdRsp = new StreamMonitorOutIF()
     }
   }
   io.signature := makeDefaultSignature()
@@ -44,7 +46,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // instantiate the gather accelerator to be tested
   /* TODO parametrize choice of gather accel */
   val gather = Module(new GatherNoCache(
-    chanBaseID = 0, outstandingTxns = 16, indWidth = indWidth,
+    chanBaseID = 0, outstandingTxns = 32, indWidth = indWidth,
     datWidth = datWidth, tagWidth = indWidth, mrp = mrp
   )).io
 
@@ -66,11 +68,14 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // -- compare against known good value
   val regResultsOK = Reg(init = UInt(0, 32))
   val regResultsNotOK = Reg(init = UInt(0, 32))
+  val regTotal = Reg(init = UInt(0, 32))
   val regActive = Reg(init = Bool(false))
   val regCycles = Reg(init = UInt(0, 32))
 
   gather.out.ready := Bool(true)
   io.finished := Bool(false)
+
+  regTotal := regResultsOK + regResultsNotOK
 
   when(!regActive) {
     regResultsOK := UInt(0)
@@ -87,8 +92,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
         regResultsNotOK := regResultsNotOK + UInt(1)
       }
     }
-    val totalResps = regResultsOK + regResultsNotOK
-    when(totalResps === regIndCount) {
+
+    when(regTotal === regIndCount) {
       io.finished := Bool(true)
       when(!io.start) {regActive := Bool(false)}
     } .otherwise {
@@ -104,4 +109,6 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val doMon = io.start & !io.finished
   io.perf.cycles := regCycles
   io.perf.monInds := StreamMonitor(inds.out, doMon, "inds")
+  io.perf.monRdReq := StreamMonitor(io.memPort(1).memRdReq, doMon, "rdreq")
+  io.perf.monRdRsp := StreamMonitor(io.memPort(1).memRdRsp, doMon, "rdrsp")
 }
