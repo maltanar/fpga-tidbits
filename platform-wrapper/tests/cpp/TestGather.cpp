@@ -69,10 +69,18 @@ bool Run_TestGather(WrapperRegDriver * platform) {
   
   cout << "Passed: " << t.get_resultsOK() << endl;
   cout << "Failed: " << t.get_resultsNotOK() << endl;
-  
-  t.set_start(0);
 
-  // TODO display performance counters here
+  // display performance counters
+  cout << endl << "Performance counters: " << endl << "=====================" << endl;
+  map<string, vector<unsigned int>> regMap = t.getStatusRegs();
+  string prefix = "perf_";
+
+  for(auto & keyVal : regMap) {
+    if(keyVal.first.substr(0, prefix.size()) == prefix)
+      cout << keyVal.first << " : " << t.readStatusReg(keyVal.first) << endl;
+  }
+
+  t.set_start(0);
 
   platform->deallocAccelBuffer(accelBufInds);
   platform->deallocAccelBuffer(accelBufVal);

@@ -15,6 +15,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val count = UInt(INPUT, 32)
     val resultsOK = UInt(OUTPUT, 32)
     val resultsNotOK = UInt(OUTPUT, 32)
+    val perf = new Bundle {
+      val cycles = UInt(OUTPUT, 32)
+    }
   }
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
@@ -63,6 +66,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val regResultsOK = Reg(init = UInt(0, 32))
   val regResultsNotOK = Reg(init = UInt(0, 32))
   val regActive = Reg(init = Bool(false))
+  val regCycles = Reg(init = UInt(0, 32))
 
   gather.out.ready := Bool(true)
   io.finished := Bool(false)
@@ -70,6 +74,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   when(!regActive) {
     regResultsOK := UInt(0)
     regResultsNotOK := UInt(0)
+    regCycles := UInt(0)
     regActive := io.start
   } .otherwise {
     // watch incoming gather responses
@@ -85,9 +90,13 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     when(totalResps === regIndCount) {
       io.finished := Bool(true)
       when(!io.start) {regActive := Bool(false)}
+    } .otherwise {
+      // still some work to do, keep track of # cycles
+      regCycles := regCycles + UInt(1)
     }
   }
 
   io.resultsOK := regResultsOK
   io.resultsNotOK := regResultsNotOK
+  io.perf.cycles := regCycles
 }
