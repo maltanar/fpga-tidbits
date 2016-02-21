@@ -35,6 +35,12 @@ class StreamMonitor(
     val out = new StreamMonitorOutIF()
   }
   val sIdle :: sRun :: Nil = Enum(UInt(), 2)
+
+  // registered version of the inputs
+  val regEnable = Reg(next = io.enable)
+  val regValidIn = Reg(next = io.validIn)
+  val regReadyIn = Reg(next = io.readyIn)
+
   val regState = Reg(init = UInt(sIdle))
 
   val regActiveCycles = Reg(init = UInt(0, 32))
@@ -49,7 +55,7 @@ class StreamMonitor(
 
   switch(regState) {
       is(sIdle) {
-        when(io.enable) {
+        when(regEnable) {
           regState := sRun
           regActiveCycles := UInt(0)
           regTotalCycles := UInt(0)
@@ -59,7 +65,7 @@ class StreamMonitor(
       }
 
       is(sRun) {
-        when(!io.enable) {
+        when(!regEnable) {
           regState := sIdle
           printf("Stream " + streamName + ": act %d - tot %d - nvr %d - vnr %d \n",
             regActiveCycles, regTotalCycles, regNoValidButReady, regNoReadyButValid
@@ -67,13 +73,13 @@ class StreamMonitor(
         }
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
-          when (io.validIn & !io.readyIn) {
+          when (regValidIn & !regReadyIn) {
             regNoReadyButValid := regNoReadyButValid + UInt(1)
           }
-          when (!io.validIn & io.readyIn) {
+          when (!regValidIn & regReadyIn) {
             regNoValidButReady := regNoValidButReady + UInt(1)
           }
-          when (io.validIn & io.readyIn) {
+          when (regValidIn & regReadyIn) {
             regActiveCycles := regActiveCycles + UInt(1)
             if(dbg) {
               // printf only active in Chisel C++ emulator
@@ -115,6 +121,11 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
     val out = new StreamMonitorOutIF()
   }
   val sIdle :: sRun :: Nil = Enum(UInt(), 2)
+  // registered version of the inputs
+  val regEnable = Reg(next = io.enable)
+  val regValidIn = Reg(next = io.validIn)
+  val regReadyIn = Reg(next = io.readyIn)
+
   val regState = Reg(init = UInt(sIdle))
 
   val regActiveCycles = Reg(init = UInt(0, 32))
@@ -129,7 +140,7 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
 
   switch(regState) {
       is(sIdle) {
-        when(io.enable) {
+        when(regEnable) {
           regState := sRun
           regActiveCycles := UInt(0)
           regTotalCycles := UInt(0)
@@ -139,7 +150,7 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
       }
 
       is(sRun) {
-        when(!io.enable) {
+        when(!regEnable) {
           regState := sIdle
           printf("Stream " + streamName + ": act %d - tot %d - nvr %d - vnr %d \n",
             regActiveCycles, regTotalCycles, regNoValidButReady, regNoReadyButValid
@@ -147,13 +158,13 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
         }
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
-          when (io.validIn & !io.readyIn) {
+          when (regValidIn & !regReadyIn) {
             regNoReadyButValid := regNoReadyButValid + UInt(1)
           }
-          when (!io.validIn & io.readyIn) {
+          when (!regValidIn & regReadyIn) {
             regNoValidButReady := regNoValidButReady + UInt(1)
           }
-          when (io.validIn & io.readyIn) {
+          when (regValidIn & regReadyIn) {
             regActiveCycles := regActiveCycles + UInt(1)
             if(dbg) {
               // printf only active in Chisel C++ emulator
