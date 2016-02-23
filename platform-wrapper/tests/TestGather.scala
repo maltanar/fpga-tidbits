@@ -47,7 +47,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   /* TODO parametrize choice of gather accel */
   val gather = Module(new GatherNoCache(
     chanBaseID = 0, outstandingTxns = 32, indWidth = indWidth,
-    datWidth = datWidth, tagWidth = indWidth, mrp = mrp
+    datWidth = datWidth, tagWidth = indWidth, mrp = mrp,
+    forceInOrder = false
   )).io
 
   gather.in.valid := inds.out.valid

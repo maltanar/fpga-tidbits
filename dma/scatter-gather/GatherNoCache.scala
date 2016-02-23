@@ -9,6 +9,7 @@ import TidbitsOCM._
 class GatherNoCache(
   chanBaseID: Int,        // base channel ID for memory system
   outstandingTxns: Int,   // number of outstanding memory transactions
+  forceInOrder: Boolean,  // use a ReadOrderCache to guarantee in-order resps
   indWidth: Int,
   datWidth: Int,
   tagWidth: Int,
@@ -69,8 +70,20 @@ class GatherNoCache(
   cloakroom.extOut <> io.out
 
   // ==========================================================================
+  // instantiate read order cache, if desired
+  val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
+    mrp = mrp, maxBurst = 1, outstandingReqs = outstandingTxns,
+    chanIDBase = chanBaseID
+  ))).io
+
+  if(forceInOrder) {
+    roc.reqMem <> io.memRdReq
+    io.memRdRsp <> roc.rspMem
+  }
+
+  // ==========================================================================
   // push ready-to-go requests to external memory
-  val memreq = io.memRdReq
+  val memreq = if(forceInOrder) roc.reqOrdered else io.memRdReq
 
   memreq.valid := readyReqs.valid
   readyReqs.ready := memreq.ready
@@ -85,7 +98,7 @@ class GatherNoCache(
 
   // ==========================================================================
   // accept responses from external memory
-  val memrsp = io.memRdRsp
+  val memrsp = if(forceInOrder) roc.rspOrdered else io.memRdRsp
 
   readyRsps.valid := memrsp.valid
   memrsp.ready := readyRsps.ready
