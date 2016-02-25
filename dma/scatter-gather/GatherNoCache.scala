@@ -75,6 +75,11 @@ class GatherNoCache(
     mrp = mrp, maxBurst = 1, outstandingReqs = outstandingTxns,
     chanIDBase = chanBaseID
   ))).io
+  // mostly here as a Chisel bug workaround: in case the read order cache is
+  // instantiated but not connected, the generated Verilog will have a syntax
+  // error (due to the comma following the reset port, and nothing else coming
+  // afterwards)
+  roc.doInit := Bool(false)
 
   if(forceInOrder) {
     roc.reqMem <> io.memRdReq
