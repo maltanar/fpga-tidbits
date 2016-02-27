@@ -22,6 +22,7 @@ object MainObj {
     "TestCopy" -> {p => new TestCopy(p)},
     "TestRandomRead" -> {p => new TestRandomRead(p)},
     "TestBRAM" -> {p => new TestBRAM(p)},
+    "TestBRAMMasked" -> {p => new TestBRAMMasked(p)},
     "TestMemLatency" -> {p => new TestMemLatency(p)},
     "TestGather" -> {p => new TestGather(p)}
   )
