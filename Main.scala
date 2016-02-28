@@ -66,7 +66,8 @@ object MainObj {
     val files = Array("wrapperregdriver.h", "platform-tester.cpp",
       "platform.h", "testerdriver.hpp")
     for(f <- files) { fileCopy(regDrvRoot + f, "emulator/" + f) }
-
+    val testRoot = "platform-wrapper/tests/cpp/"
+    fileCopy(testRoot + accelName + ".cpp", "emulator/main.cpp")
   }
 
   def makeDriver(args: Array[String]) = {
