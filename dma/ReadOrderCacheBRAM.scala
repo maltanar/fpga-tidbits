@@ -82,11 +82,11 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   val regCtrData = Reg(next = io.rspMem.bits.readData)
   val regCtrLast = Reg(next = io.rspMem.bits.isLast)
   // bypass logic to compensate for BRAM latency
-  val regDoBypass = Reg(next = (ctrRd.req.addr === ctrWr.req.addr))
+  val regDoBypass = Reg(next = ctrWr.req.writeEn & (ctrRd.req.addr === ctrWr.req.addr))
   val regNewVal = Reg(init = UInt(0, width = ctrBits))
   val ctrOldVal = Mux(regDoBypass, regNewVal, ctrRd.rsp.readData)
-  // TODO use regCtrLast to clear counter -- relying on overflow for now
-  val ctrNewVal = ctrOldVal + UInt(1)
+  // use regCtrLast to clear counter at end of burst
+  val ctrNewVal = Mux(regCtrLast, UInt(0), ctrOldVal + UInt(1))
   regNewVal := ctrNewVal
   ctrWr.req.addr := regCtrInd
   ctrWr.req.writeEn := regCtrValid
@@ -120,8 +120,6 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   // set finished flag on last beat received
   when(regCtrLast) {
     burstFinishedSet := UIntToOH(regCtrInd, p.outstandingReqs)
-    //printf("last burst in %d received \n", regCtrInd)
-    //printf("setting bits: %b\n", burstFinishedSet)
   }
 
   // =========================================================================
@@ -156,10 +154,8 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
       burstFinishedClr := UIntToOH(headReqID, p.outstandingReqs)
       freeReqID.idIn.valid := Bool(true)
       busyReqs.deq.ready := Bool(true)
-      //printf("finished burst\n")
     } .otherwise {
       regRspsPopped := regRspsPopped + UInt(1)
-      //printf("incr burst %d \n", regRspsPopped)
     }
   }
 
