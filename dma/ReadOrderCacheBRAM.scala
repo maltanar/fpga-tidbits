@@ -118,7 +118,7 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   regBurstFinished := (regBurstFinished & ~burstFinishedClr) | burstFinishedSet
 
   // set finished flag on last beat received
-  when(regCtrLast) {
+  when(regCtrValid & regCtrLast) {
     burstFinishedSet := UIntToOH(regCtrInd, p.outstandingReqs)
   }
 
