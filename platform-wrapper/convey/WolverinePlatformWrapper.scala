@@ -19,7 +19,7 @@ object WX690TParams extends PlatformWrapperParams {
                        // will be adjusted to match accelerator
   val sameIDInOrder = false
   val typicalMemLatencyCycles = 128
-  val burstBeats = 8 
+  val burstBeats = 8
 }
 
 // TODO plug unused platform ports if accel has less mem ports
@@ -268,9 +268,14 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
   // TODO handle Convey atomics correctly?
   // this works for reads, writes and bursts, but not atomics
   io.genericRspOut.bits.isWrite := (io.conveyRspIn.bits.cmd === UInt(3))
+  // mark the last beat in a read with the isLast flag
+  // a single read's response is always last
+  val isSingleReadRsp = (io.conveyRspIn.bits.cmd === UInt(2))
   // only supports 8-beat bursts, so a isLast response is always nr 7
   // (first response is #0) TODO Convey atomics won't work with this!
-  io.genericRspOut.bits.isLast := (io.conveyRspIn.bits.scmd === UInt(7))
+  val isBurstReadRsp = (io.conveyRspIn.bits.cmd === UInt(7))
+  val isLastInRdBurst = isBurstReadRsp & (io.conveyRspIn.bits.scmd === UInt(7))
+  io.genericRspOut.bits.isLast := isLastInRdBurst | isSingleReadRsp
 
   // TODO carry cmd and scmd here
   io.genericRspOut.bits.metaData := UInt(0)
