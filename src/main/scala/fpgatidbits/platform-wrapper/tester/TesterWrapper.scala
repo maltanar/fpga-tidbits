@@ -1,4 +1,4 @@
-package TidbitsPlatformWrapper
+package fpgatidbits.PlatformWrapper
 
 import Chisel._
 import fpgatidbits.axi._

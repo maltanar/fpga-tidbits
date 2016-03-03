@@ -1,4 +1,4 @@
-package TidbitsTestbenches
+package fpgatidbits.Testbenches
 
 import Chisel._
 import fpgatidbits.PlatformWrapper._
