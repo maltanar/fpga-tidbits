@@ -1,8 +1,8 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsOCM._
-import TidbitsStreams.AXIStreamDownsizer
+import fpgatidbits.ocm._
+import fpgatidbits.streams.AXIStreamDownsizer
 
 class OCMFillDump(p: OCMParameters) extends Module {
   val ocmParams = p

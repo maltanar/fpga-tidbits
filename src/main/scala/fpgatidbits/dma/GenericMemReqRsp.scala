@@ -1,7 +1,7 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsOCM._
+import fpgatidbits.ocm._
 
 // MemReqParams describes what memory requests look like
 class MemReqParams(

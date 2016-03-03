@@ -1,9 +1,9 @@
-package TidbitsPlatformWrapper
+package fpgatidbits.PlatformWrapper
 
 import Chisel._
-import TidbitsDMA._
-import TidbitsRegFile._
-import TidbitsOCM._
+import fpgatidbits.dma._
+import fpgatidbits.regfile._
+import fpgatidbits.ocm._
 import ConveyInterfaces._
 
 // Wrapper for the Convey Wolverine hardware platform

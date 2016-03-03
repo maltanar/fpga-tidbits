@@ -1,11 +1,11 @@
 import Chisel._
-import TidbitsTestbenches._
-import TidbitsOCM._
-import TidbitsStreams._
-import TidbitsSimUtils._
-import TidbitsAXI._
-import TidbitsDMA._
-import TidbitsPlatformWrapper._
+import fpgatidbits.Testbenches._
+import fpgatidbits.ocm._
+import fpgatidbits.streams._
+import fpgatidbits.SimUtils._
+import fpgatidbits.axi._
+import fpgatidbits.dma._
+import fpgatidbits.PlatformWrapper._
 
 object MainObj {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator

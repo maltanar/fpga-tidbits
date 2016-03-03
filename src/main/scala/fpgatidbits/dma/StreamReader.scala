@@ -1,8 +1,8 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsStreams._
-import TidbitsOCM._
+import fpgatidbits.streams._
+import fpgatidbits.ocm._
 
 class StreamReaderParams(
   val streamWidth: Int,

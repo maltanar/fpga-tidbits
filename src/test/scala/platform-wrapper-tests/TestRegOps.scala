@@ -1,7 +1,7 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsPlatformWrapper._
+import fpgatidbits.PlatformWrapper._
 
 // test for register reads and writes:
 // add two 64-bit values

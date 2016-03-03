@@ -1,7 +1,7 @@
-package TidbitsSimUtils
+package fpgatidbits.SimUtils
 
 import Chisel._
-import TidbitsDMA._
+import fpgatidbits.dma._
 
 class HighLatencyMemParams(
   val depth: Int,

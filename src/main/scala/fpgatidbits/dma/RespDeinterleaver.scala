@@ -1,7 +1,7 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsOCM._
+import fpgatidbits.ocm._
 
 class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
   // interleaved responses in

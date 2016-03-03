@@ -1,8 +1,8 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsOCM._
-import TidbitsStreams._
+import fpgatidbits.ocm._
+import fpgatidbits.streams._
 
 // a read order cache design, heavily based on BRAMs to facilitate scaling
 // to larger # outstanding transactions.

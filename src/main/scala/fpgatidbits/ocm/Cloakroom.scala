@@ -1,8 +1,8 @@
-package TidbitsOCM
+package fpgatidbits.ocm
 
 import Chisel._
-import TidbitsStreams._
-import TidbitsDMA._
+import fpgatidbits.streams._
+import fpgatidbits.dma._
 
 // consider some system that takes in some input consisting of fields A and B,
 // making use of only field B, but when it emits a response it also

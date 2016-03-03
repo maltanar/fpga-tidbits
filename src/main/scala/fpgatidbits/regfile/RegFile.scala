@@ -1,4 +1,4 @@
-package TidbitsRegFile
+package fpgatidbits.regfile
 
 import Chisel._
 

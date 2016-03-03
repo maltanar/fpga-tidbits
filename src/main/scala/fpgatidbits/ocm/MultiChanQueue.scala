@@ -1,7 +1,7 @@
-package TidbitsOCM
+package fpgatidbits.ocm
 
 import Chisel._
-import TidbitsStreams._
+import fpgatidbits.streams._
 
 // interface definition for multichannel queues
 class MultiChanQueueIO[T <: Data](gen: T, chans: Int) extends Bundle {

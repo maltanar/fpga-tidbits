@@ -1,4 +1,4 @@
-package TidbitsAXI
+package fpgatidbits.axi
 
 import Chisel._
 

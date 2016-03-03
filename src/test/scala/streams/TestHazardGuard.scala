@@ -1,7 +1,7 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsStreams._
+import fpgatidbits.streams._
 
 
 // set up a test scenario for the HazardGuard: a circuit with a high-latency

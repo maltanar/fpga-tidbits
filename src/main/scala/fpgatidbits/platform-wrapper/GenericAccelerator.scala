@@ -1,7 +1,7 @@
-package TidbitsPlatformWrapper
+package fpgatidbits.PlatformWrapper
 
 import Chisel._
-import TidbitsDMA._
+import fpgatidbits.dma._
 import scala.collection.mutable.LinkedHashMap
 
 // TODO should the parameters for GenericAccelerator be separated from the

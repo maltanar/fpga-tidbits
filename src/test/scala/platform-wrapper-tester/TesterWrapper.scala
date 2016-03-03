@@ -1,9 +1,9 @@
 package TidbitsPlatformWrapper
 
 import Chisel._
-import TidbitsAXI._
-import TidbitsDMA._
-import TidbitsRegFile._
+import fpgatidbits.axi._
+import fpgatidbits.dma._
+import fpgatidbits.regfile._
 import java.nio.file.{Files, Paths}
 import java.nio.ByteBuffer
 import java.io.FileOutputStream

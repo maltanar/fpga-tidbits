@@ -1,4 +1,4 @@
-package TidbitsStreams
+package fpgatidbits.streams
 import Chisel._
 
 // a content-searchable queue

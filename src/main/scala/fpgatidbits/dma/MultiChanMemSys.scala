@@ -1,8 +1,8 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsStreams._
-import TidbitsOCM._
+import fpgatidbits.streams._
+import fpgatidbits.ocm._
 
 // convenience modules for creating multichannel memory systems
 // the request interleaver/deinterleavers already permit this, the additions

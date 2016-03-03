@@ -5,11 +5,11 @@ provided by the platform to the generic control/status and memory interfaces
 expected by GenericAccelerator.
 */
 
-package TidbitsPlatformWrapper
+package fpgatidbits.PlatformWrapper
 
 import Chisel._
-import TidbitsDMA._
-import TidbitsRegFile._
+import fpgatidbits.dma._
+import fpgatidbits.regfile._
 import scala.collection.mutable.LinkedHashMap
 
 // TODO need cleaner separation of accel and platform parameters, also a way

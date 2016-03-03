@@ -1,9 +1,9 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsPlatformWrapper._
-import TidbitsDMA._
-import TidbitsStreams._
+import fpgatidbits.PlatformWrapper._
+import fpgatidbits.dma._
+import fpgatidbits.streams._
 
 // very similar to TestSum, except a StreamReader with configurable # of
 // outstanding memory requests is used. by increasing the number of outstanding

@@ -1,7 +1,7 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsSimUtils._
+import fpgatidbits.SimUtils._
 
 class SimpleHLMHarness() extends Module {
   val io = new Bundle {

@@ -1,4 +1,4 @@
-package TidbitsMath
+package fpgatidbits.math
 
 import Chisel._
 

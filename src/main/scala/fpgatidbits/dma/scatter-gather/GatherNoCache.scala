@@ -1,7 +1,7 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsOCM._
+import fpgatidbits.ocm._
 
 // a gather accelerator that services the reads directly from the memory
 // system, without caching any data

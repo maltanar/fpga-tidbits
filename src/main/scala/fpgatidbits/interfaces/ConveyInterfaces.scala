@@ -1,8 +1,8 @@
 package ConveyInterfaces
 
 import Chisel._
-import TidbitsDMA._
-import TidbitsRegFile._
+import fpgatidbits.dma._
+import fpgatidbits.regfile._
 
 // various interface definitions for Convey systems
 

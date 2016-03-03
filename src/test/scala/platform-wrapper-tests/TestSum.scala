@@ -1,9 +1,9 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsPlatformWrapper._
-import TidbitsDMA._
-import TidbitsStreams._
+import fpgatidbits.PlatformWrapper._
+import fpgatidbits.dma._
+import fpgatidbits.streams._
 
 // read and sum a contiguous stream of 32-bit uints from main memory
 class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {

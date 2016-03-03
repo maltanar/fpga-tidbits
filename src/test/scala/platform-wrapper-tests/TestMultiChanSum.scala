@@ -1,10 +1,10 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsPlatformWrapper._
-import TidbitsAXI._
-import TidbitsDMA._
-import TidbitsStreams._
+import fpgatidbits.PlatformWrapper._
+import fpgatidbits.axi._
+import fpgatidbits.dma._
+import fpgatidbits.streams._
 
 class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1

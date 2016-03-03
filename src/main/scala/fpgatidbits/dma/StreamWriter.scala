@@ -1,7 +1,7 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsStreams._
+import fpgatidbits.streams._
 
 // write contiguous streams of data to main memory
 // note that start address and total byte count to write must be aligned to

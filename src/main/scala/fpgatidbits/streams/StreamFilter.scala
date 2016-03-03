@@ -1,4 +1,4 @@
-package TidbitsStreams
+package fpgatidbits.streams
 
 import Chisel._
 
@@ -22,7 +22,7 @@ object StreamFilter {
     }
 }
 
-import TidbitsDMA._
+import fpgatidbits.dma._
 
 object ReadRespFilter {
   def apply(in: DecoupledIO[GenericMemoryResponse]) = {

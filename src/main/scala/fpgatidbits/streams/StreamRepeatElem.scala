@@ -1,7 +1,7 @@
-package TidbitsStreams
+package fpgatidbits.streams
 
 import Chisel._
-import TidbitsAXI._
+import fpgatidbits.axi._
 
 
 // takes in two streams (<element> and <repCnt>) and repeats each

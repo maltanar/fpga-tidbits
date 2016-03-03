@@ -1,4 +1,4 @@
-package TidbitsStreams
+package fpgatidbits.streams
 import Chisel._
 
 // a hazard guard, useful for performing interleaved reductions

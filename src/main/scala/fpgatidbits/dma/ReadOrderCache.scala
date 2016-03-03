@@ -1,8 +1,8 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsOCM._
-import TidbitsStreams._
+import fpgatidbits.ocm._
+import fpgatidbits.streams._
 
 class ReadOrderCacheParams (
   val mrp: MemReqParams,

@@ -1,4 +1,4 @@
-package TidbitsProfiler
+package fpgatidbits.profiler
 
 import Chisel._
 

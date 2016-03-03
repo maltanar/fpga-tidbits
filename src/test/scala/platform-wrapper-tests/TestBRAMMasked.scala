@@ -1,10 +1,10 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsPlatformWrapper._
-import TidbitsDMA._
-import TidbitsStreams._
-import TidbitsOCM._
+import fpgatidbits.PlatformWrapper._
+import fpgatidbits.dma._
+import fpgatidbits.streams._
+import fpgatidbits.ocm._
 
 // instantiate a 32-wide 1024-deep dual-port BRAM and directly connect its
 // inputs to the module I/O (thus the register file)

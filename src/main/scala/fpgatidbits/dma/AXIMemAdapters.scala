@@ -1,7 +1,7 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
-import TidbitsAXI._
+import fpgatidbits.axi._
 
 class AXIMemReqAdp(p: MemReqParams) extends Module {
   val io = new Bundle {

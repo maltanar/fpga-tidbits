@@ -1,7 +1,7 @@
-package TidbitsStreams
+package fpgatidbits.streams
 
 import Chisel._
-import TidbitsAXI._
+import fpgatidbits.axi._
 
 // Computes a delta stream from a stream of samples:
 // time -------------------------->>

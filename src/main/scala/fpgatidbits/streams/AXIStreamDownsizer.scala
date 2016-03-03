@@ -1,7 +1,7 @@
-package TidbitsStreams
+package fpgatidbits.streams
 
 import Chisel._
-import TidbitsAXI._
+import fpgatidbits.axi._
 
 class ParallelInSerialOut(parWidth: Int, serWidth: Int) extends Module {
   val numShiftSteps = parWidth/serWidth

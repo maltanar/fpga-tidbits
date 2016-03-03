@@ -1,4 +1,4 @@
-package TidbitsDMA
+package fpgatidbits.dma
 
 import Chisel._
 

@@ -1,9 +1,9 @@
 package TidbitsTestbenches
 
 import Chisel._
-import TidbitsPlatformWrapper._
-import TidbitsDMA._
-import TidbitsStreams._
+import fpgatidbits.PlatformWrapper._
+import fpgatidbits.dma._
+import fpgatidbits.streams._
 
 class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2

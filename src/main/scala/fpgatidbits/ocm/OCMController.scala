@@ -1,4 +1,4 @@
-package TidbitsOCM
+package fpgatidbits.ocm
 
 import Chisel._
 
