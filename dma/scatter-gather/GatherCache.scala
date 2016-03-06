@@ -152,7 +152,8 @@ class GatherNBCache_InOrderMissHandling(
   // wire up tag and data read and write to tag responses
   // handshaking across latency: readyReqs -> [tag & data read] -> tagRspQ
   // also need to check whether tag init after reset is finished
-  val canDoTagRsp = (tagRspQ.count < UInt(2)) & !regInitActive
+  val lineConflict = tagWr.req.writeEn & (tagWr.req.addr === tagRd.req.addr)
+  val canDoTagRsp = (tagRspQ.count < UInt(2)) & !regInitActive & !lineConflict
   val doHandleReq = canDoTagRsp & readyReqs.valid
   val origReq = ShiftRegister(readyReqs.bits, storeLatency)
   val tagMatch = tagRd.rsp.readData(cacheTagBits-1, 0) === origReq.cacheTag
