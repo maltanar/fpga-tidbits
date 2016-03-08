@@ -2,9 +2,9 @@ package fpgatidbits.dma
 
 import Chisel._
 
-import TidbitsDMA._
-import TidbitsStreams._
-import TidbitsOCM._
+import fpgatidbits.dma._
+import fpgatidbits.streams._
+import fpgatidbits.ocm._
 
 // nonblocking (cache will "set aside" misses and keep servicing up to a point)
 // the misses are put in a queue, and a ReadOrderCache is used to ensure that
