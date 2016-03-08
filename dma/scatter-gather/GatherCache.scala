@@ -127,7 +127,7 @@ class GatherNBCache_InOrderMissHandling(
   val handledQ = Module(new FPGAQueue(itagrsp, 2)).io
 
   // read order cache, critical to handling misses in-order
-  val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
+  val roc = Module(new ReadOrderCacheBRAM(new ReadOrderCacheParams(
     mrp = mrp, maxBurst = 1, outstandingReqs = nbMisses,
     chanIDBase = chanBaseID
   ))).io
