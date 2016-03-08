@@ -1,25 +1,18 @@
-scalaVersion := "2.11.6"
+val chiselVersion = System.getProperty("chiselVersion", "latest.release")
 
-libraryDependencies += "edu.berkeley.cs" %% "chisel" % "latest.release"
+val scalaVer = System.getProperty("scalaVer", "2.11.6")
 
-unmanagedSourceDirectories in Compile <++= baseDirectory { base =>
-  Seq(
-    base / "common",
-    base / "interfaces",
-    base / "profiler",
-    base / "streams",
-    base / "dma",
-    base / "on-chip-memory",
-    base / "sim-utils",
-    base / "regfile",
-    base / "testbenches/on-chip-memory",
-    base / "testbenches/streams",
-    base / "testbenches/sim-utils",
-    base / "testbenches/wrapper",
-    base / "platform-wrapper",
-    base / "platform-wrapper/convey",
-    base / "platform-wrapper/axi",
-    base / "platform-wrapper/tests",
-    base / "math"
-  )
+lazy val fpgatidbitsSettings = Seq {
+  version := "0.1",
+  name := "fpgatidbits",
+
+  scalaVersion := scalaVer,
+
+  libraryDependencies ++= ( if (chiselVersion != "None" ) ("edu.berkeley.cs" %% "chisel" % chiselVersion) :: Nil; else Nil),
+
+  libraryDependencies += "com.novocode" % "junit-interface" % "0.10" % "test",
+  libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+  libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVer
 }
+
+lazy val fpgatidbits = (project in file(".")).settings(fpgatidbitsSettings: .*)
