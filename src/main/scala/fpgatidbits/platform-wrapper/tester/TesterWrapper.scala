@@ -298,3 +298,10 @@ class GenericAccelTester(c: TesterWrapper) extends Tester(c) {
   step(10)
   // TODO launch the default test, as defined by the accelerator
 }
+
+class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+extends TesterWrapper(instFxn) {
+  override val platformDriverFiles = baseDriverFiles ++ Array[String](
+    "platform-verilatedtester.cpp", "verilatedtesterdriver.hpp"
+  )
+}

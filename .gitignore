@@ -27,3 +27,5 @@ verilogOutput/
 
 # other
 emulator/
+verilator/
+
