@@ -2,6 +2,7 @@ package fpgatidbits.dma
 
 import Chisel._
 import fpgatidbits.ocm._
+import fpgatidbits.streams.PrintableBundle
 
 // MemReqParams describes what memory requests look like
 class MemReqParams(
@@ -21,7 +22,7 @@ class MemReqParams(
 }
 
 // a generic memory request structure, inspired by AXI with some diffs
-class GenericMemoryRequest(p: MemReqParams) extends Bundle {
+class GenericMemoryRequest(p: MemReqParams) extends PrintableBundle {
   // ID of the request channel (useful for out-of-order data returns)
   val channelID = UInt(width = p.idWidth)
   // whether this request is a read (if false) or write (if true)
@@ -32,6 +33,9 @@ class GenericMemoryRequest(p: MemReqParams) extends Bundle {
   val numBytes = UInt(width = 8)
   // metadata information (can be protection bits, caching bits, etc.)
   val metaData = UInt(width = p.metaDataWidth)
+
+  val printfStr = "id %d addr %d numBytes %d \n"
+  val printfElems = {() => Seq(channelID, addr, numBytes)}
 
   override def clone = {
     new GenericMemoryRequest(p).asInstanceOf[this.type]
@@ -66,7 +70,7 @@ object GenericMemoryRequest {
 }
 
 // a generic memory response structure
-class GenericMemoryResponse(p: MemReqParams) extends Bundle {
+class GenericMemoryResponse(p: MemReqParams) extends PrintableBundle {
   // ID of the request channel (useful for out-of-order data returns)
   val channelID = UInt(width = p.idWidth)
   // returned read data (always single beat, bursts broken down into
@@ -78,6 +82,9 @@ class GenericMemoryResponse(p: MemReqParams) extends Bundle {
   val isLast = Bool()
   // metadata information (can be status/error bits, etc.)
   val metaData = UInt(width = p.metaDataWidth)
+
+  val printfStr = "id %d readData %x isLast %d \n"
+  val printfElems = {() => Seq(channelID, readData, isLast)}
 
   override def clone = {
     new GenericMemoryResponse(p).asInstanceOf[this.type]
