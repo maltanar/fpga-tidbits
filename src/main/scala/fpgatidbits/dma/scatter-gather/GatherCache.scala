@@ -21,7 +21,8 @@ class GatherNBCache_InOrderMissHandling(
   indWidth: Int,
   datWidth: Int,
   tagWidth: Int,
-  mrp: MemReqParams
+  mrp: MemReqParams,
+  orderRsps: Boolean = false
 ) extends Module {
   val io = new GatherIF(indWidth, datWidth, tagWidth, mrp) {
     // req - rsp interface for memory reads
@@ -93,9 +94,22 @@ class GatherNBCache_InOrderMissHandling(
   io.in <> cloakroom.extIn
   val readyReqs = FPGAQueue(cloakroom.intOut, 2)
   val readyRspQ = Module(new FPGAQueue(cloakroom.intIn.bits, 2)).io
-  readyRspQ.deq <> cloakroom.intIn
+
+  if(orderRsps) {
+    // use CloakroomOrderBuffer to ensure in-order responses
+    // note that the cache itself is still a nonblocking cache and will produce
+    // responses out-of-order. the COB acts as a reorder buffer on the output.
+    val cob = Module(new CloakroomOrderBuffer(outstandingTxns, irsp)).io
+    readyRspQ.deq <> cob.in
+    cob.out <> cloakroom.intIn
+  } else {
+    // emit the responses in the order produced by the cache
+    readyRspQ.deq <> cloakroom.intIn
+  }
+
   val readyRsps = readyRspQ.enq
   cloakroom.extOut <> io.out
+
 
   // ==========================================================================
   // instantiate various components for the cache
@@ -222,6 +236,7 @@ class GatherNBCache_InOrderMissHandling(
 
   // =========================================================================
   // debug
+  /*
   StreamMonitor(readyReqs, Bool(true), "readyReqs", true)
   StreamMonitor(tagRspQ.enq, Bool(true), "tagRspQ.enq", true)
   StreamMonitor(hitQ.enq, Bool(true), "hitQ.enq", true)
@@ -232,4 +247,5 @@ class GatherNBCache_InOrderMissHandling(
 
   StreamMonitor(io.memRdReq, Bool(true), "memRdReq", true)
   StreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
+  */
 }
