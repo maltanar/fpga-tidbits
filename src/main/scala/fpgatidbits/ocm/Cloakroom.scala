@@ -160,3 +160,71 @@ extends Module {
   readyResps.outA <> idPool.idIn  // recycle used tickets back into the pool
   readyResps.outB <> io.extOut
 }
+
+class CloakroomOrderBuffer[TC <: CloakroomBundle]
+(num: Int, genC: TC) extends Module {
+  val io = new Bundle {
+    val in = Decoupled(genC.cloneType).flip
+    val out = Decoupled(genC.cloneType)
+  }
+  val idBits = log2Up(num)
+  // index of expected (next in order) response
+  val regHeadInd = Reg(init = UInt(0, idBits))
+
+  // order buffer is dimensioned after the cloakroom, so we are always ready to
+  // accept incoming responses
+  io.in.ready := Bool(true)
+
+  // TODO do we need bypass logic?
+
+  // storage BRAM for incoming responses
+  val storage = Module(new DualPortBRAM(
+    addrBits = idBits, dataBits = genC.getWidth()
+  )).io
+  // name BRAM ports for easier access
+  val dataRd = storage.ports(0)
+  val dataWr = storage.ports(1)
+
+  // bitfield to keep track of response status
+  val regFinished = Reg(init = UInt(0, width = num))
+  val finishedSet = UInt(width = num)
+  finishedSet := UInt(0, num)
+  val finishedClr = UInt(width = num)
+  finishedClr := UInt(0, num)
+  regFinished := (regFinished & ~finishedClr) | finishedSet
+
+  // headRsps is used for handshaking-over-latency for reading rsps from BRAM
+  // capacity = 1 (BRAM latency) + 2 (needed for full throughput)
+  val headRsps = Module(new FPGAQueue(genC, 3)).io
+
+  // ===========================================================================
+  // write path
+  dataWr.req.writeEn := io.in.valid
+  dataWr.req.writeData := io.in.bits.toBits
+  dataWr.req.addr := io.in.bits.id
+
+  // set finished flag for id when response received
+  when(dataWr.req.writeEn) { finishedSet := UIntToOH(io.in.bits.id, num) }
+
+  // ===========================================================================
+  // read path
+  val headReadyToGo = regFinished(regHeadInd)
+  dataRd.req.writeEn := Bool(false)
+
+  // handshaking-over-latency to read out results
+  val canPopRsp = headRsps.count < UInt(2)
+  val isRspAvailable = headReadyToGo
+  val doPopRsp = canPopRsp & isRspAvailable
+  dataRd.req.addr := regHeadInd
+
+  headRsps.enq.valid := Reg(next = doPopRsp)
+  headRsps.enq.bits := genC.fromBits(dataRd.rsp.readData)
+
+  when(doPopRsp) {
+    when(regHeadInd === UInt(num-1)) { regHeadInd := UInt(0) }
+    .otherwise { regHeadInd := regHeadInd + UInt(1) }
+    finishedClr := UIntToOH(regHeadInd, num)
+  }
+
+  headRsps.deq <> io.out
+}
