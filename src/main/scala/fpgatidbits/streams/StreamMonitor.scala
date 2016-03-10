@@ -158,18 +158,32 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
         }
         .otherwise {
           regTotalCycles := regTotalCycles + UInt(1)
-          when (regValidIn & !regReadyIn) {
-            regNoReadyButValid := regNoReadyButValid + UInt(1)
-          }
-          when (!regValidIn & regReadyIn) {
-            regNoValidButReady := regNoValidButReady + UInt(1)
-          }
-          when (regValidIn & regReadyIn) {
-            regActiveCycles := regActiveCycles + UInt(1)
-            if(dbg) {
-              // printf only active in Chisel C++ emulator
+          if(dbg) {
+            // use nonregistered probes to avoid stale data
+            // this is in emulation, so no timing closure problems anyway
+            when (io.validIn & !io.readyIn) {
+              regNoReadyButValid := regNoReadyButValid + UInt(1)
+            }
+            when (!io.validIn & io.readyIn) {
+              regNoValidButReady := regNoValidButReady + UInt(1)
+            }
+            when(io.validIn & io.readyIn) {
+              regActiveCycles := regActiveCycles + UInt(1)
+              // printf only active in Chisel C++ emulator or verilog sim
               printf(streamName + " (%d) ", regActiveCycles)
               printf(io.bitsIn.printfStr, io.bitsIn.printfElems():_*)
+            }
+          } else {
+            // assume StreamMonitor used as part of synthesis - use registered
+            // probes
+            when (regValidIn & !regReadyIn) {
+              regNoReadyButValid := regNoReadyButValid + UInt(1)
+            }
+            when (!regValidIn & regReadyIn) {
+              regNoValidButReady := regNoValidButReady + UInt(1)
+            }
+            when (regValidIn & regReadyIn) {
+              regActiveCycles := regActiveCycles + UInt(1)
             }
           }
         }
