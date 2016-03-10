@@ -4,6 +4,7 @@ import Chisel._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
+import fpgatidbits.ocm._
 
 class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
@@ -20,6 +21,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       val monInds = new StreamMonitorOutIF()
       val monRdReq = new StreamMonitorOutIF()
       val monRdRsp = new StreamMonitorOutIF()
+      val resultsOoO = UInt(OUTPUT, 32)
     }
   }
   io.signature := makeDefaultSignature()
@@ -29,6 +31,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val indWidth = 32
   val datWidth = 64
   val bytesPerInd = UInt(indWidth/8)
+  val numTxns = 32
 
   val regIndCount = Reg(next = io.count)
 
@@ -45,10 +48,10 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   // instantiate the gather accelerator to be tested
   /* TODO parametrize choice of gather accel */
-  val gather = Module(new GatherNoCache(
-    chanBaseID = 0, outstandingTxns = 32, indWidth = indWidth,
-    datWidth = datWidth, tagWidth = indWidth, mrp = mrp,
-    forceInOrder = false
+  val gather = Module(new GatherNBCache_InOrderMissHandling(
+    lines = 1024, nbMisses = 64, elemsPerLine = 1, pipelinedStorage = 0,
+    chanBaseID = 0, indWidth = indWidth, datWidth = datWidth,
+    tagWidth = indWidth, mrp = mrp
   )).io
 
   gather.in.valid := inds.out.valid
@@ -72,16 +75,26 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val regTotal = Reg(init = UInt(0, 32))
   val regActive = Reg(init = Bool(false))
   val regCycles = Reg(init = UInt(0, 32))
+  val regNumOutOfOrder = Reg(init = UInt(0, 32))
 
   gather.out.ready := Bool(true)
   io.finished := Bool(false)
 
   regTotal := regResultsOK + regResultsNotOK
 
+  // keep a copy of all gather requests in the order they arrive,
+  // we'll compare them with the gather responses to determine the number of
+  // out-of-order responses
+  val orderCheckQ = Module(new FPGAQueue(gather.in.bits, numTxns)).io
+  orderCheckQ.enq.valid := gather.in.valid & gather.in.ready
+  orderCheckQ.enq.bits := gather.in.bits
+  orderCheckQ.deq.ready := gather.out.ready & gather.out.valid
+
   when(!regActive) {
     regResultsOK := UInt(0)
     regResultsNotOK := UInt(0)
     regCycles := UInt(0)
+    regNumOutOfOrder := UInt(0)
     regActive := io.start
   } .otherwise {
     // watch incoming gather responses
@@ -91,6 +104,13 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
         regResultsOK := regResultsOK + UInt(1)
       } .otherwise {
         regResultsNotOK := regResultsNotOK + UInt(1)
+      }
+      // increment OoO response counter if appropriate
+      when(orderCheckQ.deq.bits.tag != gather.out.bits.tag) {
+        printf("Found OoO response, expected %d found %d \n",
+          orderCheckQ.deq.bits.tag, gather.out.bits.tag
+        )
+        regNumOutOfOrder := regNumOutOfOrder + UInt(1)
       }
     }
 
@@ -109,6 +129,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // performance counters and monitors
   val doMon = io.start & !io.finished
   io.perf.cycles := regCycles
+  io.perf.resultsOoO := regNumOutOfOrder
   io.perf.monInds := StreamMonitor(inds.out, doMon, "inds")
   io.perf.monRdReq := StreamMonitor(io.memPort(1).memRdReq, doMon, "rdreq")
   io.perf.monRdRsp := StreamMonitor(io.memPort(1).memRdRsp, doMon, "rdrsp")
