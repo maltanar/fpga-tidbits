@@ -48,6 +48,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   // instantiate the gather accelerator to be tested
   /* TODO parametrize choice of gather accel */
+
   val gather = Module(new GatherNBCache_InOrderMissHandling(
     lines = 1024, nbMisses = 64, elemsPerLine = 1, pipelinedStorage = 0,
     chanBaseID = 0, indWidth = indWidth, datWidth = datWidth,
@@ -85,7 +86,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // keep a copy of all gather requests in the order they arrive,
   // we'll compare them with the gather responses to determine the number of
   // out-of-order responses
-  val orderCheckQ = Module(new FPGAQueue(gather.in.bits, numTxns)).io
+  val orderCheckQ = Module(new Queue(gather.in.bits, 2*numTxns)).io
   orderCheckQ.enq.valid := gather.in.valid & gather.in.ready
   orderCheckQ.enq.bits := gather.in.bits
   orderCheckQ.deq.ready := gather.out.ready & gather.out.valid
@@ -107,7 +108,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       }
       // increment OoO response counter if appropriate
       when(orderCheckQ.deq.bits.tag != gather.out.bits.tag) {
-        printf("Found OoO response, expected %d found %d \n",
+        printf("Found OoO response at %d, expected %d found %d \n",
+          regResultsOK+regResultsNotOK,
           orderCheckQ.deq.bits.tag, gather.out.bits.tag
         )
         regNumOutOfOrder := regNumOutOfOrder + UInt(1)
@@ -122,6 +124,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       regCycles := regCycles + UInt(1)
     }
   }
+
+  // PrintableBundleStreamMonitor(gather.in, Bool(true), "in", true)
+  // PrintableBundleStreamMonitor(gather.out, Bool(true), "out", true)
 
   io.resultsOK := regResultsOK
   io.resultsNotOK := regResultsNotOK
