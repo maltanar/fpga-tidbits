@@ -10,7 +10,8 @@ import fpgatidbits.ocm._
 // the misses are put in a queue, and a ReadOrderCache is used to ensure that
 // they are serviced in-order. however, the cache responses won't be in-order
 // since this is still a nonblocking cache (e.g. hit behind miss will be
-// serviced first)
+// serviced first) -- unless the orderRsps param is set to true, which will
+// instantiate a reorder buffer to guarantee in-order responses.
 
 class GatherNBCache_InOrderMissHandling(
   lines: Int,
