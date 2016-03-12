@@ -18,6 +18,9 @@ using namespace std;
 #define __TESTERDRIVER_DEBUG(x) (0)
 #endif
 
+#ifdef TRACE
+#include "verilated_vcd_c.h"
+#endif
 
 // register driver for the verilated testers (useful for e.g. Chisel-generated TesterWrapper verilog plus external verilog modules for blackboxes)
 // note that VTesterWrapper.h must be generated for each new accelerator, it is the
@@ -25,10 +28,16 @@ using namespace std;
 
 class VerilatedTesterRegDriver : public WrapperRegDriver {
 public:
-  VerilatedTesterRegDriver() {m_freePtr = 0;}
+  VerilatedTesterRegDriver() {m_freePtr = 0; m_time = 0; Verilated::traceEverOn(true);}
 
   virtual void attach(const char * name) {
     m_inst = new VTesterWrapper();
+#ifdef TRACE
+    m_tfp = new VerilatedVcdC;
+    m_inst->trace(m_tfp, 4);
+    m_tfp->open("trace.vcd");
+#endif
+
     // get # words in the memory -- TODO get from verilator?
     m_memWords = 1024*1024;
     // initialize and reset the model
@@ -37,7 +46,13 @@ public:
     cout << "memwords " << m_memWords << " regs " << m_regCount << endl;
   }
 
-  virtual void detach() { delete m_inst; }
+  virtual void detach() {
+#ifdef TRACE
+    m_tfp->close();
+    delete m_tfp;
+#endif
+    delete m_inst;
+  }
 
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
@@ -146,6 +161,9 @@ protected:
   unsigned int m_memWords;
   unsigned int m_regCount;
   uint64_t m_freePtr;
+  unsigned int m_time;
+  VerilatedVcdC * m_tfp;
+
 
   void reset() {
     m_inst->reset = 1;
@@ -158,8 +176,16 @@ protected:
     for(int i = 0; i < n; i++) {
       m_inst->clk = 1;
       m_inst->eval();
+#ifdef TRACE
+      m_tfp->dump(m_time);
+#endif
+      m_time++;
       m_inst->clk = 0;
       m_inst->eval();
+#ifdef TRACE
+      m_tfp->dump(m_time);
+#endif
+      m_time++;
     }
   }
 
