@@ -1,3 +1,5 @@
+package fpgatidbits
+
 import Chisel._
 import fpgatidbits.Testbenches._
 import fpgatidbits.ocm._
@@ -6,6 +8,43 @@ import fpgatidbits.SimUtils._
 import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.PlatformWrapper._
+
+object TidbitsMakeUtils {
+  type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
+
+  def fileCopy(from: String, to: String) = {
+    import java.io.{File,FileInputStream,FileOutputStream}
+    import sys.process._
+    s"cp -f $from $to" !
+  }
+
+  def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
+    for(f <- fileNames)
+      fileCopy(s"$fromDir/$f", s"$toDir/$f")
+  }
+
+  def makeVerilator(accInst: AccelInstFxn, tidbitsDir: String,
+  destDir: String) = {
+
+    val platformInst = {f => new VerilatedTesterWrapper(f)}
+    val chiselArgs = Array("--backend","v","--targetDir", "verilator")
+    // generate verilog for the accelerator
+    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
+    val scriptFiles = Seq("verilator-build.sh")
+    val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
+      "platform.h", "verilatedtesterdriver.hpp")
+
+    // copy blackbox verilog, scripts, driver and SW support files
+    fileCopyBulk(s"$tidbitsDir/verilog/", destDir, verilogBlackBoxFiles)
+    fileCopyBulk(s"$tidbitsDir/script/", destDir, scriptFiles)
+    fileCopyBulk(s"$tidbitsDir/cpp/platform-wrapper-regdriver/", destDir,
+      driverFiles)
+    // build driver
+    platformInst(accInst).generateRegDriver(destDir)
+  }
+}
+
 
 object MainObj {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
