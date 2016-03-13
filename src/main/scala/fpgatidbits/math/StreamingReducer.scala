@@ -247,9 +247,15 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   val newGroupIsSingle = newGroupLen === UInt(1)
   idPool.idOut.ready := Bool(false)
 
-  io.in <> DecoupledOutputDemux(
+  val inTargets = DecoupledOutputDemux(
     sel = newGroupIsSingle, chans = Seq(newQ.enq, oneQ.enq)
   )
+  // ensure id pool is available before accepting a new row
+  val stallIn = io.in.valid & (regGroupID != newGroupID) & !idPool.idOut.valid
+
+  inTargets.valid := io.in.valid & !stallIn
+  inTargets.bits <> io.in.bits
+  io.in.ready := inTargets.ready & !stallIn
 
   oneQ.enq.bits.opsDone := UInt(0)
   newQ.enq.bits.opsDone := UInt(0)
@@ -258,10 +264,8 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   oneQ.enq.bits.needZeroPad := Bool(false)
   newQ.enq.bits.needZeroPad := Bool(false)
 
-  when(io.in.valid & io.in.ready) {
-    when(regGroupID === newGroupID) {
-      // continue in same group
-    } .otherwise {
+  when(regGroupID != newGroupID) {
+    when(io.in.valid & io.in.ready) {
       // first element of new group
       // get ID directly from pool
       newQ.enq.bits.internalID := idPool.idOut.bits
@@ -269,7 +273,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       // save group ID
       memGroupID(idPool.idOut.bits) := newGroupID
       regGroupID := newGroupID
-      // save number of ops needed for group
+      // save number of ops needed for group, add +1 for zero padding as needed
       memGroupLen(idPool.idOut.bits) := Mux(newGroupLen(0), newGroupLen, newGroupLen - UInt(1))
       // add a zero to make group length even, if needed
       newQ.enq.bits.needZeroPad := newGroupLen(0)
