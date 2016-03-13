@@ -228,3 +228,39 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
 
   headRsps.deq <> io.out
 }
+
+// special case of the cloakroom is when the processing is guaranteed to be
+// in-order. in this case the context storage turns into a simple FIFO queue
+// and it is not necessary to use "tickets" (IDs) on the cloakroom
+// entry or exit
+
+class InOrderCloakroomIF
+[TA <: Data, TB <: Data, TC <: Data, TD <: Data]
+(genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
+extends Bundle {
+  val extIn = Decoupled(genA.cloneType).flip
+  val intOut = Decoupled(undress(genA.cloneType))
+  val intIn = Decoupled(genC.cloneType).flip
+  val extOut = Decoupled(dress(genA.cloneType, genC.cloneType))
+
+  override def cloneType: this.type = new InOrderCloakroomIF(genA, undress, genC, dress).asInstanceOf[this.type]
+}
+
+class InOrderCloakroom
+[TA <: Data, TB <: Data, TC <: Data, TD <: Data]
+(num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
+extends Module {
+  val io = new InOrderCloakroomIF(genA, undress, genC, dress)
+
+  val storage = Module(new FPGAQueue(genA, num)).io
+
+  val forker = Module(new StreamFork(
+    genIn = genA, genA = genA, genB = undress(genA),
+    forkA = {a: TA => a}, forkB = undress
+  )).io
+  io.extIn <> forker.in
+  forker.outA <> storage.enq
+  forker.outB <> io.intOut
+
+  StreamJoin(storage.deq, io.intIn, io.extOut.bits, dress) <> io.extOut
+}
