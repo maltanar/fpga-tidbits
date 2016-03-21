@@ -63,3 +63,64 @@ class AXIWriteRspAdp(p: MemReqParams) extends Module {
   rspOut.isWrite := Bool(true)
   rspOut.isLast := Bool(false)  // not applicable for write responses
 }
+
+class AXIReqToGenReqAdp(axiAddrW: Int, axiIDW: Int, p: MemReqParams) extends Module {
+  val io = new Bundle {
+    val axiReqIn = Decoupled(new AXIAddress(axiAddrW, axiIDW)).flip
+    val genericReqOut = Decoupled(new GenericMemoryRequest(p))
+  }
+
+  io.genericReqOut.valid := io.axiReqIn.valid
+  io.axiReqIn.ready := io.genericReqOut.ready
+
+  val axiIn = io.axiReqIn.bits
+  val genericOut = io.genericReqOut.bits
+
+  genericOut.addr := axiIn.addr
+  genericOut.numBytes := (axiIn.len + UInt(1)) * UInt(p.dataWidth/8)
+  genericOut.channelID := axiIn.id
+}
+
+class GenRspToAXIReadRspAdp(axiDataW: Int, axiIDW: Int, p: MemReqParams) extends Module {
+  val io = new Bundle {
+    val genericRspIn = Decoupled(new GenericMemoryResponse(p)).flip
+    val axiRspOut = Decoupled(new AXIReadData(axiDataW, axiIDW))
+  }
+  io.axiRspOut.valid := io.genericRspIn.valid
+  io.genericRspIn.ready := io.axiRspOut.ready
+
+  val genericIn = io.genericRspIn.bits
+  val axiOut = io.axiRspOut.bits
+
+  axiOut.data := genericIn.readData
+  axiOut.id := genericIn.channelID
+  axiOut.resp := UInt(0)
+  axiOut.last := genericIn.isLast
+}
+
+class GenRspToAXIWriteRspAdp(axiIDW: Int, p: MemReqParams) extends Module {
+  val io = new Bundle {
+    val genericRspIn = Decoupled(new GenericMemoryResponse(p)).flip
+    val axiRspOut = Decoupled(new AXIWriteResponse(axiIDW))
+  }
+  io.axiRspOut.valid := io.genericRspIn.valid
+  io.genericRspIn.ready := io.axiRspOut.ready
+
+  val genericIn = io.genericRspIn.bits
+  val axiOut = io.axiRspOut.bits
+
+  axiOut.id := genericIn.channelID
+  axiOut.resp := UInt(0)
+}
+
+class AXIWrDatToGenWrDatAdp(axiDataW: Int, p: MemReqParams) extends Module {
+  val io = new Bundle {
+    val axiIn = Decoupled(new AXIWriteData(axiDataW)).flip
+    val genericOut = Decoupled(UInt(width = p.dataWidth))
+  }
+  if(axiDataW != p.dataWidth)
+    throw new Exception("AXI<>generic adapters do not support datawidth conversion")
+  io.genericOut.valid := io.axiIn.valid
+  io.genericOut.bits := io.axiIn.bits.data
+  io.axiIn.ready := io.genericOut.ready
+}
