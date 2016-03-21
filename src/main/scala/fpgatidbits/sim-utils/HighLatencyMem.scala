@@ -1,4 +1,4 @@
-package fpgatidbits.SimUtils
+package fpgatidbits.simutils
 
 import Chisel._
 import fpgatidbits.dma._
@@ -6,33 +6,19 @@ import fpgatidbits.dma._
 class HighLatencyMemParams(
   val depth: Int,
   val numPorts: Int,
-  val portDataWidth: Int,
-  val portAddrWidth: Int,
-  val portIDWidth: Int,
-  val queueDepth: Int,
+  val dataWidth: Int,
+  val addrWidth: Int,
+  val idWidth: Int,
   val latency: Int
 ) {
 
   override def clone = {
-    new HighLatencyMemParams( depth, numPorts, portDataWidth, portAddrWidth,
-                              portIDWidth, queueDepth, latency).asInstanceOf[this.type]
+    new HighLatencyMemParams( depth, numPorts, dataWidth, addrWidth,
+                              idWidth, latency).asInstanceOf[this.type]
   }
 
   def toMemReqParams() = {
-    new MemReqParams(portAddrWidth, portDataWidth, portIDWidth, 1)
-  }
-}
-
-class HighLatencyMemPort(val p: HighLatencyMemParams) extends Bundle {
-  // requests
-  val req = Decoupled(new GenericMemoryRequest(p.toMemReqParams())).flip
-  // write data
-  val wdt = Decoupled(UInt(width=p.portDataWidth)).flip
-  // responses
-  val rsp = Decoupled(new GenericMemoryResponse(p.toMemReqParams()))
-
-  override def clone = {
-    new HighLatencyMemPort(p).asInstanceOf[this.type]
+    new MemReqParams(addrWidth, dataWidth, idWidth, 1)
   }
 }
 
@@ -42,92 +28,138 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
   val rspType = new GenericMemoryResponse(pReq)
 
   val io = new Bundle {
-    val ports = Vec.fill(p.numPorts) {new HighLatencyMemPort(p)}
-    val reads = Vec.fill(p.numPorts) {UInt(OUTPUT, 32)}
-    val writes = Vec.fill(p.numPorts) {UInt(OUTPUT, 32)}
+    // dedicated port for testbench reads/writes
+    val memAddr = UInt(INPUT, p.addrWidth)
+    val memWriteEn = Bool(INPUT)
+    val memWriteData = UInt(INPUT, p.dataWidth)
+    val memReadData = UInt(OUTPUT, p.dataWidth)
+    // ports for accelerator accesss
+    val memPort = Vec.fill(p.numPorts) {new GenericMemorySlavePort(pReq)}
   }
 
   // the memory
-  val mem = Mem(UInt(width = p.portDataWidth),  p.depth)
+  val mem = Mem(UInt(width = p.dataWidth),  p.depth)
+  val memUnitBytes = UInt(p.dataWidth/8)
 
-  // memory port queues
-  val reqQ = Vec.fill(p.numPorts) {Module(new Queue(reqType, p.queueDepth)).io}
-  val wdtQ = Vec.fill(p.numPorts) {Module(new Queue(UInt(width = p.portDataWidth), p.queueDepth)).io}
-  val rspQ = Vec.fill(p.numPorts) {Module(new Queue(rspType, p.queueDepth)).io}
+  // testbench memory access
+  def addrToWord(x: UInt) = {x >> UInt(log2Up(p.dataWidth/8))}
+  val memWord = addrToWord(io.memAddr)
+  io.memReadData := mem(memWord)
 
-  // port connections and memory logic
+  when (io.memWriteEn) {mem(memWord) := io.memWriteData}
+
+  // add lateny between a producer-consumer pair using 2-deep queues
+  def addLatency[T <: Data](n: Int, prod: DecoupledIO[T]): DecoupledIO[T] = {
+    if(n == 1) {
+      return Queue(prod, 2)
+    } else {
+      return addLatency(n-1, Queue(prod, 2))
+    }
+  }
+
+  // accelerator memory access ports
+  // one FSM per port, rather simple, but supports bursts
   for(i <- 0 until p.numPorts) {
-    reqQ(i).enq <> io.ports(i).req
-    wdtQ(i).enq <> io.ports(i).wdt
-    rspQ(i).deq <> io.ports(i).rsp
+    // reads
+    val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
+    val regStateRead = Reg(init = UInt(sWaitRd))
+    val regReadRequest = Reg(init = GenericMemoryRequest(pReq))
 
-    val regReadCnt = Reg(init = UInt(0, 32))
-    val regWriteCnt = Reg(init = UInt(0, 32))
-    io.reads(i) := regReadCnt
-    io.writes(i) := regWriteCnt
+    val accmp = io.memPort(i)
+    val accRdReq = addLatency(p.latency, accmp.memRdReq)
+    val accRdRsp = accmp.memRdRsp
 
-    val req = reqQ(i).deq
-    val wdt = wdtQ(i).deq
-    val rsp = rspQ(i).enq
+    accRdReq.ready := Bool(false)
+    accRdRsp.valid := Bool(false)
+    accRdRsp.bits.channelID := regReadRequest.channelID
+    accRdRsp.bits.metaData := UInt(0)
+    accRdRsp.bits.isWrite := Bool(false)
+    accRdRsp.bits.isLast := Bool(false)
+    accRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
 
-    // TODO how to add latency to responses?
-    // we could connect a shift register to just delay it,
-    // but we need to support backpressure as well: something like
-    // a FIFO with minimum delay
-
-    req.ready := Bool(false)
-    wdt.ready := Bool(false)
-    rsp.valid := Bool(false)
-    rsp.bits.driveDefaults()
-
-    val sIdle :: sServe :: sBurst :: Nil = Enum(UInt(), 3)
-    val regState = Reg(init = UInt(sIdle))
-
-    val regBeatsLeft = Reg(init = UInt(0, 32))
-    val regBurstAddr = Reg(init = UInt(0, p.portAddrWidth))
-    val regOrigReq = Reg(init = GenericMemoryRequest(pReq))
-
-    switch(regState) {
-        is(sIdle) {
-          req.ready := Bool(true)
-          when(req.valid) {
-            // register the original request
-            regOrigReq := req.bits
-            // switch state based on burst
-            when(req.bits.numBytes === UInt(p.portDataWidth/8)) {
-              regState := sServe
-            } .elsewhen(req.bits.numBytes === UInt(p.portDataWidth)) {
-              regState := sBurst
-            }
-          }
+    switch(regStateRead) {
+      is(sWaitRd) {
+        accRdReq.ready := Bool(true)
+        when (accRdReq.valid) {
+          regReadRequest := accRdReq.bits
+          regStateRead := sRead
         }
+      }
 
-        is(sServe) {
-          // serve a single read or write
-          val baseAddr = regOrigReq.addr/UInt(p.portDataWidth/8)
-          when(rsp.ready) {
-            rsp.bits.channelID := regOrigReq.channelID
-            when(regOrigReq.isWrite) {
-              // need write data for writes
-              when(wdt.valid) {
-                wdt.ready := Bool(true)
-                mem(baseAddr) := wdt.bits
-                regWriteCnt := regWriteCnt+UInt(1)
-                rsp.valid := Bool(true)
-                regState := sIdle
+      is(sRead) {
+        when(regReadRequest.numBytes === UInt(0)) {
+          // prefetch the read request if possible to minimize waiting
+          accRdReq.ready := Bool(true)
+          when (accRdReq.valid) {
+            regReadRequest := accRdReq.bits
+            // stay in this state and continue processing
+          } .otherwise {regStateRead := sWaitRd}
+        }
+        .otherwise {
+          accRdRsp.valid := Bool(true)
+          accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
+          when (accRdRsp.ready) {
+            regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
+            regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
+
+            // was this the last beat of burst transferred?
+            when(regReadRequest.numBytes === memUnitBytes) {
+              // prefetch the read request if possible to minimize waiting
+              accRdReq.ready := Bool(true)
+              when (accRdReq.valid) {
+                regReadRequest := accRdReq.bits
+                // stay in this state and continue processing
               }
-            } .otherwise {
-              rsp.valid := Bool(true)
-              rsp.bits.readData := mem(baseAddr)
-              regReadCnt := regReadCnt+UInt(1)
-              regState := sIdle
             }
           }
         }
+      }
+    }
 
-        is(sBurst) {
-          // TODO
+    // writes
+    val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
+    val regStateWrite = Reg(init = UInt(sWaitWr))
+    val regWriteRequest = Reg(init = GenericMemoryRequest(pReq))
+    // write data queue to avoid deadlocks (state machine expects rspQ and data
+    // available simultaneously)
+    val wrDatQ = Module(new Queue(UInt(width = p.dataWidth), 16)).io
+    wrDatQ.enq <> accmp.memWrDat
+
+    // queue on write response port (to avoid combinational loops)
+    val wrRspQ = Module(new Queue(GenericMemoryResponse(pReq), 16)).io
+    wrRspQ.deq <> accmp.memWrRsp
+
+    val accWrReq = addLatency(10, accmp.memWrReq)
+
+    accWrReq.ready := Bool(false)
+    wrDatQ.deq.ready := Bool(false)
+    wrRspQ.enq.valid := Bool(false)
+    wrRspQ.enq.bits.driveDefaults()
+    wrRspQ.enq.bits.channelID := regWriteRequest.channelID
+
+    switch(regStateWrite) {
+      is(sWaitWr) {
+        accWrReq.ready := Bool(true)
+        when(accWrReq.valid) {
+          regWriteRequest := accWrReq.bits
+          regStateWrite := sWrite
         }
+      }
+
+      is(sWrite) {
+        when(regWriteRequest.numBytes === UInt(0)) {regStateWrite := sWaitWr}
+        .otherwise {
+          when(wrRspQ.enq.ready && wrDatQ.deq.valid) {
+            when(regWriteRequest.numBytes === memUnitBytes) {
+              wrRspQ.enq.valid := Bool(true)
+            }
+            wrDatQ.deq.ready := Bool(true)
+            mem(addrToWord(regWriteRequest.addr)) := wrDatQ.deq.bits
+            regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
+            regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
+          }
+        }
+      }
     }
   }
 }
