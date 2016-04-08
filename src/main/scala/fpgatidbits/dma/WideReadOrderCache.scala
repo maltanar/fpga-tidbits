@@ -173,3 +173,27 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   //PrintableBundleStreamMonitor(io.reqMem, Bool(true), "memRdReq", true)
   //PrintableBundleStreamMonitor(io.rspMem, Bool(true), "memRdRsp", true)
 }
+
+
+// an alternative to WideReadOrderCache: upsize an incoming burst using a
+// shift register (StreamUpsizer)
+class BurstUpsizer(mIn: MemReqParams, wOut: Int) extends Module {
+  val mOut = new MemReqParams(
+    mIn.addrWidth, wOut, mIn.dataWidth, mIn.metaDataWidth, mIn.sameIDInOrder
+  )
+  val io = new Bundle {
+    val in = Decoupled(new GenericMemoryResponse(mIn)).flip
+    val out = Decoupled(new GenericMemoryResponse(mOut))
+  }
+  val wIn = mIn.dataWidth
+  if(wOut % wIn != 0) throw new Exception("Cannot upsize from unaligned size")
+
+  // copy all fields by default
+  io.out.bits := io.in.bits
+  // upsize the read data
+  val upsized = StreamUpsizer(ReadRespFilter(io.in), wOut)
+  // use the upsized read data stream to drive output readData and handshake
+  io.out.valid := upsized.valid
+  upsized.ready := io.out.ready
+  io.out.bits.readData := upsized.bits
+}
