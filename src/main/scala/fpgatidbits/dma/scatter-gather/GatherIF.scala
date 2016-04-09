@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
 import Chisel._
+import fpgatidbits.streams._
 
 // interface for "gather"-accelerators
 // gather is defined as an indirectly index memory operation; e.g. given
@@ -8,17 +9,25 @@ import Chisel._
 // the res array is constructed by indexing the val array by the ind array
 
 // a single gather request
-class GatherReq(indWidth: Int, tagWidth: Int) extends Bundle {
+class GatherReq(indWidth: Int, tagWidth: Int) extends PrintableBundle {
   val ind = UInt(width = indWidth)  // index to be loaded
   val tag = UInt(width = tagWidth)  // tag associated with this request
+
+  val printfStr = "gatherReq: ind = %d tag = %d \n"
+  val printfElems = {() => Seq(ind, tag)}
+
   override def cloneType: this.type =
     new GatherReq(indWidth, tagWidth).asInstanceOf[this.type]
 }
 
 // response to a single gather request
-class GatherRsp(datWidth: Int, tagWidth: Int) extends Bundle {
+class GatherRsp(datWidth: Int, tagWidth: Int) extends PrintableBundle {
   val dat = UInt(width = datWidth)  // return data
   val tag = UInt(width = tagWidth)  // tag of original request
+
+  val printfStr = "GatherRsp: dat = %d tag = %d \n"
+  val printfElems = {() => Seq(dat, tag)}
+
   override def cloneType: this.type =
     new GatherRsp(datWidth, tagWidth).asInstanceOf[this.type]
 }
