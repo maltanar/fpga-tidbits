@@ -301,16 +301,24 @@ class GatherNBCache_InOrderMissHandling(
   // =========================================================================
   // debug
   /*
-  StreamMonitor(tagRspQ.enq, Bool(true), "tagRspQ.enq", true)
-  StreamMonitor(hitQ.enq, Bool(true), "hitQ.enq", true)
-  StreamMonitor(missQ.enq, Bool(true), "missQ.enq", true)
-  StreamMonitor(pendingQ.enq, Bool(true), "pendingQ.enq", true)
-  StreamMonitor(handledQ.enq, Bool(true), "handledQ.enq", true)
-  StreamMonitor(readyRsps, Bool(true), "readyRsps", true)
+  val regCnt = Reg(init = UInt(0, 32))
+  when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
+  val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  val doVerboseDebug = false
 
+  StreamMonitor(cloakroom.extIn, doMon, "cloakroom.extIn", doVerboseDebug)
+  StreamMonitor(cloakroom.intOut, doMon, "cloakroom.intOut", doVerboseDebug)
+  PrintableBundleStreamMonitor(readyReqs, doMon, "readyReqs", doVerboseDebug)
+  PrintableBundleStreamMonitor(readyRsps, doMon, "readyRsps", doVerboseDebug)
+  StreamMonitor(tagRspQ.enq, doMon, "tagRspQ.enq", doVerboseDebug)
+  StreamMonitor(hitQ.enq, doMon, "hitQ.enq", doVerboseDebug)
+  StreamMonitor(missQ.enq, doMon, "missQ.enq", doVerboseDebug)
+  StreamMonitor(pendingQ.enq, doMon, "pendingQ.enq", doVerboseDebug)
+  StreamMonitor(handledQ.enq, doMon, "handledQ.enq", doVerboseDebug)
+  */
+
+  /*
   PrintableBundleStreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
-  PrintableBundleStreamMonitor(readyReqs, Bool(true), "readyReqs", true)
-  PrintableBundleStreamMonitor(readyRsps, Bool(true), "readyRsps", true)
   PrintableBundleStreamMonitor(io.memRdReq, Bool(true), "memRdReq", true)
   */
 }
