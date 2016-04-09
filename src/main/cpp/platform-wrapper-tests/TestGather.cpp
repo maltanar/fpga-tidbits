@@ -48,11 +48,19 @@ bool Run_TestGather(WrapperRegDriver * platform) {
   t.set_valsBase((AccelDblReg) accelBufVal);
 
   // read random access indices from a file and copy into accel memory
-  cout << "Enter filename to get rand.acc. indices: ";
+  cout << "Enter filename to get rand.acc. indices (or eye): ";
   string indsFileName;
   cin >> indsFileName;
 
-  RandAccInd * hostBufInds = readInfData(indsFileName, numInds);
+  RandAccInd * hostBufInds;
+  if(indsFileName == "eye") {
+    numInds = numVals;
+    hostBufInds = new RandAccInd[numInds];
+    for(unsigned int i = 0; i < numInds; i++) { hostBufInds[i] = i; }
+  } else {
+    hostBufInds = readInfData(indsFileName, numInds);
+  }
+
   unsigned int indsbufsize = numInds * sizeof(RandAccInd);
 
   void * accelBufInds = platform->allocAccelBuffer(indsbufsize);
@@ -60,13 +68,13 @@ bool Run_TestGather(WrapperRegDriver * platform) {
 
   t.set_indsBase((AccelDblReg) accelBufInds);
   t.set_count((AccelReg) numInds);
-  
+
   cout << "Starting accelerator..." << endl;
-  
+
   t.set_start(1);
 
   while(t.get_finished() != 1);
-  
+
   cout << "Passed: " << t.get_resultsOK() << endl;
   cout << "Failed: " << t.get_resultsNotOK() << endl;
 
