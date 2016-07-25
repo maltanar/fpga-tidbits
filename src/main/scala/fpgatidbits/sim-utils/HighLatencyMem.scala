@@ -1,4 +1,4 @@
-package fpgatidbits.simutils
+package fpgatidbits.SimUtils
 
 import Chisel._
 import fpgatidbits.dma._
