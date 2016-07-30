@@ -50,7 +50,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   /* TODO parametrize choice of gather accel */
 
   val gather = Module(new GatherNBCache_InOrderMissHandling(
-    lines = 1024, nbMisses = numTxns, elemsPerLine = 1, pipelinedStorage = 0,
+    lines = 1024, nbMisses = numTxns, elemsPerLine = 8, pipelinedStorage = 0,
     chanBaseID = 0, indWidth = indWidth, datWidth = datWidth,
     tagWidth = indWidth, mrp = mrp, orderRsps = true
   )).io
@@ -86,7 +86,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // keep a copy of all gather requests in the order they arrive,
   // we'll compare them with the gather responses to determine the number of
   // out-of-order responses
-  val orderCheckQ = Module(new Queue(gather.in.bits, numTxns+4)).io
+  val orderCheckQ = Module(new Queue(gather.in.bits, 2*numTxns)).io
   orderCheckQ.enq.valid := gather.in.valid & gather.in.ready
   orderCheckQ.enq.bits := gather.in.bits
   orderCheckQ.deq.ready := gather.out.ready & gather.out.valid
