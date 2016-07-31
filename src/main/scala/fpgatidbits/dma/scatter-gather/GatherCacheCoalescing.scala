@@ -282,7 +282,9 @@ class GatherNBCache_Coalescing(
           for(i <- 0 until maxMissPerLine) {
             regMisses(i) := io.in.bits.misses(i)
           }
-          regState := sProcess
+          when(io.in.valid) {
+            regState := sProcess
+          }
         }
 
         is(sProcess) {
@@ -330,6 +332,7 @@ class GatherNBCache_Coalescing(
     pendingLines.write := Bool(false)
     val incomingLine = Cat(io.in.bits.cacheTag, io.in.bits.cacheLine)
     pendingLines.write_tag := incomingLine
+    pendingLines.tag := incomingLine
 
     // set up signal values to emit mem request
     io.reqOrdered.valid := Bool(false)
@@ -342,7 +345,9 @@ class GatherNBCache_Coalescing(
 
     // TODO also block entry when:
     // - no more room in memReqs for slot
-    io.in.ready := pendingLines.hasFree & io.reqOrdered.ready & !pendingLines.clear_hit
+    val enterAsNew = !pendingLines.hit & pendingLines.hasFree & io.reqOrdered.ready
+    val enterAsExisting = pendingLines.hit
+    io.in.ready := (enterAsNew | enterAsExisting) & !pendingLines.clear_hit
 
     when(io.in.fire()) {
       when(!pendingLines.hit) {
