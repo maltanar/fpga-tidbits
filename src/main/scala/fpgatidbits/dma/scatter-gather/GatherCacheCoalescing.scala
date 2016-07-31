@@ -316,6 +316,7 @@ class GatherNBCache_Coalescing(
     // content-associative storage for tracking pending cachelines
     val pendingLines = Module(new CAM(nbMisses,  cacheLineNumBits+cacheTagBits)).io
     val regNumMiss = Vec.fill(nbMisses) {Reg(init = UInt(0, width = log2Up(maxMissPerLine)+1))}
+    val regTag = Vec.fill(nbMisses) {Reg(init = UInt(0, width = cacheLineNumBits+cacheTagBits))}
     // memory for keeping the pending requests to words
     val memReqs = Vec.fill(nbMisses) { Vec.fill(maxMissPerLine) {Reg(init = new InternalReq())}}
     // internal pool for ID management
@@ -349,12 +350,16 @@ class GatherNBCache_Coalescing(
     val enterAsExisting = pendingLines.hit
     io.in.ready := (enterAsNew | enterAsExisting) & !pendingLines.clear_hit
 
+    //printf("## R: %d EN: %d EE: %d B: %d \n", io.in.ready, enterAsNew, enterAsExisting, !pendingLines.clear_hit)
+    printf("%x \n", pendingLines.valid_bits)
+
     when(io.in.fire()) {
       when(!pendingLines.hit) {
         // new entry
         pendingLines.write := Bool(true)
         usedID.enq.valid := Bool(true)
         // record miss
+        regTag(newLineID) := incomingLine
         regNumMiss(newLineID) := UInt(1)
         memReqs(newLineID)(0) := io.in.bits
         // emit memory request
@@ -368,7 +373,7 @@ class GatherNBCache_Coalescing(
 
     // ready to receive main mem resps as long as downstream is ready
     ups.out.ready := io.out.ready
-    pendingLines.clear_tag := usedID.deq.bits
+    pendingLines.clear_tag := regTag(usedID.deq.bits)
 
     // construct coalesced response from received response and memReqs
     io.out.bits.misses := memReqs(usedID.deq.bits)
@@ -377,6 +382,7 @@ class GatherNBCache_Coalescing(
     io.out.valid := ups.out.valid
 
     when(ups.out.fire()) {
+      printf("ups fired, usedID size: %d\n", usedID.count)
       // clear pending line entry
       pendingLines.clear_hit := Bool(true)
       usedID.deq.ready := Bool(true)
@@ -415,22 +421,24 @@ class GatherNBCache_Coalescing(
   // =========================================================================
   // debug
 
-  val regCnt = Reg(init = UInt(0, 32))
-  when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
-  val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  //val regCnt = Reg(init = UInt(0, 32))
+  //when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
+  //val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  val doMon = Bool(true)
   val doVerboseDebug = true
 
+  PrintableBundleStreamMonitor(io.in, doMon, "io.in", doVerboseDebug)
   StreamMonitor(cloakroom.extIn, doMon, "cloakroom.extIn", doVerboseDebug)
   StreamMonitor(cloakroom.intOut, doMon, "cloakroom.intOut", doVerboseDebug)
   PrintableBundleStreamMonitor(readyReqs, doMon, "readyReqs", doVerboseDebug)
-  PrintableBundleStreamMonitor(readyRsps, doMon, "readyRsps", doVerboseDebug)
-  StreamMonitor(tagRspQ.enq, doMon, "tagRspQ.enq", doVerboseDebug)
+  PrintableBundleStreamMonitor(tagRspQ.enq, doMon, "tagRspQ.enq", doVerboseDebug)
   StreamMonitor(hitQ.enq, doMon, "hitQ.enq", doVerboseDebug)
-  StreamMonitor(missQ.enq, doMon, "missQ.enq", doVerboseDebug)
-  StreamMonitor(cmh.in, doMon, "cmh.in", doVerboseDebug)
+  PrintableBundleStreamMonitor(missQ.enq, doMon, "missQ.enq", doVerboseDebug)
+  PrintableBundleStreamMonitor(cmh.in, doMon, "cmh.in", doVerboseDebug)
   PrintableBundleStreamMonitor(cmrg.in, doMon, "cmrg.in", doVerboseDebug)
-
   StreamMonitor(handledQ.enq, doMon, "handledQ.enq", doVerboseDebug)
+  PrintableBundleStreamMonitor(readyRsps, doMon, "readyRsps", doVerboseDebug)
+  PrintableBundleStreamMonitor(io.out, doMon, "io.out", doVerboseDebug)
 
 
   /*
