@@ -49,7 +49,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // instantiate the gather accelerator to be tested
   /* TODO parametrize choice of gather accel */
 
-  val gather = Module(new GatherNBCache_InOrderMissHandling(
+  val gather = Module(new GatherNBCache_Coalescing(
     lines = 1024, nbMisses = numTxns, elemsPerLine = 8, pipelinedStorage = 0,
     chanBaseID = 0, indWidth = indWidth, datWidth = datWidth,
     tagWidth = indWidth, mrp = mrp, orderRsps = true
@@ -90,6 +90,10 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   orderCheckQ.enq.valid := gather.in.valid & gather.in.ready
   orderCheckQ.enq.bits := gather.in.bits
   orderCheckQ.deq.ready := gather.out.ready & gather.out.valid
+
+  when(gather.in.fire() & !orderCheckQ.enq.ready) {
+    printf("Error: No space left in orderCheckQ!\n")
+  }
 
   when(!regActive) {
     regResultsOK := UInt(0)
