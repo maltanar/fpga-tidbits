@@ -225,17 +225,20 @@ class GatherNBCache_Coalescing(
   // move only the requested word at the correct offset if applicable
   if(needOffset) {
     val offsMin = UInt(datWidth) * tagRspQ.deq.bits.cacheOffset
-    val offsMax = UInt(datWidth) * (UInt(1) + tagRspQ.deq.bits.cacheOffset)
-    hitQ.enq.bits.dat := tagRspQ.deq.bits.dat(offsMax-UInt(1), offsMin)
+    val offsMax = UInt(datWidth) * (UInt(1) + tagRspQ.deq.bits.cacheOffset) - UInt(1)
+    hitQ.enq.bits.dat := tagRspQ.deq.bits.dat(offsMax, offsMin)
   }
 
   // =========================================================================
   // miss handling
 
-  class CoalescingMissHandlerRsp(maxMissPerLine: Int) extends Bundle {
+  class CoalescingMissHandlerRsp(maxMissPerLine: Int) extends PrintableBundle {
     val cacheline = UInt(width = bitsPerLine)
-    val numMisses = UInt(width = log2Up(maxMissPerLine))
+    val numMisses = UInt(width = log2Up(maxMissPerLine)+1)
     val misses = Vec.fill(maxMissPerLine){new InternalReq()}
+
+    override val printfStr = "numMisses %d, missed line %d, missed tag %d, cacheline %x \n"
+    override val printfElems = {() => Seq(numMisses, misses(0).cacheLine, misses(0).cacheTag, cacheline)}
 
     override def cloneType: this.type =
       new CoalescingMissHandlerRsp(maxMissPerLine).asInstanceOf[this.type]
@@ -246,13 +249,13 @@ class GatherNBCache_Coalescing(
   class CoalescedMissRspGen(maxMissPerLine: Int) extends  Module {
     val io = new Bundle {
       val in = Decoupled(new CoalescingMissHandlerRsp(maxMissPerLine)).flip
-      val out = Decoupled(irsp)
+      val out = Decoupled(new InternalRsp())
     }
     val sIdle :: sProcess :: Nil = Enum(UInt(), 2)
     val regState = Reg(init = UInt(sIdle))
-    val regNumLeft = Reg(init = UInt(0, width = log2Up(maxMissPerLine)))
-    val regCacheline = Reg(init = UInt(0, width = cacheLineNumBits))
-    val regMisses = Vec.fill(maxMissPerLine) {Reg(init = ireq)}
+    val regNumLeft = Reg(init = UInt(0, width = log2Up(maxMissPerLine)+1))
+    val regCacheline = Reg(init = UInt(0, width = bitsPerLine))
+    val regMisses = Vec.fill(maxMissPerLine) {Reg(init = new InternalReq())}
 
     io.in.ready := Bool(false)
     io.out.valid := Bool(false)
@@ -264,7 +267,7 @@ class GatherNBCache_Coalescing(
     if(needOffset) {
       // choose appropriate offset from cacheline
       val offsMin = UInt(datWidth) * currentMiss.cacheOffset
-      val offsMax = UInt(datWidth) * (UInt(1) + currentMiss.cacheOffset)
+      val offsMax = UInt(datWidth) * (UInt(1) + currentMiss.cacheOffset) - UInt(1)
       io.out.bits.dat := regCacheline(offsMax, offsMin)
     } else {
       // line size = word size, copy as-is
@@ -286,6 +289,10 @@ class GatherNBCache_Coalescing(
           when(regNumLeft === UInt(0)) {
             regState := sIdle
           } .otherwise {
+            io.out.valid := Bool(true)
+            printf("miss offset: %d \n", currentMiss.cacheOffset)
+            printf("saved cacheline: %x\n", regCacheline)
+            printf("out data: %x \n", io.out.bits.dat)
             // decrement the number of misses left
             regNumLeft := regNumLeft - UInt(1)
           }
@@ -298,7 +305,7 @@ class GatherNBCache_Coalescing(
       // base memory pointer for loads
       val base = UInt(INPUT, width = mrp.addrWidth)
       // interface towards the cache
-      val in = Decoupled(ireq).flip
+      val in = Decoupled(new InternalReq()).flip
       val out = Decoupled(new CoalescingMissHandlerRsp(maxMissPerLine))
       // interface towards the ReadOrderCache for main mem access
       val reqOrdered = Decoupled(new GenericMemoryRequest(mrp))
@@ -306,9 +313,9 @@ class GatherNBCache_Coalescing(
     }
     // content-associative storage for tracking pending cachelines
     val pendingLines = Module(new CAM(nbMisses,  cacheLineNumBits+cacheTagBits)).io
-    val regNumMiss = Vec.fill(nbMisses) {Reg(init = UInt(0, width = log2Up(maxMissPerLine)))}
+    val regNumMiss = Vec.fill(nbMisses) {Reg(init = UInt(0, width = log2Up(maxMissPerLine)+1))}
     // memory for keeping the pending requests to words
-    val memReqs = Vec.fill(nbMisses) {Reg(init=UInt(0, width = maxMissPerLine * ireq.getWidth()))}
+    val memReqs = Vec.fill(nbMisses) { Vec.fill(maxMissPerLine) {Reg(init = new InternalReq())}}
     // internal pool for ID management
     val usedID = Module(new FPGAQueue(UInt(width = log2Up(nbMisses)), nbMisses)).io
     // burst upsizer for getting full cachelines as respnses
@@ -344,12 +351,12 @@ class GatherNBCache_Coalescing(
         usedID.enq.valid := Bool(true)
         // record miss
         regNumMiss(newLineID) := UInt(1)
-        memReqs(newLineID) := io.in.bits
+        memReqs(newLineID)(0) := io.in.bits
         // emit memory request
         io.reqOrdered.valid := Bool(true)
       } .otherwise {
         // update old entry with new miss information
-        memReqs(foundLineID) := Cat(memReqs(foundLineID), io.in.bits)
+        memReqs(foundLineID)(regNumMiss(foundLineID)) := io.in.bits
         regNumMiss(foundLineID) := regNumMiss(foundLineID) + UInt(1)
       }
     }
@@ -402,11 +409,11 @@ class GatherNBCache_Coalescing(
 
   // =========================================================================
   // debug
-  /*
+
   val regCnt = Reg(init = UInt(0, 32))
   when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
   val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
-  val doVerboseDebug = false
+  val doVerboseDebug = true
 
   StreamMonitor(cloakroom.extIn, doMon, "cloakroom.extIn", doVerboseDebug)
   StreamMonitor(cloakroom.intOut, doMon, "cloakroom.intOut", doVerboseDebug)
@@ -415,9 +422,11 @@ class GatherNBCache_Coalescing(
   StreamMonitor(tagRspQ.enq, doMon, "tagRspQ.enq", doVerboseDebug)
   StreamMonitor(hitQ.enq, doMon, "hitQ.enq", doVerboseDebug)
   StreamMonitor(missQ.enq, doMon, "missQ.enq", doVerboseDebug)
-  StreamMonitor(pendingQ.enq, doMon, "pendingQ.enq", doVerboseDebug)
+  StreamMonitor(cmh.in, doMon, "cmh.in", doVerboseDebug)
+  PrintableBundleStreamMonitor(cmrg.in, doMon, "cmrg.in", doVerboseDebug)
+
   StreamMonitor(handledQ.enq, doMon, "handledQ.enq", doVerboseDebug)
-  */
+
 
   /*
   PrintableBundleStreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
