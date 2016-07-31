@@ -83,8 +83,8 @@ class GatherNBCache_Coalescing(
     val isHit = Bool()
     val dat = UInt(width = bitsPerLine)
 
-    override val printfStr = "req: id = %d linersp: %x\n"
-    override val printfElems = {() => Seq(id, dat)}
+    override val printfStr = "req: id = %d hit = %d linersp: %x\n"
+    override val printfElems = {() => Seq(id, isHit, dat)}
 
     override def cloneType: this.type =
       new InternalTagRsp().asInstanceOf[this.type]
@@ -292,11 +292,13 @@ class GatherNBCache_Coalescing(
             regState := sIdle
           } .otherwise {
             io.out.valid := Bool(true)
-            printf("miss offset: %d \n", currentMiss.cacheOffset)
-            printf("saved cacheline: %x\n", regCacheline)
-            printf("out data: %x \n", io.out.bits.dat)
+            //printf("miss offset: %d \n", currentMiss.cacheOffset)
+            //printf("saved cacheline: %x\n", regCacheline)
+            //printf("out data: %x \n", io.out.bits.dat)
             // decrement the number of misses left
-            regNumLeft := regNumLeft - UInt(1)
+            when(io.out.ready) {
+              regNumLeft := regNumLeft - UInt(1)
+            }
           }
         }
     }
@@ -344,14 +346,12 @@ class GatherNBCache_Coalescing(
     val foundLineID = PriorityEncoder(pendingLines.hits)
     usedID.enq.bits := newLineID
 
-    // TODO also block entry when:
-    // - no more room in memReqs for slot
     val enterAsNew = !pendingLines.hit & pendingLines.hasFree & io.reqOrdered.ready
-    val enterAsExisting = pendingLines.hit
+    val enterAsExisting = pendingLines.hit & (regNumMiss(foundLineID) < UInt(maxMissPerLine))
     io.in.ready := (enterAsNew | enterAsExisting) & !pendingLines.clear_hit
 
     //printf("## R: %d EN: %d EE: %d B: %d \n", io.in.ready, enterAsNew, enterAsExisting, !pendingLines.clear_hit)
-    printf("%x \n", pendingLines.valid_bits)
+    //printf("%x \n", pendingLines.valid_bits)
 
     when(io.in.fire()) {
       when(!pendingLines.hit) {
@@ -404,7 +404,8 @@ class GatherNBCache_Coalescing(
   // update tag and data when handled miss response is available
   tagWr.req.addr := cmh.out.bits.misses(0).cacheLine
   tagWr.req.writeData := Cat(Bool(true), cmh.out.bits.misses(0).cacheTag)
-  datWr.req.addr := cmh.out.bits.cacheline
+  datWr.req.addr := cmh.out.bits.misses(0).cacheLine
+  datWr.req.writeData := cmh.out.bits.cacheline
 
   when(cmh.out.fire()) {
     tagWr.req.writeEn := Bool(true)
