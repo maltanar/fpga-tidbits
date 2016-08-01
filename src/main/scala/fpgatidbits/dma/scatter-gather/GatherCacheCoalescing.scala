@@ -170,7 +170,6 @@ class GatherNBCache_Coalescing(
   val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
   val hitQ = Module(new FPGAQueue(irsp, 2)).io
   val missQ = Module(new FPGAQueue(ireq, 2)).io
-  val pendingQ = Module(new FPGAQueue(ireq, nbMisses)).io
   val handledQ = Module(new FPGAQueue(irsp, 2)).io
 
   // read order cache, critical to handling misses in-order
