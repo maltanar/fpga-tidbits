@@ -28,4 +28,4 @@ verilogOutput/
 # other
 emulator/
 verilator/
-
+emu-*/

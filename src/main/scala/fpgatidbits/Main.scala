@@ -8,13 +8,13 @@ import fpgatidbits.SimUtils._
 import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.PlatformWrapper._
+import java.io.{File,FileInputStream,FileOutputStream}
+import sys.process._
 
 object TidbitsMakeUtils {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
 
   def fileCopy(from: String, to: String) = {
-    import java.io.{File,FileInputStream,FileOutputStream}
-    import sys.process._
     s"cp -f $from $to" !
   }
 
@@ -73,15 +73,7 @@ object MainObj {
   )
 
   def fileCopy(from: String, to: String) = {
-    import java.io.{File,FileInputStream,FileOutputStream}
-    import sys.process._
-    s"cp -f $from $to" !
-    /*
-    val src = new File(from)
-    val dest = new File(to)
-    new FileOutputStream(dest) getChannel() transferFrom(
-      new FileInputStream(src) getChannel, 0, Long.MaxValue )
-      */
+    s"cp -f $from $to".!!
   }
 
   def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
@@ -102,20 +94,22 @@ object MainObj {
   def makeEmulator(args: Array[String]) = {
     val accelName = args(0)
 
+    val targetDir = s"emu-$accelName"
+    println(s"Creating emulator in $targetDir")
     val accInst = accelMap(accelName)
     val platformInst = platformMap("Tester")
-    val chiselArgs = Array("--backend","c","--targetDir", "emulator")
+    val chiselArgs = Array("--backend","c","--targetDir", targetDir)
 
     chiselMain(chiselArgs, () => Module(platformInst(accInst)))
     // build driver
-    platformInst(accInst).generateRegDriver("emulator/")
+    platformInst(accInst).generateRegDriver(s"$targetDir/")
     // copy emulator driver and SW support files
     val regDrvRoot = "src/main/cpp/platform-wrapper-regdriver/"
     val files = Array("wrapperregdriver.h", "platform-tester.cpp",
       "platform.h", "testerdriver.hpp")
-    for(f <- files) { fileCopy(regDrvRoot + f, "emulator/" + f) }
+    for(f <- files) { fileCopy(regDrvRoot + f, s"$targetDir/" + f) }
     val testRoot = "src/main/cpp/platform-wrapper-tests/"
-    fileCopy(testRoot + accelName + ".cpp", "emulator/main.cpp")
+    fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
   def makeVerilator(args: Array[String]) = {
