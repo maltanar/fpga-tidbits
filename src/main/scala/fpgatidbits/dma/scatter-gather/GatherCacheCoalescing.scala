@@ -381,7 +381,7 @@ class GatherNBCache_Coalescing(
     io.out.valid := ups.out.valid
 
     when(ups.out.fire()) {
-      printf("ups fired, usedID size: %d\n", usedID.count)
+      //printf("ups fired, usedID size: %d\n", usedID.count)
       // clear pending line entry
       pendingLines.clear_hit := Bool(true)
       usedID.deq.ready := Bool(true)
@@ -424,6 +424,7 @@ class GatherNBCache_Coalescing(
   //val regCnt = Reg(init = UInt(0, 32))
   //when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
   //val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  /*
   val doMon = Bool(true)
   val doVerboseDebug = true
 
@@ -439,7 +440,7 @@ class GatherNBCache_Coalescing(
   StreamMonitor(handledQ.enq, doMon, "handledQ.enq", doVerboseDebug)
   PrintableBundleStreamMonitor(readyRsps, doMon, "readyRsps", doVerboseDebug)
   PrintableBundleStreamMonitor(io.out, doMon, "io.out", doVerboseDebug)
-
+  */
 
   /*
   PrintableBundleStreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
