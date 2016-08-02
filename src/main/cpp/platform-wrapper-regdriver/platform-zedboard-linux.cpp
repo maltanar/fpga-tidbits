@@ -21,6 +21,7 @@ extern "C" {
   #include <unistd.h>
   #include <sys/types.h>
   #include <sys/wait.h>
+  #include <stdlib.h>
 }
 
 LinuxPhysRegDriver * platform = 0;
@@ -40,9 +41,12 @@ void loadBitfile(const char * accelName) {
   pid_t c_pid, pid;
   int status;
 
-  c_pid = fork();
   // call a shell script to do the bitfile loading, fork & exec & wait
-  const char * loader = "/root/bitfiles/load-bitfile.sh";
+  char * loader = getenv("ZYNQ_BITFILE_LOADER");
+  if(!loader)
+    throw "ZYNQ_BITFILE_LOADER must be set";
+
+  c_pid = fork();
 
   if (c_pid == 0){
     execl(loader, loader, accelName, NULL);
