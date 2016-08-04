@@ -13,6 +13,7 @@ import fpgatidbits.ocm._
 class GatherNBCache_Coalescing(
   lines: Int,
   nbMisses: Int,
+  coalescePerLine: Int,
   elemsPerLine: Int,
   pipelinedStorage: Int,
   chanBaseID: Int,
@@ -389,9 +390,8 @@ class GatherNBCache_Coalescing(
   }
 
   // instantiate the coalescing miss handler components
-  // use max misses to line = elems per line for now
-  val cmh = Module(new CoalescingMissHandler(elemsPerLine)).io
-  val cmrg = Module(new CoalescedMissRspGen(elemsPerLine)).io
+  val cmh = Module(new CoalescingMissHandler(coalescePerLine)).io
+  val cmrg = Module(new CoalescedMissRspGen(coalescePerLine)).io
   // wire up the miss handler components
   cmh.base := io.base
   cmh.reqOrdered <> roc.reqOrdered
