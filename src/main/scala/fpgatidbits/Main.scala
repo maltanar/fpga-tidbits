@@ -13,6 +13,14 @@ import sys.process._
 
 object TidbitsMakeUtils {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
+  type PlatformInstFxn = AccelInstFxn => PlatformWrapper
+  type PlatformMap = Map[String, PlatformInstFxn]
+
+  val platformMap: PlatformMap = Map(
+    "ZedBoard" -> {f => new ZedBoardWrapper(f)},
+    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
+    "Tester" -> {f => new TesterWrapper(f)}
+  )
 
   def fileCopy(from: String, to: String) = {
     s"cp -f $from $to" !
