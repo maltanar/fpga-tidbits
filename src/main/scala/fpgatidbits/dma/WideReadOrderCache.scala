@@ -190,8 +190,9 @@ class BurstUpsizer(mIn: MemReqParams, wOut: Int) extends Module {
 
   // copy all fields by default
   io.out.bits := io.in.bits
-  // upsize the read data
-  val upsized = StreamUpsizer(ReadRespFilter(io.in), wOut)
+  // upsize the read data if needed
+  var upsized = if(wOut > mIn.dataWidth)StreamUpsizer(ReadRespFilter(io.in), wOut) else ReadRespFilter(io.in)
+
   // use the upsized read data stream to drive output readData and handshake
   io.out.valid := upsized.valid
   upsized.ready := io.out.ready

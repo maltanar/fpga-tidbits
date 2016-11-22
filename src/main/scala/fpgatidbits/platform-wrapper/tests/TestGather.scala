@@ -51,7 +51,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val gather = Module(new GatherNBCache_Coalescing(
     lines = 1024, nbMisses = numTxns, elemsPerLine = 8, pipelinedStorage = 0,
     chanBaseID = 0, indWidth = indWidth, datWidth = datWidth,
-    tagWidth = indWidth, mrp = mrp, orderRsps = true
+    tagWidth = indWidth, mrp = mrp, orderRsps = true, coalescePerLine = 8
   )).io
 
   gather.in.valid := inds.out.valid
