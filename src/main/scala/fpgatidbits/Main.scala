@@ -31,19 +31,42 @@ object TidbitsMakeUtils {
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
+  def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String) = {
+    val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
+    val platformInst = platformMap("Tester")
+    val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
+    val chiselArgs = Array("--backend","c","--targetDir", fullDir)
+
+    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    val p = platformInst(accInst)
+    // build reg driver
+    p.generateRegDriver(s"$fullDir")
+    // copy emulator driver and SW support files
+    fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
+    val drvFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
+    // call g++ to produce a shared library
+    println("Compiling hardware emulator as library...")
+    val gc = (Seq(
+      "g++", "-I/opt/convey/include", "-I/opt/convey/pdk2/latest/wx-690/include",
+      "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
+    ) ++ drvFiles ++ Seq(outDir+"/TesterWrapper.cpp")).!!
+    println(s"Hardware emulator library built as $fullDir/driver.a")
+  }
+
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
-    val fullDir = s"readlink -f outDir".!!.filter(_ >= ' ')
-    println(fullDir)
+    val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
     val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
     val mkd = s"mkdir -p $fullDir".!!
     // copy necessary files to build the driver
     fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
     val fullFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
     // call g++ to produce a shared library
+    println("Compiling driver as library...")
     val gc = (Seq(
       "g++", "-I/opt/convey/include", "-I/opt/convey/pdk2/latest/wx-690/include",
       "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
     ) ++ fullFiles).!!
+    println(s"Hardware driver library built as $fullDir/driver.a")
   }
 
   def makeVerilator(accInst: AccelInstFxn, tidbitsDir: String,
