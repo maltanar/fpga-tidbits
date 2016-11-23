@@ -32,10 +32,18 @@ object TidbitsMakeUtils {
   }
 
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
+    val fullDir = s"readlink -f outDir".!!.filter(_ >= ' ')
+    println(fullDir)
     val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
-    println(drvDir)
-    val mkd = s"mkdir -p $outDir".!!
-    fileCopyBulk(drvDir, outDir, p.platformDriverFiles)
+    val mkd = s"mkdir -p $fullDir".!!
+    // copy necessary files to build the driver
+    fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
+    val fullFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
+    // call g++ to produce a shared library
+    val gc = (Seq(
+      "g++", "-I/opt/convey/include", "-I/opt/convey/pdk2/latest/wx-690/include",
+      "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
+    ) ++ fullFiles).!!
   }
 
   def makeVerilator(accInst: AccelInstFxn, tidbitsDir: String,
