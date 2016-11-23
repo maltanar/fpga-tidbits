@@ -31,6 +31,13 @@ object TidbitsMakeUtils {
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
+  def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
+    val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
+    println(drvDir)
+    val mkd = s"mkdir -p $outDir".!!
+    fileCopyBulk(drvDir, outDir, p.platformDriverFiles)
+  }
+
   def makeVerilator(accInst: AccelInstFxn, tidbitsDir: String,
   destDir: String) = {
 
