@@ -31,7 +31,7 @@ object TidbitsMakeUtils {
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
-  def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String) = {
+  def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq()) = {
     val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
     val platformInst = platformMap("Tester")
     val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
@@ -46,10 +46,12 @@ object TidbitsMakeUtils {
     val drvFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
     // call g++ to produce a shared library
     println("Compiling hardware emulator as library...")
-    val gc = (Seq(
-      "g++", "-I/opt/convey/include", "-I/opt/convey/pdk2/latest/wx-690/include",
-      "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
-    ) ++ drvFiles ++ Seq(outDir+"/TesterWrapper.cpp")).!!
+    val gc = Seq(
+      "g++", "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
+    ) ++ gOpts ++ drvFiles ++ Seq(outDir+"/TesterWrapper.cpp")
+    println(gc.mkString(" "))
+    val gcret = gc.!!
+    println(gcret)
     println(s"Hardware emulator library built as $fullDir/driver.a")
   }
 

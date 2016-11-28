@@ -10,9 +10,11 @@ using namespace std;
 // enable verbose reg read/writes and Chisel HW printfs
 // remember to compile with -std=c++11 for Chisel HW printfs to work
 #ifdef DEBUG
+#warning "Compiling emulation with full debug support"
 #define __TESTERDRIVER_DEBUG_PRINT(x) (cout << x << endl)
 #define __TESTERDRIVER_DEBUG(x) (x)
 #elif DEBUG_HW
+#warning "Compiling emulation with Chisel printf support"
 #define __TESTERDRIVER_DEBUG_PRINT(x) (0)
 #define __TESTERDRIVER_DEBUG(x) (x)
 #else
