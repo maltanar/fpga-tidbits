@@ -29,7 +29,7 @@ using namespace std;
 
 class TesterRegDriver : public WrapperRegDriver {
 public:
-  TesterRegDriver() {m_freePtr = 0;}
+  TesterRegDriver() {m_inst = 0; m_freePtr = 0;}
 
   virtual void attach(const char * name) {
     m_inst = new TesterWrapper_t();
@@ -41,7 +41,12 @@ public:
     m_regCount = m_inst->TesterWrapper__io_regFileIF_regCount.to_ulong();
   }
 
-  virtual void detach() { delete m_inst; }
+  virtual void detach() {
+    if(m_inst) {
+      delete m_inst;
+      m_inst = 0;
+    }
+  }
 
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
