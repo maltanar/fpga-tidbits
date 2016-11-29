@@ -69,7 +69,9 @@ extends Module {
 
   // separate out the mem port signals, won't map the to the regfile
   val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
-  val ownIO = accel.io.flatten.filter(ownFilter)
+
+  import scala.collection.immutable.ListMap
+  val ownIO = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
 
   // each I/O is assigned to at least one register index, possibly more if wide
   // round each I/O width to nearest csrWidth multiple, sum, divide by csrWidth
@@ -90,50 +92,59 @@ extends Module {
 
   println("Generating register file mappings...")
   // traverse the accel I/Os and connect to the register file
-  var allocReg = 0
   var regFileMap = new RegFileMap
+  var allocReg = 0
+  // hand-place the signature register at 0
+  regFileMap("signature") = Array(allocReg)
+  regFile.regIn(allocReg).valid := Bool(true)
+  regFile.regIn(allocReg).bits := ownIO("signature")
+  println("Signal signature mapped to single reg " + allocReg.toString)
+  allocReg += 1
+
   for((name, bits) <- ownIO) {
-    val w = bits.getWidth()
-    if(w > wCSR) {
-      // signal is wide, maps to several registers
-      val numRegsToAlloc = roundMultiple(w, wCSR) / wCSR
-      regFileMap(name) = (allocReg until allocReg + numRegsToAlloc).toArray
-      // connect the I/O signal to the register file appropriately
-      if(bits.dir == INPUT) {
-        // concatanate all assigned registers, connect to input
-        bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
-        for(i <- 0 until numRegsToAlloc) {
-          regFile.regIn(allocReg + i).valid := Bool(false)
-        }
-      } else if(bits.dir == OUTPUT) {
-        for(i <- 0 until numRegsToAlloc) {
-          regFile.regIn(allocReg + i).valid := Bool(true)
-          regFile.regIn(allocReg + i).bits := bits(i*wCSR+wCSR-1, i*wCSR)
-        }
-      } else { throw new Exception("Wire in IO: "+name) }
+    if(name != "signature") {
+      val w = bits.getWidth()
+      if(w > wCSR) {
+        // signal is wide, maps to several registers
+        val numRegsToAlloc = roundMultiple(w, wCSR) / wCSR
+        regFileMap(name) = (allocReg until allocReg + numRegsToAlloc).toArray
+        // connect the I/O signal to the register file appropriately
+        if(bits.dir == INPUT) {
+          // concatanate all assigned registers, connect to input
+          bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
+          for(i <- 0 until numRegsToAlloc) {
+            regFile.regIn(allocReg + i).valid := Bool(false)
+          }
+        } else if(bits.dir == OUTPUT) {
+          for(i <- 0 until numRegsToAlloc) {
+            regFile.regIn(allocReg + i).valid := Bool(true)
+            regFile.regIn(allocReg + i).bits := bits(i*wCSR+wCSR-1, i*wCSR)
+          }
+        } else { throw new Exception("Wire in IO: "+name) }
 
-      println("Signal " + name + " mapped to regs " + regFileMap(name).map(_.toString).reduce(_+" "+_))
-      allocReg += numRegsToAlloc
-    } else {
-      // signal is narrow enough, maps to a single register
-      regFileMap(name) = Array(allocReg)
-      // connect the I/O signal to the register file appropriately
-      if(bits.dir == INPUT) {
-        // handle Bool input cases,"multi-bit signal to Bool" error
-        if(bits.getWidth() == 1) {
-          bits := regFile.regOut(allocReg)(0)
-        } else { bits := regFile.regOut(allocReg) }
-        // disable internal write for this register
-        regFile.regIn(allocReg).valid := Bool(false)
+        println("Signal " + name + " mapped to regs " + regFileMap(name).map(_.toString).reduce(_+" "+_))
+        allocReg += numRegsToAlloc
+      } else {
+        // signal is narrow enough, maps to a single register
+        regFileMap(name) = Array(allocReg)
+        // connect the I/O signal to the register file appropriately
+        if(bits.dir == INPUT) {
+          // handle Bool input cases,"multi-bit signal to Bool" error
+          if(bits.getWidth() == 1) {
+            bits := regFile.regOut(allocReg)(0)
+          } else { bits := regFile.regOut(allocReg) }
+          // disable internal write for this register
+          regFile.regIn(allocReg).valid := Bool(false)
 
-      } else if(bits.dir == OUTPUT) {
-        // TODO don't always write (change detect?)
-        regFile.regIn(allocReg).valid := Bool(true)
-        regFile.regIn(allocReg).bits := bits
-      } else { throw new Exception("Wire in IO: "+name) }
+        } else if(bits.dir == OUTPUT) {
+          // TODO don't always write (change detect?)
+          regFile.regIn(allocReg).valid := Bool(true)
+          regFile.regIn(allocReg).bits := bits
+        } else { throw new Exception("Wire in IO: "+name) }
 
-      println("Signal " + name + " mapped to single reg " + allocReg.toString)
-      allocReg += 1
+        println("Signal " + name + " mapped to single reg " + allocReg.toString)
+        allocReg += 1
+      }
     }
   }
 
