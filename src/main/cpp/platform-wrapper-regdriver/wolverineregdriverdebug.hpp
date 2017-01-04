@@ -22,14 +22,12 @@ void *memset(void *dst, int c, size_t n)
 }
 
 
-typedef uint64_t AccelReg;
-
 // variant of WolverineRegDriver that uses AEGs instead of CSRs
 // - cannot read registers while coprocessor is busy
 // - useful for Convey Verilog simulation (since no CSR support there)
 // - must call start() after all registers are set up
 
-class WolverineRegDriverDebug : public WrapperRegDriver<AccelReg>
+class WolverineRegDriverDebug : public WrapperRegDriver
 {
 public:
   virtual void attach(const char * name) {
@@ -50,6 +48,8 @@ public:
   }
 
   virtual void deattach() {
+    // hack: do a write to register 0 to unset the busy flag
+    writeReg(0, 2);
     // close firmware daemon connection and release coprocessor
     wdm_detach(m_coproc);
     wdm_release(m_coproc);

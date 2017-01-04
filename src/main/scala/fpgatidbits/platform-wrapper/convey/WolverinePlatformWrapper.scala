@@ -234,13 +234,36 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   // 7 for burst read
   io.conveyReqOut.bits.cmd := UInt(0)
   // values for scmd:
-  // number of beats (quadwords) for burst write
+  // supposedly number of beats (quadwords) for burst write -- but not really
   // 0 for everything else (except atomics, which we do not support)
+  // scmd is not quite 4 bits and not really the # of words to write,
+  // the source code says otherwise (aemc_mc.v):
+  // ====================================================================
+  // AEMC WR64 - sub cmd
+  // Sub-command[2:0] indicates WR64 length, i.e.
+  // sub-command  | write size
+  //     0	    64 bytes
+  //     7	    56 bytes
+  //     6	    48 bytes
+  //     5	    40 bytes
+  //     4	    32 bytes
+  //     3	    24 bytes
+  //     2	    16 bytes
+  //     1	     8 bytes
+  //
+  //  virtual address[5:3] indicate starting quadword offset
+  //
+  // The cae_xb_if logic uses sub-command[3] == 1'b1, to indicate the
+  // last quadword WR64 cycle, the personality should treat sub-command[3]
+  // as reserved
+  // ====================================================================
+  // since we only support 64byte writes anyway, set scmd to be const zero
   io.conveyReqOut.bits.scmd := UInt(0)
 
   // plug write data ready signals by default
   io.writeData.ready := Bool(false)
 
+  // TODO only 64byte bursts for now
   val isBurst = (io.genericReqIn.bits.numBytes === UInt(64))
   val isWriteBurst = io.genericReqIn.bits.isWrite & isBurst
 
@@ -286,7 +309,6 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
       .otherwise {
         // use registers to generate the next request of the write burst
         io.conveyReqOut.bits.cmd := UInt(6)
-        io.conveyReqOut.bits.scmd := regWriteBurst.numBytes / UInt(8)
         io.conveyReqOut.bits.rtnCtl := regWriteBurst.channelID
         io.conveyReqOut.bits.addr := regWriteBurst.addr
 
