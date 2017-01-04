@@ -233,6 +233,28 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   // write must have both request and data ready
   val validWrite = io.genericReqIn.valid & io.writeData.valid
 
+  val sRegular :: sWriteBurst :: Nil = Enum(UInt(), 3)
+  val regState = Reg(init = UInt(sRegular))
+
+  switch(regState) {
+    is(sRegular) {
+      // "regular" state for the adapter, burst reads and non-burst writes
+      // TODO
+    }
+    is(sWriteBurst) {
+      // use registers to generate the next request of the write burst
+      io.conveyReqOut.bits.cmd := UInt(6)
+      io.conveyReqOut.bits.scmd := regWriteBurst_NumWords
+      io.conveyReqOut.bits.rtnCtl := regWriteBurst_ChannelID
+      io.conveyReqOut.bits.addr := regWriteBurst_Addr
+
+      io.conveyReqOut := io.writeData.valid
+
+      // TODO transaction handling + update registered request
+    }
+  }
+
+
   when (validWrite && io.genericReqIn.bits.isWrite) {
     // write request
     // both request and associated channel data are valid
