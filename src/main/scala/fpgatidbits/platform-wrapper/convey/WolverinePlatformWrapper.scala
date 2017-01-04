@@ -222,56 +222,85 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   io.conveyReqOut.bits.rtnCtl := io.genericReqIn.bits.channelID
   io.conveyReqOut.bits.writeData := io.writeData.bits
   io.conveyReqOut.bits.addr := io.genericReqIn.bits.addr
-  io.conveyReqOut.bits.size := UInt( log2Up(p.dataWidth/8) )
-  // TODO scmd needs to be set for write bursts
-  io.conveyReqOut.bits.scmd := UInt(0)
+  // can actually be smaller for subword writes/reads but those are not
+  // supported (so UInt( log2Up(p.dataWidth/8)))
+  io.conveyReqOut.bits.size := UInt(3)
+  // see Convey PDK Guide 8.3.x for more details on the memreq signals
+  // values for cmd:
+  // 1 for regular load
+  // 2 for regular write
+  // 6 for burst write
+  // 5 for atomics (not supported in fpga-tidbits)
+  // 7 for burst read
   io.conveyReqOut.bits.cmd := UInt(0)
+  // values for scmd:
+  // number of beats (quadwords) for burst write
+  // 0 for everything else (except atomics, which we do not support)
+  io.conveyReqOut.bits.scmd := UInt(0)
 
   // plug write data ready signals by default
   io.writeData.ready := Bool(false)
 
-  // write must have both request and data ready
-  val validWrite = io.genericReqIn.valid & io.writeData.valid
+  val isBurst = (io.genericReqIn.bits.numBytes === UInt(64))
+  val isWriteBurst = io.genericReqIn.bits.isWrite & isBurst
 
-  val sRegular :: sWriteBurst :: Nil = Enum(UInt(), 3)
+  // regular write must have both request and data ready
+  val isWriteReadyToGo = io.genericReqIn.valid & io.writeData.valid
+  val isWriteRegular = io.genericReqIn.bits.isWrite & !isBurst
+
+  val sRegular :: sWriteBurst :: Nil = Enum(UInt(), 2)
   val regState = Reg(init = UInt(sRegular))
+  // register to keep write burst state
+  val regWriteBurst = Reg(init = GenericMemoryRequest(p))
+  val regWriteBeatsLeft = Reg(init = UInt(0, width = 32))
 
   switch(regState) {
     is(sRegular) {
       // "regular" state for the adapter, burst reads and non-burst writes
-      // TODO
+      when(isWriteRegular & isWriteReadyToGo) {
+        // non-burst write request
+        io.conveyReqOut.bits.cmd := UInt(2)
+        // both request and associated channel data are valid
+        io.conveyReqOut.valid := Bool(true)
+        // both request and associated channel data must be ready
+        io.genericReqIn.ready := io.conveyReqOut.ready
+        io.writeData.ready := io.conveyReqOut.ready
+      } .elsewhen (io.genericReqIn.valid && !io.genericReqIn.bits.isWrite) {
+        // read request, burst or regular
+        io.conveyReqOut.bits.cmd := Mux(isBurst, UInt(7), UInt(1))
+        io.conveyReqOut.valid := Bool(true)
+        io.genericReqIn.ready := io.conveyReqOut.ready
+      } .elsewhen(io.genericReqIn.valid & isWriteBurst) {
+        // when write burst is detected, switch to sWriteBurst state
+        regState := sWriteBurst
+        // register the write request and # of beats needed
+        regWriteBurst := io.genericReqIn.bits
+        regWriteBeatsLeft := regWriteBurst.numBytes / UInt(8)
+      }
     }
     is(sWriteBurst) {
-      // use registers to generate the next request of the write burst
-      io.conveyReqOut.bits.cmd := UInt(6)
-      io.conveyReqOut.bits.scmd := regWriteBurst_NumWords
-      io.conveyReqOut.bits.rtnCtl := regWriteBurst_ChannelID
-      io.conveyReqOut.bits.addr := regWriteBurst_Addr
+      when(regWriteBeatsLeft === UInt(0)) {
+        // TODO idle cycle -- merge into comb block below to optimize
+        regState := sRegular
+      }
+      .otherwise {
+        // use registers to generate the next request of the write burst
+        io.conveyReqOut.bits.cmd := UInt(6)
+        io.conveyReqOut.bits.scmd := regWriteBurst.numBytes / UInt(8)
+        io.conveyReqOut.bits.rtnCtl := regWriteBurst.channelID
+        io.conveyReqOut.bits.addr := regWriteBurst.addr
 
-      io.conveyReqOut := io.writeData.valid
+        io.conveyReqOut.valid := io.writeData.valid
+        io.genericReqIn.ready := io.conveyReqOut.ready
+        io.writeData.ready := io.conveyReqOut.ready
 
-      // TODO transaction handling + update registered request
+        when(io.conveyReqOut.valid & io.conveyReqOut.ready) {
+          // update registered request and decrement counter
+          regWriteBeatsLeft := regWriteBeatsLeft - UInt(1)
+          regWriteBurst.addr := regWriteBurst.addr + UInt(8)
+        }
+      }
     }
-  }
-
-
-  when (validWrite && io.genericReqIn.bits.isWrite) {
-    // write request
-    // both request and associated channel data are valid
-    io.conveyReqOut.valid := Bool(true)
-    // both request and associated channel data must be ready
-    io.genericReqIn.ready := io.conveyReqOut.ready
-    io.writeData.ready := io.conveyReqOut.ready
-  } .elsewhen (io.genericReqIn.valid && !io.genericReqIn.bits.isWrite) {
-    // read request
-    io.conveyReqOut.valid := Bool(true)
-    io.genericReqIn.ready := io.conveyReqOut.ready
-  }
-  // command according to burst length and r/w flag
-  when (io.genericReqIn.bits.numBytes === UInt(64)) {
-    io.conveyReqOut.bits.cmd := Mux(io.genericReqIn.bits.isWrite, UInt(6), UInt(7))
-  } .elsewhen (io.genericReqIn.bits.numBytes === UInt(8)) {
-    io.conveyReqOut.bits.cmd := Mux(io.genericReqIn.bits.isWrite, UInt(2), UInt(1))
   }
 }
 
