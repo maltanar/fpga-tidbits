@@ -11,7 +11,8 @@ import fpgatidbits.streams._
 class StreamWriterParams(
   val streamWidth: Int,
   val mem: MemReqParams,
-  val chanID: Int
+  val chanID: Int,
+  val maxBeats: Int = 1
 )
 
 class StreamWriterIF(w: Int, p: MemReqParams) extends Bundle {
@@ -41,7 +42,7 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   io.rsp.ready := rc.streamIn.ready
 
   // write request generator
-  val wg = Module(new WriteReqGen(p.mem, p.chanID)).io
+  val wg = Module(new WriteReqGen(p.mem, p.chanID, p.maxBeats)).io
   wg.ctrl.start := io.start
   wg.ctrl.baseAddr := io.baseAddr
   wg.ctrl.byteCount := io.byteCount // TODO must be multiple of write size!
