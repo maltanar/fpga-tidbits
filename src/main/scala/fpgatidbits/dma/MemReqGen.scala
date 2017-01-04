@@ -53,14 +53,19 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
   val burstLen = Mux(doBurst, UInt(bytesPerBurst), UInt(bytesPerBeat))
   io.reqs.bits.numBytes := burstLen
 
-  val numZeroAddrBits = log2Up(bytesPerBeat)
+  // address needs to be aligned to burst size
+  val numZeroAddrBits = log2Up(bytesPerBurst)
   val unalignedAddr = (regAddr(numZeroAddrBits-1, 0) != UInt(0))
+  // number of bytes needs to be aligned to bus width
+  val numZeroSizeBits = log2Up(bytesPerBeat)
+  val unalignedSize = (io.ctrl.byteCount(numZeroSizeBits-1, 0) != UInt(0))
+  val isUnaligned = unalignedSize || unalignedAddr
 
   switch(regState) {
       is(sIdle) {
         regAddr := io.ctrl.baseAddr
         regBytesLeft := io.ctrl.byteCount
-        when (io.ctrl.start) { regState := Mux(unalignedAddr, sError, sRun) }
+        when (io.ctrl.start) { regState := Mux(isUnaligned, sError, sRun) }
       }
 
       is(sRun) {
@@ -84,6 +89,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
       is(sError) {
         // only way out is reset
         io.stat.error := Bool(true)
+        printf("Error in MemReqGen! regAddr = %x\n", regAddr)
       }
   }
 }
@@ -239,7 +245,7 @@ class TestReadReqGen(c: TestReadReqGenWrapper) extends Tester(c) {
   expect(c.reqQ.io.count, 0)
 }
 
-class WriteReqGen(p: MemReqParams, chanID: Int) extends ReadReqGen(p, chanID, 1) {
+class WriteReqGen(p: MemReqParams, chanID: Int, maxBeats: Int = 1) extends ReadReqGen(p, chanID, maxBeats) {
   // force single beat per burst for now
   // TODO support write bursts -- needs support in interleaver
   io.reqs.bits.isWrite := Bool(true)
