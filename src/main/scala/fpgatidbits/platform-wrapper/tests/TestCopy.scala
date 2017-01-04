@@ -8,7 +8,7 @@ import fpgatidbits.streams._
 // TODO support non-word-aligned sizes in byteCount
 
 class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 1
+  val numMemPorts = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
@@ -20,7 +20,7 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.signature := makeDefaultSignature()
 
   val rrg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
-  val wrg = Module(new WriteReqGen(p.toMemReqParams(), 0)).io
+  val wrg = Module(new WriteReqGen(p.toMemReqParams(), 0, 8)).io
 
   rrg.ctrl.start := io.start
   rrg.ctrl.throttle := Bool(false)
@@ -32,21 +32,30 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   wrg.ctrl.throttle := Bool(false)
   wrg.ctrl.baseAddr := io.dstAddr
   wrg.ctrl.byteCount := io.byteCount
-  wrg.reqs <> io.memPort(0).memWrReq
+  wrg.reqs <> io.memPort(1).memWrReq
 
   // pull out read response as write data
-  ReadRespFilter(io.memPort(0).memRdRsp) <> io.memPort(0).memWrDat
+  ReadRespFilter(io.memPort(0).memRdRsp) <> io.memPort(1).memWrDat
 
   // count write responses to determine finished
-  val regCompletes = Reg(init = UInt(0, 32))
+  val regNumPendingReqs = Reg(init = UInt(0, 32))
+  val regRequestedBytes = Reg(init = UInt(0, 32))
 
-  io.memPort(0).memWrRsp.ready := Bool(true)
+  io.memPort(1).memWrRsp.ready := Bool(true)
 
-  when (!io.start) { regCompletes := UInt(0)}
-  .elsewhen (io.memPort(0).memWrRsp.valid) {
-    regCompletes := regCompletes + UInt(p.memDataBits/8)
+  when(!io.start) {
+    regNumPendingReqs := UInt(0)
+    regRequestedBytes := UInt(0)
+  } .otherwise {
+    val reqFired = io.memPort(1).memWrReq.valid & io.memPort(1).memWrReq.ready
+    val rspFired = io.memPort(1).memWrRsp.valid & io.memPort(1).memWrRsp.ready
+
+    regRequestedBytes := regRequestedBytes + Mux(reqFired, io.memPort(1).memWrReq.bits.numBytes, UInt(0))
+
+    when(reqFired && !rspFired) { regNumPendingReqs := regNumPendingReqs + UInt(1)}
+    .elsewhen(!reqFired && rspFired) { regNumPendingReqs := regNumPendingReqs - UInt(1) }
   }
 
-  io.finished := io.start & (regCompletes === io.byteCount)
-  io.finBytes := regCompletes
+  io.finished := io.start & (regRequestedBytes === io.byteCount) & (regNumPendingReqs === UInt(0))
+  io.finBytes := regRequestedBytes
 }
