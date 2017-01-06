@@ -155,25 +155,32 @@ class SimplexAdapter(p: MemReqParams) extends Module {
   val wrDatQ = FPGAQueue(io.duplex.memWrDat, 2)
 
   val simplexReqQ = Module(new FPGAQueue(GenericMemoryRequest(p), 2)).io
-  val simplexWDQ = Module(new FPGAQueue(UInt(width = p.dataWidth), 2)).io
 
   // simply interleave the read-write reqs onto common req channel
   val mux = Module(new ReqInterleaver(2, p)).io
   rdReqQ <> mux.reqIn(0)
+  wrReqQ <> mux.reqIn(1)
   mux.reqOut <> simplexReqQ.enq
   simplexReqQ.deq <> io.simplex.req
-  simplexWDQ.deq <> io.simplex.wrdat
 
+  wrDatQ <> io.simplex.wrdat
+
+  // (commented out for now to get write bursts working -- do not mix
+  // reads and dependent writes in the same channel!)
   // to prevent head-of-line blocking from write requests whose data is not
   // yet ready, sync the write request-data streams
   // TODO this won't work for write bursts!
+
+/*
+  val simplexWDQ = Module(new FPGAQueue(UInt(width = p.dataWidth), 2)).io
+  simplexWDQ.deq <> io.simplex.wrdat
   mux.reqIn(1).valid := wrReqQ.valid & wrDatQ.valid & simplexWDQ.enq.ready
   simplexWDQ.enq.valid := wrReqQ.valid & wrDatQ.valid & mux.reqIn(1).ready
   wrReqQ.ready := wrDatQ.valid & simplexWDQ.enq.ready & mux.reqIn(1).ready
   wrDatQ.ready := wrReqQ.valid &  simplexWDQ.enq.ready & mux.reqIn(1).ready
-
   mux.reqIn(1).bits := wrReqQ.bits
   simplexWDQ.enq.bits := wrDatQ.bits
+*/
 
   val demux = Module(new QueuedRdWrDeinterleaver(p)).io
   io.simplex.rsp <> demux.rspIn
