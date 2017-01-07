@@ -313,7 +313,6 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
         io.conveyReqOut.bits.addr := regWriteBurst.addr
 
         io.conveyReqOut.valid := io.writeData.valid
-        io.genericReqIn.ready := io.conveyReqOut.ready
         io.writeData.ready := io.conveyReqOut.ready
 
         when(io.conveyReqOut.valid & io.conveyReqOut.ready) {
