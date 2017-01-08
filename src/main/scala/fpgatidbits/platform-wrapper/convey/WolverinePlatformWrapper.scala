@@ -296,29 +296,29 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
       } .elsewhen(io.genericReqIn.valid & isWriteBurst) {
         // when write burst is detected, switch to sWriteBurst state
         regState := sWriteBurst
+        // consume the write burst request
+        io.genericReqIn.ready := Bool(true)
         // register the write request and # of beats needed
         regWriteBurst := io.genericReqIn.bits
-        regWriteBeatsLeft := regWriteBurst.numBytes / UInt(8)
+        regWriteBeatsLeft := io.genericReqIn.bits.numBytes / UInt(8)
       }
     }
     is(sWriteBurst) {
-      when(regWriteBeatsLeft === UInt(0)) {
-        // TODO idle cycle -- merge into comb block below to optimize
-        regState := sRegular
-      }
-      .otherwise {
-        // use registers to generate the next request of the write burst
-        io.conveyReqOut.bits.cmd := UInt(6)
-        io.conveyReqOut.bits.rtnCtl := regWriteBurst.channelID
-        io.conveyReqOut.bits.addr := regWriteBurst.addr
+      // use registers to generate the next request of the write burst
+      io.conveyReqOut.bits.cmd := UInt(6)
+      io.conveyReqOut.bits.rtnCtl := regWriteBurst.channelID
+      io.conveyReqOut.bits.addr := regWriteBurst.addr
 
-        io.conveyReqOut.valid := io.writeData.valid
-        io.writeData.ready := io.conveyReqOut.ready
+      io.conveyReqOut.valid := io.writeData.valid
+      io.writeData.ready := io.conveyReqOut.ready
 
-        when(io.conveyReqOut.valid & io.conveyReqOut.ready) {
-          // update registered request and decrement counter
-          regWriteBeatsLeft := regWriteBeatsLeft - UInt(1)
-          regWriteBurst.addr := regWriteBurst.addr + UInt(8)
+      when(io.conveyReqOut.valid & io.conveyReqOut.ready) {
+        // update registered request and decrement counter
+        regWriteBeatsLeft := regWriteBeatsLeft - UInt(1)
+        regWriteBurst.addr := regWriteBurst.addr + UInt(8)
+        // back to sRegular when no more write burst beats
+        when(regWriteBeatsLeft <= UInt(1)) {
+          regState := sRegular
         }
       }
     }
