@@ -34,12 +34,26 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   val io = new StreamWriterIF(p.streamWidth, p.mem)
   val StreamElem = UInt(width = p.streamWidth)
 
-  // use a reducer to count write responses and decide finished
-  val rc = Module(new StreamReducer(p.mem.dataWidth, 0, {_+_})).io
-  rc.start := io.start
-  rc.byteCount := io.byteCount
-  rc.streamIn.valid := io.rsp.valid
-  io.rsp.ready := rc.streamIn.ready
+  // always ready to receive write responses
+  io.rsp.ready := Bool(true)
+  // count write responses to determine finished
+  val regNumPendingReqs = Reg(init = UInt(0, 32))
+  val regRequestedBytes = Reg(init = UInt(0, 32))
+  when(!io.start) {
+    regNumPendingReqs := UInt(0)
+    regRequestedBytes := UInt(0)
+  } .otherwise {
+    val reqFired = io.req.valid & io.req.ready
+    val rspFired = io.rsp.valid & io.rsp.ready
+    regRequestedBytes := regRequestedBytes + Mux(reqFired, io.req.bits.numBytes, UInt(0))
+    when(reqFired && !rspFired) { regNumPendingReqs := regNumPendingReqs + UInt(1)}
+    .elsewhen(!reqFired && rspFired) { regNumPendingReqs := regNumPendingReqs - UInt(1) }
+  }
+  // finished when:
+  // - all bytes have been requested
+  // - there are no pending (un-responded) requests left
+  val fin = (regRequestedBytes === io.byteCount) & (regNumPendingReqs === UInt(0))
+  io.finished := io.start & fin
 
   // write request generator
   val wg = Module(new WriteReqGen(p.mem, p.chanID, p.maxBeats)).io
@@ -47,8 +61,7 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   wg.ctrl.baseAddr := io.baseAddr
   wg.ctrl.byteCount := io.byteCount // TODO must be multiple of write size!
   wg.ctrl.throttle := Bool(false)
-  io.active := (io.start & !rc.finished)
-  io.finished := rc.finished  // finished when all write resps. received
+  io.active := (io.start & !fin)
   io.error := wg.stat.error
 
   // push out the generated write requests
