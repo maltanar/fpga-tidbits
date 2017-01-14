@@ -4,9 +4,8 @@ using namespace std;
 #include "platform.h"
 
 bool Run_TestHostCopy(WrapperRegDriver * platform) {
-  TestCopy t(platform);
+  platform->attach("TestHostCopy");
   cout << "HostCopy test" << endl;
-  cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
   cout << "Enter number of words to generate and copy: " << endl;
   cin >> ub;
