@@ -6,7 +6,7 @@ import Chisel._
 
 object PYNQParams extends PlatformWrapperParams {
   val platformName = "PYNQ"
-  val memAddrBits = 32
+  val memAddrBits = 64
   val memDataBits = 64
   val memIDBits = 6
   val memMetaBits = 1
