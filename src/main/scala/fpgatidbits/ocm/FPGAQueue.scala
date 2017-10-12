@@ -41,7 +41,7 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox {
   io.oData := mockQ.deq.bits
   io.oValid := mockQ.deq.valid
   // ready signals connected to backpressure and vice versa
-  io.iBackPressure := !mockQ.enq.ready
+  io.iBackPressure := mockQ.enq.ready
   mockQ.deq.ready := !io.oBackPressure
 }
 
@@ -57,7 +57,7 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
   // Q_srl uses backpressure, while Chisel queues use "ready"
   // invert signals while connecting
   srlQ.oBackPressure := !io.deq.ready
-  io.enq.ready := !srlQ.iBackPressure
+  io.enq.ready := srlQ.iBackPressure
 }
 
 
