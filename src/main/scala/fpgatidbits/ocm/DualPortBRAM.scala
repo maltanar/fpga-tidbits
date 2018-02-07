@@ -11,6 +11,9 @@ import Chisel._
 class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
   val ports = Vec.fill (2) {new OCMSlaveIF(dataBits, dataBits, addrBits)}
 
+  override def cloneType: this.type =
+    new DualPortBRAMIO(addrBits, dataBits).asInstanceOf[this.type]
+
   ports(0).req.addr.setName("a_addr")
   ports(0).req.writeData.setName("a_din")
   ports(0).req.writeEn.setName("a_wr")
