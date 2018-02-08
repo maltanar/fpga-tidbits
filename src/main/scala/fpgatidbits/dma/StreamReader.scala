@@ -65,10 +65,14 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // the superflous (alignment) bytes will be removed later
   rg.ctrl.byteCount := RoundUpAlign(memWidthBytes, io.byteCount)
 
-  // active and finished are generated based not only on the status
-  // of the req.gen but also if all responses are finished (FIFO empty)
-  io.active := rg.stat.active | (fifo.count > UInt(0))
-  io.finished := rg.stat.finished & (fifo.count === UInt(0))
+  val regDoneBytes = Reg(init = UInt(0, width = 32))
+  when(!io.start) { regDoneBytes := UInt(0) }
+  .elsewhen(io.out.valid & io.out.ready) {
+    regDoneBytes := regDoneBytes + UInt(p.streamWidth/8)
+  }
+  val allResponsesDone = (regDoneBytes === io.byteCount)
+  io.active := io.start & !allResponsesDone
+  io.finished := allResponsesDone
   io.error := rg.stat.error
 
   var orderedResponses = io.rsp
