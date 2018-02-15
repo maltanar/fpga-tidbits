@@ -55,7 +55,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
 
   // address needs to be aligned to burst size
   val numZeroAddrBits = log2Up(bytesPerBurst)
-  val unalignedAddr = (regAddr(numZeroAddrBits-1, 0) != UInt(0))
+  val unalignedAddr = (io.ctrl.baseAddr(numZeroAddrBits-1, 0) != UInt(0))
   // number of bytes needs to be aligned to bus width
   val numZeroSizeBits = log2Up(bytesPerBeat)
   val unalignedSize = (io.ctrl.byteCount(numZeroSizeBits-1, 0) != UInt(0))
