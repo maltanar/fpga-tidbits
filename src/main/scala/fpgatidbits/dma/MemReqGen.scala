@@ -89,7 +89,8 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
       is(sError) {
         // only way out is reset
         io.stat.error := Bool(true)
-        printf("Error in MemReqGen! regAddr = %x\n", regAddr)
+        printf("Error in MemReqGen! regAddr = %x byteCount = %d \n", regAddr, io.ctrl.byteCount)
+        printf("Unaligned addr? %d size? %d \n", unalignedAddr, unalignedSize)
       }
   }
 }
