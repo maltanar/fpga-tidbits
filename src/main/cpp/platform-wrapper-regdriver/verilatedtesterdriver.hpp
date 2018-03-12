@@ -54,6 +54,10 @@ public:
     delete m_inst;
   }
 
+  virtual std::string platformID() {
+		return "VerilatedEmuDriver";
+	}
+
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
     __TESTERDRIVER_DEBUG_PRINT("host2accel(" << (uint64_t) hostBuffer << " -> " << accelBufBase << " : " << numBytes << " bytes)");

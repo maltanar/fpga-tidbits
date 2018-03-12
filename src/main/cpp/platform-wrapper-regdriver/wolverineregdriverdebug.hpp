@@ -30,6 +30,10 @@ void *memset(void *dst, int c, size_t n)
 class WolverineRegDriverDebug : public WrapperRegDriver
 {
 public:
+  virtual std::string platformID() {
+		return "WolverineDebugDriver";
+	}
+
   virtual void attach(const char * name) {
     m_coproc = WDM_INVALID;
 
