@@ -72,6 +72,10 @@ public:
 		cma_munmap(m_reg, m_regSize);
 	}
 
+	virtual std::string platformID() {
+		return "XlnkDriver";
+	}
+
 	virtual void copyBufferHostToAccel(void* hostBuffer, void* accelBuffer, unsigned int numBytes) {
 		PhysMap::iterator iter = m_physmap.find(accelBuffer);
 		if (iter == m_physmap.end()) {

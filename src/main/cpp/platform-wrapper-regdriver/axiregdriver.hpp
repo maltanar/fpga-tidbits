@@ -12,6 +12,10 @@ public:
 
   virtual ~AXIRegDriver() {}
 
+  virtual std::string platformID() {
+		return "AXIDriver";
+	}
+
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
     m_baseAddr[regInd] = regValue;
   }

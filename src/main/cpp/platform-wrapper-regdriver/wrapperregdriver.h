@@ -2,6 +2,7 @@
 #define WRAPPERREGDRIVER_H
 
 #include <stdint.h>
+#include <string>
 
 // TODO wrapper driver should be a singleton
 typedef unsigned int AccelReg;
@@ -24,6 +25,7 @@ public:
   // (mandatory) register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) = 0;
   virtual AccelReg readReg(unsigned int regInd) = 0;
+  virtual std::string platformID() = 0;
 
 };
 
