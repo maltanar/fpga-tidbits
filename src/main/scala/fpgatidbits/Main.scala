@@ -18,6 +18,8 @@ object TidbitsMakeUtils {
 
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
+    "PYNQ" -> {f => new PYNQWrapper(f)},
+    "ZC706" -> {f => new ZC706Wrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
     "Tester" -> {f => new TesterWrapper(f)}
   )
