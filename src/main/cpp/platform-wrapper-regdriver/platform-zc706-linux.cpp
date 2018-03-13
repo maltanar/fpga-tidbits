@@ -38,27 +38,5 @@ void deinitPlatform(WrapperRegDriver * driver) {
 }
 
 void loadBitfile(const char * accelName) {
-  pid_t c_pid, pid;
-  int status;
-
-  // call a shell script to do the bitfile loading, fork & exec & wait
-  char * loader = getenv("ZC706_BITFILE_LOADER");
-  if(!loader)
-    throw "ZC706_BITFILE_LOADER must be set";
-
-  c_pid = fork();
-
-  if (c_pid == 0){
-    execl(loader, loader, accelName, NULL);
-    throw "execl failed";
-  } else if (c_pid > 0){
-    if( (pid = wait(&status)) < 0){
-      throw "wait failed";
-      _exit(1);
-    }
-  } else{
-    throw ("fork failed");
-    _exit(1);
-  }
-  cout << "loadBitfile finished: " << accelName << endl;
+  // TODO add bitfile loader here if desired
 }
