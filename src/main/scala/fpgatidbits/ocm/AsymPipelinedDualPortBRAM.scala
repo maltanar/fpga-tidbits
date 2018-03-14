@@ -26,7 +26,7 @@ class AsymPipelinedDualPortBRAM(
   if(asymRatio == 1) {
     // just instantiate a regular PipelinedDualPortBRAM
     val mem = Module(new PipelinedDualPortBRAM(
-      addrBits = addrInUnit_bits, dataBits = minWidth, regIn = regIn,
+      addrBits = addr_bits, dataBits = minWidth, regIn = regIn,
       regOut = regOut
     )).io
 
