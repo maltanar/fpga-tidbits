@@ -19,6 +19,7 @@ class StreamWriterIF(w: Int, p: MemReqParams) extends Bundle {
   val start = Bool(INPUT)
   val active = Bool(OUTPUT)
   val finished = Bool(OUTPUT)
+  val allFinished = Bool(OUTPUT)
   val error = Bool(OUTPUT)
   val baseAddr = UInt(INPUT, p.addrWidth)
   val byteCount = UInt(INPUT, 32)
@@ -53,7 +54,8 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   // - all bytes have been requested
   // - there are no pending (un-responded) requests left
   val fin = (regRequestedBytes === io.byteCount) & (regNumPendingReqs === UInt(0))
-  io.finished := io.start & fin
+  io.allFinished := io.start & fin
+
 
   // write request generator
   val wg = Module(new WriteReqGen(p.mem, p.chanID, p.maxBeats)).io
@@ -63,6 +65,7 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   wg.ctrl.throttle := Bool(false)
   io.active := (io.start & !fin)
   io.error := wg.stat.error
+  io.finished := wg.stat.finished
 
   // push out the generated write requests
   wg.reqs <> io.req
