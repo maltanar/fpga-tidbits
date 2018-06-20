@@ -4,8 +4,8 @@ import Chisel._
 
 // platform wrapper for PYNQ
 
-object PYNQParams extends PlatformWrapperParams {
-  val platformName = "PYNQ"
+object PYNQZ1Params extends PlatformWrapperParams {
+  val platformName = "PYNQZ1"
   val memAddrBits = 32
   val memDataBits = 64
   val memIDBits = 6
@@ -16,11 +16,11 @@ object PYNQParams extends PlatformWrapperParams {
   val burstBeats = 8  // TODO why cap bursts at 8? AXI can do more
 }
 
-class PYNQWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
-  extends AXIPlatformWrapper(PYNQParams, instFxn) {
+class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+  extends AXIPlatformWrapper(PYNQZ1Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-xlnk.cpp", "xlnkdriver.hpp"
   )
-  setName("PYNQWrapper")
-  setModuleName("PYNQWrapper")
+  setName("PYNQZ1Wrapper")
+  setModuleName("PYNQZ1Wrapper")
 }
