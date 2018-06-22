@@ -189,6 +189,7 @@ extends Module {
   def generateRegDriver(targetDir: String) = {
     var driverStr: String = ""
     val driverName: String = accel.name
+    val expected_signature: String = accel.hexSignature()
     var readWriteFxns: String = ""
     for((name, bits) <- ownIO) {
       if(bits.dir == INPUT) {
@@ -219,6 +220,9 @@ public:
   $driverName(WrapperRegDriver * platform) {
     m_platform = platform;
     attach();
+    if(readReg(0) != 0x${expected_signature})  {
+      throw "Unexpected accelerator signature, is the correct bitfile loaded?";
+    }
   }
   ~$driverName() {
     detach();

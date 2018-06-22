@@ -18,7 +18,7 @@ object TidbitsMakeUtils {
 
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
-    "PYNQ" -> {f => new PYNQWrapper(f)},
+    "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
     "ZC706" -> {f => new ZC706Wrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
     "Tester" -> {f => new TesterWrapper(f)}
@@ -36,7 +36,7 @@ object TidbitsMakeUtils {
   def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq()) = {
     val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
     val platformInst = platformMap("Tester")
-    val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
+    val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
     val chiselArgs = Array("--backend","c","--targetDir", fullDir)
 
     chiselMain(chiselArgs, () => Module(platformInst(accInst)))
@@ -59,7 +59,7 @@ object TidbitsMakeUtils {
 
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
     val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
-    val drvDir = sys.env("TIDBITS_ROOT")+"/src/main/cpp/platform-wrapper-regdriver"
+    val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
     val mkd = s"mkdir -p $fullDir".!!
     // copy necessary files to build the driver
     fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
@@ -73,8 +73,8 @@ object TidbitsMakeUtils {
     println(s"Hardware driver library built as $fullDir/driver.a")
   }
 
-  def makeVerilator(accInst: AccelInstFxn, tidbitsDir: String,
-  destDir: String) = {
+  def makeVerilator(accInst: AccelInstFxn, destDir: String) = {
+    val tidbitsDir = getClass.getResource("/").getPath
 
     val platformInst = {f => new VerilatedTesterWrapper(f)}
     val chiselArgs = Array("--backend","v","--targetDir", "verilator")
@@ -119,6 +119,7 @@ object MainObj {
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
+    "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
     "Tester" -> {f => new TesterWrapper(f)}
   )
 
@@ -154,11 +155,11 @@ object MainObj {
     // build driver
     platformInst(accInst).generateRegDriver(s"$targetDir/")
     // copy emulator driver and SW support files
-    val regDrvRoot = "src/main/cpp/platform-wrapper-regdriver/"
+    val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"
     val files = Array("wrapperregdriver.h", "platform-tester.cpp",
       "platform.h", "testerdriver.hpp")
     for(f <- files) { fileCopy(regDrvRoot + f, s"$targetDir/" + f) }
-    val testRoot = "src/main/cpp/platform-wrapper-tests/"
+    val testRoot = getClass.getResource("/cpp/platform-wrapper-tests").getPath + "/"
     fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
@@ -175,15 +176,16 @@ object MainObj {
     val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
       "platform.h", "verilatedtesterdriver.hpp")
 
+    val resRoot = getClass.getResource("/").getPath
     // copy blackbox verilog, scripts, driver and SW support files
-    fileCopyBulk("src/main/verilog/", "verilator/", verilogBlackBoxFiles)
-    fileCopyBulk("src/main/script/", "verilator/", scriptFiles)
-    fileCopyBulk("src/main/cpp/platform-wrapper-regdriver/", "verilator/",
+    fileCopyBulk(s"$resRoot/verilog/", "verilator/", verilogBlackBoxFiles)
+    fileCopyBulk(s"$resRoot/script/", "verilator/", scriptFiles)
+    fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", "verilator/",
       driverFiles)
     // build driver
     platformInst(accInst).generateRegDriver("verilator/")
     // copy test application
-    val testRoot = "src/main/cpp/platform-wrapper-tests/"
+    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
     fileCopy(testRoot + accelName + ".cpp", "verilator/main.cpp")
   }
 

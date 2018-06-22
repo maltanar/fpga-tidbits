@@ -16,7 +16,8 @@ class SequenceGenerator(w: Int, a: Int = 32) extends Module {
   }
 
   val regSeqElem = Reg(init = UInt(0, w))
-  val regElemsLeft = Reg(init = UInt(0, a))
+  val regCounter = Reg(init = UInt(0, a))
+  val regMaxCount = Reg(init = UInt(0, a))
   val regStep = Reg(init = UInt(0, a))
   io.finished := Bool(false)
   io.seq.valid := Bool(false)
@@ -30,18 +31,19 @@ class SequenceGenerator(w: Int, a: Int = 32) extends Module {
         when(io.start) {
           regStep := io.step
           regState := sRun
-          regElemsLeft := io.count
+          regCounter := UInt(0)
+          regMaxCount := io.count
           regSeqElem := io.init
         }
       }
 
       is(sRun) {
-        when (regElemsLeft === UInt(0)) {
+        when (regCounter === regMaxCount) {
           regState := sFinished
         } .otherwise {
           io.seq.valid := Bool(true)
           when(io.seq.ready) {
-            regElemsLeft := regElemsLeft - UInt(1)
+            regCounter := regCounter + UInt(1)
             regSeqElem := regSeqElem + regStep
           }
         }

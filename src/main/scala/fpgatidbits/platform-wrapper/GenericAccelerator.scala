@@ -28,16 +28,18 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
     crc.getValue.toHexString
   }
 
-  def makeDefaultSignature(): UInt = {
+  def hexSignature(): String = {
     import java.util.Date
     import java.text.SimpleDateFormat
     val dateFormat = new SimpleDateFormat("yyyyMMdd");
     val date = new Date();
     val dateString = dateFormat.format(date);
     val fullSignature = this.getClass.getSimpleName + "-" + dateString
-    val hexSignature = hexcrc32(fullSignature)
+    return hexcrc32(fullSignature)
+  }
 
-    return UInt("h" + hexSignature)
+  def makeDefaultSignature(): UInt = {
+    return UInt("h" + hexSignature())
   }
 
   // drive default values for memory read port i
