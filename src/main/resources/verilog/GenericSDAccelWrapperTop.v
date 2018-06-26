@@ -1,4 +1,4 @@
-module GenericSDAccelWrapperTop(input clk, input reset,
+module GenericSDAccelWrapperTop(input ap_clk, input ap_rst_n,
     output s_axi_control_AWREADY,
     input  s_axi_control_AWVALID,
     input [63:0] s_axi_control_AWADDR,
