@@ -44,6 +44,10 @@
 
 #include "wrapperregdriver.h"
 #include <xclhal2.h>
+#include <cassert>
+#include <iostream>
+
+using namespace std;
 
 void loadBitfile(const char * accelName);
 
@@ -57,26 +61,26 @@ public:
 	}
 
   virtual void copyBufferHostToAccel(void* hostBuffer, void* accelBuffer, unsigned int numBytes) {
-    const uint64_t dram_offset = (uint64_t*) accelBuffer;
+    const uint64_t dram_offset = (uint64_t) accelBuffer;
     int nret = xclUnmgdPwrite(m_device, 0, hostBuffer, numBytes, dram_offset);
     assert(nret >= 0);
 	}
 
 	virtual void copyBufferAccelToHost(void* accelBuffer, void* hostBuffer, unsigned int numBytes) {
-    const uint64_t dram_offset = (uint64_t*) accelBuffer;
+    const uint64_t dram_offset = (uint64_t) accelBuffer;
     int nret = xclUnmgdPread(m_device, 0, hostBuffer, numBytes, dram_offset);
     assert(nret >= 0);
 	}
 
 	virtual void* allocAccelBuffer(unsigned int numBytes) {
     // TODO need to cater for aligned alloc here?
-    return xclAllocDeviceBuffer2(
+    return (void *)xclAllocDeviceBuffer2(
       m_device, numBytes, XCL_MEM_DEVICE_RAM, XCL_DEVICE_RAM_BANK0
     );
 	}
 
 	virtual void deallocAccelBuffer(void* buffer) {
-    xclFreeDeviceBuffer(m_device, buffer);
+    xclFreeDeviceBuffer(m_device, (uint64_t)buffer);
 	}
 
   // (optional) functions for accelerator attach-detach handling
@@ -107,6 +111,7 @@ public:
   // (mandatory) register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
     const uint64_t reg_offset = regInd * sizeof(AccelReg);
+    cout << "offset = " << hex << reg_offset << " value " << regValue << dec << endl;
     size_t nret = xclWrite(
       m_device, m_csr_addrspace, m_csr_base + reg_offset, (void*)&regValue,
       sizeof(AccelReg)
@@ -149,6 +154,6 @@ protected:
       (*result)[size] = 0;
       return size;
   }
-}
+};
 
 #endif // XCLHALWRAPPER_H

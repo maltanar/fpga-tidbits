@@ -56,7 +56,7 @@ extern "C" {
   #include <stdlib.h>
 }
 
-static XlnkDriver* platform = 0;
+static XCLHalWrapperRegDriver* platform = 0;
 
 void platformSIGINTHandler(int signum) {
 	std::cout << "Caught SIGINT, forcing exit" << std::endl;
