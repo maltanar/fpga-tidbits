@@ -58,9 +58,9 @@ foreach up [ipx::get_user_parameters] {
 set_property sdx_kernel true [ipx::current_core]
 set_property sdx_kernel_type rtl [ipx::current_core]
 ipx::create_xgui_files [ipx::current_core]
-ipx::add_bus_parameter POLARITY [ipx::get_bus_interfaces reset -of_objects [ipx::current_core]]
-set_property value ACTIVE_HIGH [ipx::get_bus_parameters POLARITY -of_objects [ipx::get_bus_interfaces reset -of_objects [ipx::current_core]]]
-ipx::associate_bus_interfaces -busif csr -clock clk [ipx::current_core]
+#ipx::add_bus_parameter POLARITY [ipx::get_bus_interfaces ap_rst_n -of_objects [ipx::current_core]]
+#set_property value ACTIVE_LOW [ipx::get_bus_parameters POLARITY -of_objects [ipx::get_bus_interfaces ap_rst_n -of_objects [ipx::current_core]]]
+ipx::associate_bus_interfaces -busif s_axi_control -clock clk [ipx::current_core]
 ipx::associate_bus_interfaces -busif mem0 -clock clk [ipx::current_core]
 
 set_property xpm_libraries {XPM_CDC XPM_MEMORY XPM_FIFO} [ipx::current_core]
