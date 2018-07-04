@@ -74,9 +74,11 @@ public:
 
 	virtual void* allocAccelBuffer(unsigned int numBytes) {
     // TODO need to cater for aligned alloc here?
-    return (void *)xclAllocDeviceBuffer2(
+    uint64_t ret = xclAllocDeviceBuffer2(
       m_device, numBytes, XCL_MEM_DEVICE_RAM, XCL_DEVICE_RAM_BANK0
     );
+    assert(ret != 0xffffffffffffffffL);
+    return (void *) ret;
 	}
 
 	virtual void deallocAccelBuffer(void* buffer) {
@@ -99,7 +101,8 @@ public:
     int n_i0 = load_file_to_memory(name, (char **) &m_kernelbinary);
     assert(n_i0 >= 0);
     // load the xclbin into the device
-    xclLoadXclBin(m_device, (const xclBin *)m_kernelbinary);
+    int xclbin_ret = xclLoadXclBin(m_device, (const xclBin *)m_kernelbinary);
+    assert(xclbin_ret == 0);
   }
 
   virtual void detach() {
@@ -111,7 +114,6 @@ public:
   // (mandatory) register access methods for the platform wrapper
   virtual void writeReg(unsigned int regInd, AccelReg regValue) {
     const uint64_t reg_offset = regInd * sizeof(AccelReg);
-    cout << "offset = " << hex << reg_offset << " value " << regValue << dec << endl;
     size_t nret = xclWrite(
       m_device, m_csr_addrspace, m_csr_base + reg_offset, (void*)&regValue,
       sizeof(AccelReg)
