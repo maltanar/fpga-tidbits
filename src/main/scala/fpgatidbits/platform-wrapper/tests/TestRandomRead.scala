@@ -16,6 +16,9 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val sum = UInt(OUTPUT, 32)
   }
   io.signature := makeDefaultSignature()
+  // plug unused ports
+  plugMemWritePort(0)
+  plugMemWritePort(1)
 
   val rrgInds = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
   val opBytes = UInt(p.memDataBits/8)

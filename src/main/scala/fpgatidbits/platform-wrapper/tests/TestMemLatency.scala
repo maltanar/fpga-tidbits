@@ -25,6 +25,7 @@ class TestMemLatency(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val initCount = UInt(INPUT, width = 8)  // # IDs to initialize
   }
   io.signature := makeDefaultSignature()
+  plugMemWritePort(0)
 
   val rdP = new StreamReaderParams(
     streamWidth = 64, fifoElems = 8, mem = p.toMemReqParams(),

@@ -26,6 +26,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
+  // plug unused ports (write ports)
+  plugMemWritePort(0)
+  plugMemWritePort(1)
 
   // # bits per index, 32-bit integers are generally enough
   val indWidth = 32
