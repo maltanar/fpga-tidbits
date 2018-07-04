@@ -7,8 +7,8 @@ import Chisel._
 object GenericSDAccelParams extends PlatformWrapperParams {
   val platformName = "GenericSDAccel"
   val memAddrBits = 64
-  val memDataBits = 512
-  val memIDBits = 6
+  val memDataBits = 64
+  val memIDBits = 1
   val memMetaBits = 1
   val numMemPorts = 1
   val sameIDInOrder = true

@@ -61,7 +61,7 @@ ipx::create_xgui_files [ipx::current_core]
 #ipx::add_bus_parameter POLARITY [ipx::get_bus_interfaces ap_rst_n -of_objects [ipx::current_core]]
 #set_property value ACTIVE_LOW [ipx::get_bus_parameters POLARITY -of_objects [ipx::get_bus_interfaces ap_rst_n -of_objects [ipx::current_core]]]
 ipx::associate_bus_interfaces -busif s_axi_control -clock ap_clk [ipx::current_core]
-ipx::associate_bus_interfaces -busif mem0 -clock ap_clk [ipx::current_core]
+ipx::associate_bus_interfaces -busif m_axi_gmem -clock ap_clk [ipx::current_core]
 
 set_property xpm_libraries {XPM_CDC XPM_MEMORY XPM_FIFO} [ipx::current_core]
 set_property supported_families { } [ipx::current_core]

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root versionMajor="1" versionMinor="6">
-  <kernel name="memcpy" language="ip" vlnv="xilinx.com:RTLKernel:memcpy:1.0" attributes="" preferredWorkGroupSizeMultiple="0" workGroupSize="1" debug="true" compileOptions=" -g" profileType="none" interrupt="true">
+  <kernel name="GenericSDAccelWrapperTop" language="ip" vlnv="xilinx.com:RTLKernel:GenericSDAccelWrapperTop:1.0" attributes="" preferredWorkGroupSizeMultiple="0" workGroupSize="1" debug="true" compileOptions=" -g" profileType="none" interrupt="true">
     <ports>
       <port name="s_axi_control" mode="slave" range="0x1000" dataWidth="32" portType="addressable" base="0x0"/>
-      <port name="m_axi_gmem" mode="master" range="0xFFFFFFFF" dataWidth="32" portType="addressable" base="0x0"/>
+      <port name="m_axi_gmem" mode="master" range="0xFFFFFFFF" dataWidth="64" portType="addressable" base="0x0"/>
     </ports>
     <args>
       <arg name="src" addressQualifier="1" id="0" port="m_axi_gmem" size="0x8" offset="0x18" hostOffset="0x0" hostSize="0x8" type="int*"/>
