@@ -11,9 +11,9 @@ class StreamThrottle[T <: Data](gen: T) extends Module {
     val out = Decoupled(gen)        // output stream
     val throttle = Bool(INPUT)      // stop input to output when this is high
   }
-  out.bits := in.bits
-  out.valid := in.valid & !io.throttle
-  in.ready := out.ready & !io.throttle
+  io.out.bits := io.in.bits
+  io.out.valid := io.in.valid & !io.throttle
+  io.in.ready := io.out.ready & !io.throttle
 }
 
 object StreamThrottle {
