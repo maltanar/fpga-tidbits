@@ -34,7 +34,7 @@ object TidbitsMakeUtils {
   }
 
   def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq()) = {
-    val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
+    val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
     val platformInst = platformMap("Tester")
     val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
     val chiselArgs = Array("--backend","c","--targetDir", fullDir)
@@ -61,7 +61,7 @@ object TidbitsMakeUtils {
   }
 
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
-    val fullDir = s"readlink -f $outDir".!!.filter(_ >= ' ')
+    val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
     val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
     val mkd = s"mkdir -p $fullDir".!!
     // copy necessary files to build the driver
