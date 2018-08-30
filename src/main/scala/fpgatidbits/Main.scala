@@ -46,11 +46,14 @@ object TidbitsMakeUtils {
     // copy emulator driver and SW support files
     fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
     val drvFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
+    // get only the cpp files
+    val regex = "(.*\\.cpp)"
+    val cppDrvFiles = drvFiles.filter(x => x matches regex)
     // call g++ to produce a shared library
     println("Compiling hardware emulator as library...")
     val gc = Seq(
       "g++", "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
-    ) ++ gOpts ++ drvFiles ++ Seq(outDir+"/TesterWrapper.cpp")
+    ) ++ gOpts ++ cppDrvFiles ++ Seq(outDir+"/TesterWrapper.cpp")
     println(gc.mkString(" "))
     val gcret = gc.!!
     println(gcret)
