@@ -45,7 +45,7 @@ set path_to_ip  [lindex $::argv 2]
 set path_to_tmp $path_to_hdl/pkg_tmp
 
 create_project -force kernel_pack $path_to_tmp
-add_files -norecurse [glob $path_to_hdl/*.v $path_to_hdl/*.sv]
+add_files -norecurse [glob $path_to_hdl/*.v $path_to_hdl/*.sv $path_to_hdl/*.vhd]
 update_compile_order -fileset sources_1
 update_compile_order -fileset sim_1
 ipx::package_project -root_dir $path_to_ip -vendor xilinx.com -library RTLKernel -taxonomy /KernelIP -import_files -set_current false
