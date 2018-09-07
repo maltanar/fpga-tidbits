@@ -19,6 +19,7 @@ object TidbitsMakeUtils {
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
     "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
+    "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
     "ZC706" -> {f => new ZC706Wrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
     "Tester" -> {f => new TesterWrapper(f)}
@@ -119,12 +120,7 @@ object MainObj {
     "TestGather" -> {p => new TestGather(p)}
   )
 
-  val platformMap: PlatformMap = Map(
-    "ZedBoard" -> {f => new ZedBoardWrapper(f)},
-    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
-    "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
-    "Tester" -> {f => new TesterWrapper(f)}
-  )
+  val platformMap = TidbitsMakeUtils.platformMap
 
   def fileCopy(from: String, to: String) = {
     s"cp -f $from $to".!!

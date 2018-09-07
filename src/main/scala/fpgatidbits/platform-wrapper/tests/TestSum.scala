@@ -17,6 +17,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val cycleCount = UInt(OUTPUT, width = 32)
   }
   io.signature := makeDefaultSignature()
+  plugMemWritePort(0)
 
   val rdP = new StreamReaderParams(
     streamWidth = 32, fifoElems = 8, mem = p.toMemReqParams(),

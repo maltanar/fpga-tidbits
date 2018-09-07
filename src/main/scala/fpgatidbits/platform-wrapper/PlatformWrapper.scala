@@ -118,7 +118,8 @@ extends Module {
         } else if(bits.dir == OUTPUT) {
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := Bool(true)
-            regFile.regIn(allocReg + i).bits := bits(i*wCSR+wCSR-1, i*wCSR)
+            val ubound = math.min(i*wCSR+wCSR-1, w-1)
+            regFile.regIn(allocReg + i).bits := bits(ubound, i*wCSR)
           }
         } else { throw new Exception("Wire in IO: "+name) }
 
@@ -162,7 +163,9 @@ extends Module {
       fxnStr += "  AccelDblReg get_" + regName + "() "
       fxnStr += "{ return (AccelDblReg)readReg("+regs(1).toString+") << 32 "
       fxnStr += "| (AccelDblReg)readReg("+regs(0).toString+"); }"
-    } else { throw new Exception("Multi-reg reads not yet implemented") }
+    } else {
+      println(s"$regName is split across more than 2 regs, read manually")
+    }
 
     return fxnStr
   }
@@ -181,7 +184,16 @@ extends Module {
       fxnStr += "  void set_" + regName + "(AccelDblReg value)"
       fxnStr += " { writeReg("+regs(0).toString+", (AccelReg)(value >> 32)); "
       fxnStr += "writeReg("+regs(1).toString+", (AccelReg)(value & 0xffffffff)); }"
-    } else { throw new Exception("Multi-reg writes not yet implemented") }
+    } else {
+      println(s"$regName is split across more than 2 regs, write manually")
+      var r_ind: Int = 0
+      for(r <- regs) {
+        // single register write
+        fxnStr += "  void set_" + regName + s"$r_ind(AccelReg value)"
+        fxnStr += " {writeReg(" + r.toString + ", value);}\n"
+        r_ind += 1
+      }
+    }
 
     return fxnStr
   }
