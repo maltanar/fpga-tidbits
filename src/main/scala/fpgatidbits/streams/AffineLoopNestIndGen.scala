@@ -41,7 +41,7 @@ class AffineLoopNestIndGen(val n: Int, val w: Int) extends Module {
     if(i == 0) {
       cntrs(i).enable := doStep
     } else {
-      cntrs(i).enable := cntrs(i-1).full & doStep
+      cntrs(i).enable := cntrs(i-1).full & cntrs(i-1).enable & doStep
     }
   }
   // finite state machine for decoupled logic

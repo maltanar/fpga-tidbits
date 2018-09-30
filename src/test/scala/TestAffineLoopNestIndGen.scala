@@ -8,7 +8,7 @@ import fpgatidbits.streams._
 class AffineLoopNestIndGenTester(c: AffineLoopNestIndGen) extends Tester(c) {
   val levels = c.n
   val r = scala.util.Random
-  val reps = r.nextInt(5)
+  val reps = 1 + r.nextInt(5)
 
   // functions to create the golden values for the affine loop nest
   def balance(current: Seq[Int], desc: Seq[Int]): Seq[Int] = {
@@ -71,7 +71,7 @@ class AffineLoopNestIndGenTester(c: AffineLoopNestIndGen) extends Tester(c) {
 class TestAffineLoopNestIndGen extends JUnitSuite {
   @Test def AffineLoopNestIndGenTest {
     for(w <- 32 to 32) {
-      for(n <- 2 to 2) {
+      for(n <- 2 to 4) {
         // Chisel arguments to pass to chiselMainTest
         def testArgs = TestHelpers.stdArgs
         // function that instantiates the Module to be tested
