@@ -43,7 +43,6 @@ public:
     // initialize and reset the model
     reset();
     m_regCount = m_inst->io_regFileIF_regCount;
-    cout << "memwords " << m_memWords << " regs " << m_regCount << endl;
   }
 
   virtual void detach() {
