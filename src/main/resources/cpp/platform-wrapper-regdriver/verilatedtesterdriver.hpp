@@ -102,9 +102,9 @@ public:
   }
 
   virtual void * allocAccelBuffer(unsigned int numBytes) {
-    // all this assumes allocation and mem word size of 8 bytes
-    // round requested size to nearest multiple of 8
-    unsigned int actualAllocSize = (numBytes + 7) / 8 * 8;
+    // all this assumes allocation and mem word size of 64 bytes
+    // round requested size to nearest multiple of 64
+    unsigned int actualAllocSize = (numBytes + 63) / 64 * 64;
     void * accelBuf = (void *) m_freePtr;
     // update free pointer and sanity check
     m_freePtr += actualAllocSize;
