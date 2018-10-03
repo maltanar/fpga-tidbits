@@ -81,7 +81,7 @@ object TidbitsMakeUtils {
     val tidbitsDir = getClass.getResource("/").getPath
 
     val platformInst = {f => new VerilatedTesterWrapper(f)}
-    val chiselArgs = Array("--backend","v","--targetDir", "verilator")
+    val chiselArgs = Array("--backend","v","--targetDir", s"$destDir")
     // generate verilog for the accelerator
     chiselMain(chiselArgs, () => Module(platformInst(accInst)))
     val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")

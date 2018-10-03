@@ -39,7 +39,7 @@ public:
 #endif
 
     // get # words in the memory -- TODO get from verilator?
-    m_memWords = 1024*1024;
+    m_memWords = 64*1024*1024;
     // initialize and reset the model
     reset();
     m_regCount = m_inst->io_regFileIF_regCount;
