@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# requires a recent version of verilator, e.g. 3.878
-VERILATOR_SRC_DIR="/usr/local/share/verilator/include"
+# requires a recent version of verilator, e.g. 3.916
+VERILATOR_SRC_DIR="/usr/share/verilator/include"
 
 # call verilator to translate verilog to C++
 verilator -Iother-verilog --cc TesterWrapper.v -Wno-assignin -Wno-fatal -Wno-lint -Wno-style -Wno-COMBDLY -Wno-STMTDLY --Mdir verilated --trace
