@@ -35,11 +35,11 @@ object TidbitsMakeUtils {
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
-  def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq()) = {
+  def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq(), chiselOpts: Seq[String] = Seq()) = {
     val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
     val platformInst = platformMap("Tester")
     val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
-    val chiselArgs = Array("--backend","c","--targetDir", fullDir)
+    val chiselArgs = Array("--backend","c","--targetDir", fullDir) ++ chiselOpts
 
     chiselMain(chiselArgs, () => Module(platformInst(accInst)))
     val p = platformInst(accInst)

@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string.h>
+#include <stdio.h>
 using namespace std;
 #include "wrapperregdriver.h"
 #include "TesterWrapper.h"
@@ -33,6 +34,9 @@ public:
 
   virtual void attach(const char * name) {
     m_inst = new TesterWrapper_t();
+    m_cycle = 0;
+    __TESTERDRIVER_DEBUG(m_vcd = fopen("dump.vcd", "w"));
+    __TESTERDRIVER_DEBUG(m_inst->dump_init(m_vcd));
     // get # words in the memory
     m_memWords = m_inst->TesterWrapper__mem.length();
     // initialize and reset the model
@@ -45,6 +49,7 @@ public:
     if(m_inst) {
       delete m_inst;
       m_inst = 0;
+      __TESTERDRIVER_DEBUG(fclose(m_vcd));
     }
   }
 
@@ -156,9 +161,11 @@ public:
 
 protected:
   TesterWrapper_t * m_inst;
+  FILE * m_vcd;
   unsigned int m_memWords;
   unsigned int m_regCount;
   uint64_t m_freePtr;
+  uint64_t m_cycle;
 
   void reset() {
     m_inst->clock(1);
@@ -173,6 +180,8 @@ protected:
       // Chisel c++ backend requires this workaround to get out the correct values
       m_inst->clock_lo(0);
       __TESTERDRIVER_DEBUG(m_inst->print(cout));
+     m_cycle++;
+     __TESTERDRIVER_DEBUG(m_inst->dump(m_vcd, m_cycle));
     }
   }
 
