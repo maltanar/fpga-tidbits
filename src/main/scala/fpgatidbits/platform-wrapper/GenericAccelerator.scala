@@ -29,12 +29,14 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   }
 
   def hexSignature(): String = {
-    import java.util.Date
+    /*import java.util.Date
     import java.text.SimpleDateFormat
     val dateFormat = new SimpleDateFormat("yyyyMMdd");
     val date = new Date();
-    val dateString = dateFormat.format(date);
-    val fullSignature = this.getClass.getSimpleName + "-" + dateString
+    val dateString = dateFormat.format(date);*/
+    // removing date from signature due to discrepancies that this causes
+    // when HW and driver are generated on different days
+    val fullSignature = this.getClass.getSimpleName/* + "-" + dateString*/
     return hexcrc32(fullSignature)
   }
 
