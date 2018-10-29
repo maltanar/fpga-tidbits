@@ -130,11 +130,12 @@ object TidbitsMakeUtils {
       // generate include file that sets args for templated functions
       println(s"Writing template defines to ${synDir}/${hls_fxn_name}_TemplateDefs.hpp")
       hls_bb.generateTemplateDefines(s"${synDir}/${hls_fxn_name}_TemplateDefs.hpp")
+      val inclDirs_withTemplateDefines = inclDirs ++ Seq(s"${synDir}")
       // call HLS synthesis to generate Verilog
       TidbitsHLSTools.hlsToVerilog(
         s"${hlsSrcDir}/${hls_fxn_name}.cpp",
         destDir, synDir, hls_fxn_name, hls_fxn_name,
-        inclDirs, fpgaPart, nsClk
+        inclDirs_withTemplateDefines, fpgaPart, nsClk
       )
     }
   }
