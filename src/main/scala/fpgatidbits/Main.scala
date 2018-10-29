@@ -8,6 +8,7 @@ import fpgatidbits.SimUtils._
 import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.PlatformWrapper._
+import fpgatidbits.hlstools._
 import java.io.{File,FileInputStream,FileOutputStream}
 import sys.process._
 
@@ -98,8 +99,38 @@ object TidbitsMakeUtils {
     // build driver
     platformInst(accInst).generateRegDriver(destDir)
   }
-}
 
+  def makeHLSDependencies(
+    // the accelerator instantiation function
+    accInst: AccelInstFxn,
+    // path to HLS sources, each HLSBlackBox function assumed to live under
+    // a .cpp file with its own name under this folder
+    hlsSrcDir: String,
+    // target directory where generated Verilog will be placed
+    destDir: String,
+    // include directories for HLS sources
+    inclDirs: Seq[String] = Seq(),
+    // FPGA part to use during HLS synthesis
+    fpgaPart: String = "xc7z020clg400-1",
+    // target clock period for HLS synthesis, in nanoseconds
+    nsClk: String = "5.0"
+  ) = {
+    // make an instance of the accelerator using the given function
+    val acc = accInst(TesterWrapperParams)
+
+    println("Generating HLS dependencies...")
+    // generate HLS for each registered HLSBlackBox dependency
+    for(hls_bb <- acc.hlsBlackBoxes) {
+      val hls_fxn_name = hls_bb.getClass.getSimpleName
+      // TODO call template arg generation function here
+      TidbitsHLSTools.hlsToVerilog(
+        s"${hlsSrcDir}/${hls_fxn_name}.cpp",
+        destDir, hls_fxn_name, hls_fxn_name,
+        inclDirs, fpgaPart, nsClk
+      )
+    }
+  }
+}
 
 object MainObj {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
