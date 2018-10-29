@@ -218,6 +218,8 @@ extends Module {
     val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
 
+    val hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
+
     driverStr += s"""
 #ifndef ${driverName}_H
 #define ${driverName}_H
@@ -225,6 +227,9 @@ extends Module {
 #include <map>
 #include <string>
 #include <vector>
+
+// template parameters used for instantiating TemplatedHLSBlackBoxes, if any:
+${hlsBlackBoxTemplateDefines}
 
 using namespace std;
 class $driverName {

@@ -24,17 +24,23 @@ abstract class TemplatedHLSBlackBox() extends BlackBox {
   def hlsTemplateParams: Map[String, String]
   val templateParamPrefix = "TEMPLATE_PARAM_"
 
-  def generateTemplateDefines(fileName: String) = {
-    // build the define string by serializing the pairs as
-    // given by hlsTemplateParams
-    var templateDefines: String = ""
-    for((name, value) <- hlsTemplateParams) {
-      templateDefines += s"#define ${templateParamPrefix}${name} ${value}\n"
-    }
+  def generateTemplateDefines(fileName: String): String = {
+    val templateDefines = generateTemplateDefines()
     // write the generated define string into a file
     import java.io._
     val writer = new PrintWriter(new File(fileName))
     writer.write(templateDefines)
     writer.close()
+    return templateDefines
+  }
+
+  def generateTemplateDefines(): String = {
+    // build and return the define string by serializing the pairs as
+    // given by hlsTemplateParams
+    var templateDefines: String = ""
+    for((name, value) <- hlsTemplateParams) {
+      templateDefines += s"#define ${templateParamPrefix}${name} ${value}\n"
+    }
+    return templateDefines
   }
 }
