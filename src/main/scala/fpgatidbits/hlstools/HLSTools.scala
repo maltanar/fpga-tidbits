@@ -15,10 +15,12 @@ object TidbitsHLSTools {
     fpgaPart: String = "xc7z020clg400-1",
     nsClk: String = "5.0"
   ) = {
+    // use a temp dir for synthesis, remove if exists
+    val synDir = s"/tmp/hls_syn_$projName"
+    s"rm -rf $synDir".!!
+    s"mkdir -p $synDir".!!
     // get path to hls_syn.tcl
     val synthScriptPath = getClass.getResource("/script/hls_syn.tcl").getPath
-    // ensure output directory exists
-    val mkd = s"mkdir -p $outDir".!!
     // need to provide include dirs as a single string argument, parsing
     // done in tcl. note: dirs here should have no spaces!
     val inclDirString = inclDirs.mkString(" ")
@@ -28,6 +30,8 @@ object TidbitsHLSTools {
       "-f", synthScriptPath,
       "-tclargs", projName, inFile, fpgaPart, nsClk, topFxnName, inclDirString
     )
-    val status = Process(cmdline, new File(outDir)) ! ProcessLogger(stdout append _+"\n", stderr append _+"\n")
+    val status = Process(cmdline, new File(synDir)) ! ProcessLogger(stdout append _+"\n", stderr append _+"\n")
+    // copy results to outDir
+    s"cp -a $synDir/$projName/sol1/impl/verilog/. $outDir/".!!
   }
 }
