@@ -2,7 +2,8 @@ package fpgatidbits.PlatformWrapper
 
 import Chisel._
 import fpgatidbits.dma._
-import scala.collection.mutable.LinkedHashMap
+import fpgatidbits.hlstools.TemplatedHLSBlackBox
+import scala.collection.mutable.ArrayBuffer
 
 // TODO should the parameters for GenericAccelerator be separated from the
 // parameters for PlatformWrapper?
@@ -20,6 +21,12 @@ class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends B
 abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   def io: GenericAcceleratorIF
   def numMemPorts: Int
+  val hlsBlackBoxes = ArrayBuffer[TemplatedHLSBlackBox]()
+
+  def HLSBlackBox[T <: TemplatedHLSBlackBox](blackBox: T): T = {
+    hlsBlackBoxes += blackBox
+    return blackBox
+  }
 
   def hexcrc32(s: String): String = {
     import java.util.zip.CRC32
