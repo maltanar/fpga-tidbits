@@ -122,10 +122,18 @@ object TidbitsMakeUtils {
     // generate HLS for each registered HLSBlackBox dependency
     for(hls_bb <- acc.hlsBlackBoxes) {
       val hls_fxn_name = hls_bb.getClass.getSimpleName
-      // TODO call template arg generation function here
+      println(s"Generating HLS for ${hls_fxn_name}")
+      // use a temp dir for synthesis, remove if exists
+      val synDir = s"/tmp/hls_syn_${hls_fxn_name}"
+      s"rm -rf $synDir".!!
+      s"mkdir -p $synDir".!!
+      // generate include file that sets args for templated functions
+      println(s"Writing template defines to ${synDir}/${hls_fxn_name}_TemplateDefs.hpp")
+      hls_bb.generateTemplateDefines(s"${synDir}/${hls_fxn_name}_TemplateDefs.hpp")
+      // call HLS synthesis to generate Verilog
       TidbitsHLSTools.hlsToVerilog(
         s"${hlsSrcDir}/${hls_fxn_name}.cpp",
-        destDir, hls_fxn_name, hls_fxn_name,
+        destDir, synDir, hls_fxn_name, hls_fxn_name,
         inclDirs, fpgaPart, nsClk
       )
     }

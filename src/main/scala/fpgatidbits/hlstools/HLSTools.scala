@@ -9,16 +9,13 @@ object TidbitsHLSTools {
   def hlsToVerilog(
     inFile: String,
     outDir: String,
+    synDir: String,
     projName: String,
     topFxnName: String,
     inclDirs: Seq[String] = Seq(),
     fpgaPart: String = "xc7z020clg400-1",
     nsClk: String = "5.0"
   ) = {
-    // use a temp dir for synthesis, remove if exists
-    val synDir = s"/tmp/hls_syn_$projName"
-    s"rm -rf $synDir".!!
-    s"mkdir -p $synDir".!!
     // get path to hls_syn.tcl
     val synthScriptPath = getClass.getResource("/script/hls_syn.tcl").getPath
     // need to provide include dirs as a single string argument, parsing
