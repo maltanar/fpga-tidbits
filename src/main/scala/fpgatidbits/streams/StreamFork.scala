@@ -35,4 +35,13 @@ object StreamCopy {
     m.outA <> outA
     m.outB <> outB
   }
+
+  def apply[T <: Data]
+  (in: DecoupledIO[T], out: Seq[DecoupledIO[T]]) = {
+    for(o <- out) {
+      o.bits := in.bits
+      o.valid := in.valid & out.filterNot(_ == o).map(_.ready).reduce(_&_)
+    }
+    in.ready := out.map(_.ready).reduce(_ & _)
+  }
 }
