@@ -218,7 +218,10 @@ extends Module {
     val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
 
-    val hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
+    var hlsBlackBoxTemplateDefines = ""
+    if(accel.hlsBlackBoxes.size != 0) {
+      hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
+    }
 
     driverStr += s"""
 #ifndef ${driverName}_H
