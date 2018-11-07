@@ -3,14 +3,19 @@ package fpgatidbits.streams
 import Chisel._
 import fpgatidbits.axi._
 
+class SerialInParallelOutIO(parWidth: Int, serWidth: Int) extends Bundle {
+  val serIn = UInt(INPUT, serWidth)
+  val parOut = UInt(OUTPUT, parWidth)
+  val shiftEn = Bool(INPUT)
+
+  override def cloneType: this.type =
+    new SerialInParallelOutIO(parWidth, serWidth).asInstanceOf[this.type]
+}
+
 class SerialInParallelOut(parWidth: Int, serWidth: Int) extends Module {
   val numShiftSteps = parWidth/serWidth
 
-  val io = new Bundle {
-    val serIn = UInt(INPUT, serWidth)
-    val parOut = UInt(OUTPUT, parWidth)
-    val shiftEn = Bool(INPUT)
-  }
+  val io = new SerialInParallelOutIO(parWidth, serWidth)
 
   val stages = Vec.fill(numShiftSteps) { Reg(init = UInt(0, serWidth)) }
 
