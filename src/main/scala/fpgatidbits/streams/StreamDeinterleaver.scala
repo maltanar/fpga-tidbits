@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
 import Chisel._
+import fpgatidbits.ocm.FPGAQueue
 
 // deinterleavers a input stream with identifiers onto one of the output
 // streams, based on the ID value and a routing function
@@ -51,11 +52,11 @@ extends Module {
 
   val deintl = Module(new StreamDeinterleaver(numDests, gen, route)).io
 
-  io.in <> deintl.in
+  FPGAQueue(io.in, 2) <> deintl.in
   io.decodeErrors := deintl.decodeErrors
 
   for(i <- 0 until numDests) {
-    val q = Module(new Queue(gen, capacity)).io
+    val q = Module(new FPGAQueue(gen, capacity)).io
     q.enq <> deintl.out(i)
     io.out(i) <> q.deq
   }
