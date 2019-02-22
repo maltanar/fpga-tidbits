@@ -77,21 +77,35 @@ public:
 	}
 
 	virtual void copyBufferHostToAccel(void* hostBuffer, void* accelBuffer, unsigned int numBytes) {
-		PhysMap::iterator iter = m_physmap.find(accelBuffer);
-		if (iter == m_physmap.end()) {
-			throw "Invalid buffer specified";
+		for(PhysMap::iterator iter = m_physmap.begin(); iter != m_physmap.end(); ++iter) {
+			uint64_t phys_base = (uint64_t) iter->first;
+			uint64_t virt_base = (uint64_t) iter->second;
+			size_t alloc_size = m_physmap_size[iter->first];
+			uint64_t query = (uint64_t) accelBuffer;
+			if( (phys_base <= query) && ((query + numBytes) <= (phys_base + alloc_size)) ) {
+				uint64_t offset = query - phys_base;
+				void * accelBuffer = (void*)(virt_base + offset);
+				std::memcpy(accelBuffer, hostBuffer, numBytes);
+				return;
+			}
 		}
-		void* virt = iter->second;
-		std::memcpy(virt, hostBuffer, numBytes);
+		throw "Invalid buffer specified";
 	}
 
 	virtual void copyBufferAccelToHost(void* accelBuffer, void* hostBuffer, unsigned int numBytes) {
-		PhysMap::iterator iter = m_physmap.find(accelBuffer);
-		if (iter == m_physmap.end()) {
-			throw "Invalid buffer specified";
+		for(PhysMap::iterator iter = m_physmap.begin(); iter != m_physmap.end(); ++iter) {
+			uint64_t phys_base = (uint64_t) iter->first;
+			uint64_t virt_base = (uint64_t) iter->second;
+			size_t alloc_size = m_physmap_size[iter->first];
+			uint64_t query = (uint64_t) accelBuffer;
+			if( (phys_base <= query) && ((query + numBytes) <= (phys_base + alloc_size)) ) {
+				uint64_t offset = query - phys_base;
+				void * accelBuffer = (void*)(virt_base + offset);
+				std::memcpy(hostBuffer, accelBuffer, numBytes);
+				return;
+			}
 		}
-		void* virt = iter->second;
-		std::memcpy(hostBuffer, virt, numBytes);
+		throw "Invalid buffer specified";
 	}
 
 	virtual void* allocAccelBuffer(unsigned int numBytes) {
@@ -99,6 +113,7 @@ public:
 		if (!virt) return 0;
 		void* phys = reinterpret_cast<void*>(cma_get_phy_addr(virt));
 		m_physmap.insert(std::make_pair(phys, virt));
+		m_physmap_size.insert(std::make_pair(phys, numBytes));
 		return phys;
 	}
 
@@ -109,6 +124,7 @@ public:
 		}
 		cma_free(iter->second);
 		m_physmap.erase(iter);
+		m_physmap_size.erase(iter->first);
 	}
 
   // (optional) functions for accelerator attach-detach handling
@@ -128,7 +144,9 @@ public:
 
 private:
 	typedef std::map<void*, void*> PhysMap;
+	typedef std::map<void*, size_t> PhysMapSize;
 	PhysMap m_physmap;
+	PhysMapSize m_physmap_size;
 	AccelReg* m_reg;
 	uint32_t m_regSize;
 };
