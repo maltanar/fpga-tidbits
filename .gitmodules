@@ -1,0 +1,3 @@
+[submodule "src/main/resources/script/oh-my-xilinx"]
+	path = src/main/resources/script/oh-my-xilinx
+	url = https://bitbucket.org/maltanar/oh-my-xilinx.git
