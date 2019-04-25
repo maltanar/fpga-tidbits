@@ -28,6 +28,17 @@ object TidbitsMakeUtils {
     "Tester" -> {f => new TesterWrapper(f)}
   )
 
+  // handy to have a few commonly available Xilinx FPGA boards here
+  val fpgaPartMap = Map(
+    "ZedBoard" -> "xc7z020clg400-1",
+    "PYNQZ1" -> "xc7z020clg400-1",
+    "PYNQU96" -> "xczu3eg-sbva484-1-i",
+    "ZC706" -> "xc7z045ffg900-2",
+    "KU115" -> "xcku115-flvb2104-2-e",
+    "VerilatedTester" -> "xczu3eg-sbva484-1-i", // use Ultra96 part for tester
+    "VU9P" -> "xcvu9p-flgb2104-2-i"
+  )
+
   def fileCopy(from: String, to: String) = {
     s"cp -f $from $to" !
   }
