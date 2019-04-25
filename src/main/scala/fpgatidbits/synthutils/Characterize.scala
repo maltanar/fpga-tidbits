@@ -92,8 +92,8 @@ object VivadoSynth {
     var ret: CharacterizeResult = new CharacterizeResult(
       lut = 0, reg = 0, bram = 0, dsp = 0, target_ns = 0, fmax_mhz = 0)
     try {
-      // TODO add oh-my-xilinx to PATH here
-      val compile_res = Process(s"vivadocompile.sh $topModuleName clk $fpgaPart", new File(path)).!!
+      val omxDir = getClass.getResource("/script/oh-my-xilinx").getPath
+      val compile_res = Process(s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart", new File(path)).!!
       val result_res = Process(s"cat results_$topModuleName/res.txt", new File(path)).!!
       // do some string parsing to pull out the numbers
       val result_lines = result_res.split("\n")
