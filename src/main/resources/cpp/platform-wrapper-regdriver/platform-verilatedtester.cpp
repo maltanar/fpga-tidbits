@@ -14,5 +14,8 @@ WrapperRegDriver * initPlatform() {
 }
 
 void deinitPlatform(WrapperRegDriver * driver) {
-  // TODO deinit tester?
+  if(platform) {
+    delete platform;
+    platform = 0;
+  }
 }
