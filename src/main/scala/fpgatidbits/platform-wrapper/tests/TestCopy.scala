@@ -8,7 +8,7 @@ import fpgatidbits.streams._
 // TODO support non-word-aligned sizes in byteCount
 
 class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 2
+  val numMemPorts = 1
   val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
@@ -23,12 +23,7 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val wrg = Module(new WriteReqGen(p.toMemReqParams(), 0, 8)).io
 
   val readPort = io.memPort(0)
-  val writePort = io.memPort(1)
-
-  // plug unused valid signals
-  readPort.memWrReq.valid := Bool(false)
-  readPort.memWrDat.valid := Bool(false)
-  writePort.memRdReq.valid := Bool(false)
+  val writePort = io.memPort(0)
 
   rrg.ctrl.start := io.start
   rrg.ctrl.throttle := Bool(false)
