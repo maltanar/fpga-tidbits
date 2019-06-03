@@ -17,13 +17,13 @@ object PYNQU96CCParams extends PlatformWrapperParams {
   val coherentMem = true
 }
 
-class PYNQU96Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class PYNQU96CCWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   extends AXIPlatformWrapper(PYNQU96Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-ultra96-cc-xlnk.cpp", "xlnkdriver.hpp"
   )
   setName("PYNQU96CCWrapper")
-  setModuleName("PYNQU9CC6Wrapper")
+  setModuleName("PYNQU96CCWrapper")
   // override AXI MM signals for cache coherency
   io.mem(0).readAddr.bits.cache := UInt("b1100")
   io.mem(0).writeAddr.bits.cache := UInt("b1100")

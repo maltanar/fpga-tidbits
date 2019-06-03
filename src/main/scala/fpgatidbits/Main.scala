@@ -21,7 +21,7 @@ object TidbitsMakeUtils {
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
     "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
     "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
-    "PYNQU96CC" -> {f => new PYNQU9CC6Wrapper(f)},
+    "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
     "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
     "ZC706" -> {f => new ZC706Wrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
