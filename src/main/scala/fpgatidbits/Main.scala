@@ -21,6 +21,7 @@ object TidbitsMakeUtils {
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
     "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
     "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
+    "PYNQU96CC" -> {f => new PYNQU9CC6Wrapper(f)},
     "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
     "ZC706" -> {f => new ZC706Wrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
@@ -33,6 +34,7 @@ object TidbitsMakeUtils {
     "ZedBoard" -> "xc7z020clg400-1",
     "PYNQZ1" -> "xc7z020clg400-1",
     "PYNQU96" -> "xczu3eg-sbva484-1-i",
+    "PYNQU96CC" -> "xczu3eg-sbva484-1-i",
     "ZC706" -> "xc7z045ffg900-2",
     "KU115" -> "xcku115-flvb2104-2-e",
     "VerilatedTester" -> "xczu3eg-sbva484-1-i", // use Ultra96 part for tester
