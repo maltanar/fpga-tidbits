@@ -25,6 +25,7 @@ trait PlatformWrapperParams {
   def memIDBits: Int
   def memMetaBits: Int
   def sameIDInOrder: Boolean
+  def coherentMem: Boolean
   val csrDataBits: Int = 32 // TODO let platforms configure own CSR width
 
   def toMemReqParams(): MemReqParams = {

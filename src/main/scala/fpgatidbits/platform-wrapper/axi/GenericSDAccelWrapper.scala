@@ -14,6 +14,7 @@ object GenericSDAccelParams extends PlatformWrapperParams {
   val sameIDInOrder = true
   val typicalMemLatencyCycles = 128
   val burstBeats = 8
+  val coherentMem = false
 }
 
 class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)

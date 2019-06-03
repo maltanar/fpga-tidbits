@@ -20,6 +20,7 @@ object WX690TParams extends PlatformWrapperParams {
   val sameIDInOrder = false
   val typicalMemLatencyCycles = 128
   val burstBeats = 8
+  val coherentMem = false
 }
 
 // TODO plug unused platform ports if accel has less mem ports

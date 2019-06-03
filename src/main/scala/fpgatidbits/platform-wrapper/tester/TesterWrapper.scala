@@ -24,6 +24,7 @@ object TesterWrapperParams extends PlatformWrapperParams {
   val sameIDInOrder = true
   val typicalMemLatencyCycles = 16
   val burstBeats = 8
+  val coherentMem = false
 }
 
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
