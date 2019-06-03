@@ -59,8 +59,8 @@ void loadBitfile(const char * accelName);
 class XlnkDriver : public WrapperRegDriver
 {
 public:
-	XlnkDriver(uint32_t regBase, unsigned int regSize):
-		m_regSize(regSize) {
+	XlnkDriver(uint32_t regBase, unsigned int regSize, bool assume_coherency = false):
+		m_regSize(regSize), m_assume_coherency(assume_coherency) {
 		m_reg = reinterpret_cast<AccelReg*>(cma_mmap(regBase, regSize));
 		if (!m_reg) throw "Failed to allocate registers";
 	}
@@ -74,6 +74,20 @@ public:
 
 	virtual std::string platformID() {
 		return "XlnkDriver";
+	}
+
+	virtual bool is_coherent() {
+		return assume_coherency;
+	}
+
+	virtual void * phys2virt(void * accelBuffer) {
+		// the assume_coherency flag doesn't really "do" anything, it's mostly
+		// there as a safety net to warn the user if they are using the non-CC
+		// variant of the platform (PYNQU96 instead of PYNQU96CC)
+		if(!assume_coherency) {
+			throw "Coherency not enabled for XlnkDriver, you should not use phys2virt";
+		}
+		return m_physmap[accelBuffer];
 	}
 
 	virtual void copyBufferHostToAccel(void* hostBuffer, void* accelBuffer, unsigned int numBytes) {
@@ -149,6 +163,7 @@ private:
 	PhysMapSize m_physmap_size;
 	AccelReg* m_reg;
 	uint32_t m_regSize;
+	bool m_assume_coherency;
 };
 
 

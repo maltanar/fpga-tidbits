@@ -15,8 +15,13 @@ public:
   // (optional) functions for host-accelerator buffer management
   virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {}
   virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {}
-  virtual void * allocAccelBuffer(unsigned int numBytes) {return 0;}
+  virtual void * allocAccelBuffer(unsigned int numBytes) { throw "allocAccelBuffer not supported"; }
   virtual void deallocAccelBuffer(void * buffer) {}
+  // return CPU-accessible address for a buffer returned from allocAccelBuffer
+  // only makes sense for some (shared-memory) platforms
+  // facilitates SW that takes advantage of cache coherency
+  virtual void * phys2virt(void * accelBuffer) { throw "phys2virt not supported"; }
+  virtual bool is_coherent() { return false; }
 
   // (optional) functions for accelerator attach-detach handling
   virtual void attach(const char * name) {}
