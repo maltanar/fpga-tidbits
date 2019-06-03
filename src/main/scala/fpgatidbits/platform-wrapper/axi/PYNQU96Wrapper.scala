@@ -23,9 +23,4 @@ class PYNQU96Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   )
   setName("PYNQU96Wrapper")
   setModuleName("PYNQU96Wrapper")
-  // experimental: set AXI MM signals correctly for cache coherency
-  io.mem(0).readAddr.bits.cache := UInt("b1100")
-  io.mem(0).writeAddr.bits.cache := UInt("b1100")
-  io.mem(0).readAddr.bits.prot := UInt("b10")
-  io.mem(0).writeAddr.bits.prot := UInt("b10")
 }
