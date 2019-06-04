@@ -77,14 +77,14 @@ public:
 	}
 
 	virtual bool is_coherent() {
-		return assume_coherency;
+		return m_assume_coherency;
 	}
 
 	virtual void * phys2virt(void * accelBuffer) {
 		// the assume_coherency flag doesn't really "do" anything, it's mostly
 		// there as a safety net to warn the user if they are using the non-CC
 		// variant of the platform (PYNQU96 instead of PYNQU96CC)
-		if(!assume_coherency) {
+		if(!m_assume_coherency) {
 			throw "Coherency not enabled for XlnkDriver, you should not use phys2virt";
 		}
 		return m_physmap[accelBuffer];
