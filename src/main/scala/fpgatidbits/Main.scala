@@ -22,6 +22,8 @@ object TidbitsMakeUtils {
     "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
     "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
     "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
+    "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
+    "PYNQZCU104CC" -> {f => new PYNQZCU104CCWrapper(f)},
     "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
     "ZC706" -> {f => new ZC706Wrapper(f)},
     "WX690T" -> {f => new WolverinePlatformWrapper(f)},
@@ -35,6 +37,8 @@ object TidbitsMakeUtils {
     "PYNQZ1" -> "xc7z020clg400-1",
     "PYNQU96" -> "xczu3eg-sbva484-1-i",
     "PYNQU96CC" -> "xczu3eg-sbva484-1-i",
+    "PYNQZCU104" -> "xczu7ev-ffvc1156-2-e",
+    "PYNQZCU104CC" -> "xczu7ev-ffvc1156-2-e",
     "ZC706" -> "xc7z045ffg900-2",
     "KU115" -> "xcku115-flvb2104-2-e",
     "VerilatedTester" -> "xczu3eg-sbva484-1-i", // use Ultra96 part for tester
