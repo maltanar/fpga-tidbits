@@ -20,7 +20,7 @@ object PYNQU96Params extends PlatformWrapperParams {
 class PYNQU96Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   extends AXIPlatformWrapper(PYNQU96Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
-    "platform-ultra96-xlnk.cpp", "xlnkdriver.hpp"
+    "platform-mpsoc-xlnk.cpp", "xlnkdriver.hpp"
   )
   setName("PYNQU96Wrapper")
   setModuleName("PYNQU96Wrapper")

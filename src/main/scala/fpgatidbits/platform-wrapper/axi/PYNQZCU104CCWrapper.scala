@@ -20,7 +20,7 @@ object PYNQZCU104CCParams extends PlatformWrapperParams {
 class PYNQZCU104CCWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   extends AXIPlatformWrapper(PYNQZCU104Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
-    "platform-zcu104-cc-xlnk.cpp", "xlnkdriver.hpp"
+    "platform-mpsoc-cc-xlnk.cpp", "xlnkdriver.hpp"
   )
   setName("PYNQZCU104CCWrapper")
   setModuleName("PYNQZCU104CCWrapper")
