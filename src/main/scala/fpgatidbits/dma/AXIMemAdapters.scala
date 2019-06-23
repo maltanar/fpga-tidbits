@@ -141,6 +141,7 @@ class AXIWriteBurstReqAdapter(
   }
   // connect the write address and data output directly to input
   io.in_writeAddr <> io.out_writeAddr
+  io.in_writeData <> io.out_writeData
   // except the handshake signals -- these will be set from the state machine
   io.out_writeAddr.valid := Bool(false)
   io.in_writeAddr.ready := Bool(false)
