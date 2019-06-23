@@ -124,3 +124,59 @@ class AXIWrDatToGenWrDatAdp(axiDataW: Int, p: MemReqParams) extends Module {
   io.genericOut.bits := io.axiIn.bits.data
   io.axiIn.ready := io.genericOut.ready
 }
+
+// set the .last of the write request correctly for bursts
+class AXIWriteBurstReqAdapter(
+  addrWidthBits: Int, dataWidthBits: Int, idBits: Int
+) extends Module {
+  val io = new Bundle {
+    // write address channel in
+    val in_writeAddr   = Decoupled(new AXIAddress(addrWidthBits, idBits)).flip
+    // write data channel in
+    val in_writeData   = Decoupled(new AXIWriteData(dataWidthBits)).flip
+    // write address channel out
+    val out_writeAddr   = Decoupled(new AXIAddress(addrWidthBits, idBits))
+    // write data channel out
+    val out_writeData   = Decoupled(new AXIWriteData(dataWidthBits))
+  }
+  // connect the write address and data output directly to input
+  io.in_writeAddr <> io.out_writeAddr
+  // except the handshake signals -- these will be set from the state machine
+  io.out_writeAddr.valid := Bool(false)
+  io.in_writeAddr.ready := Bool(false)
+  io.out_writeData.valid := Bool(false)
+  io.in_writeData.ready := Bool(false)
+  // we'll also set the .last field of the write data from the state machine
+  io.out_writeData.bits.last := Bool(false)
+
+  val sWaitReq :: sWaitData :: Nil = Enum(UInt(), 2)
+  val regState = Reg(init = UInt(sWaitReq))
+  val regBeatsLeft = Reg(init = UInt(0, width = 8))
+
+  switch(regState) {
+    is(sWaitReq) {
+      // enable write requests to pass through
+      io.out_writeAddr.valid := io.in_writeAddr.valid
+      io.in_writeAddr.ready := io.out_writeAddr.ready
+      // register the burst count when we get a transaction
+      // TODO can this handle non-bursts? is this something we need to consider?
+      when(io.out_writeAddr.fire()) {
+        regBeatsLeft := io.in_writeAddr.bits.len
+        regState := sWaitData
+      }
+
+    }
+    is(sWaitData) {
+      val isLastBeat = (regBeatsLeft === UInt(0))
+      // enable write data to pass through
+      io.out_writeData.valid := io.in_writeData.valid
+      io.in_writeData.ready := io.out_writeData.ready
+      io.out_writeData.bits.last := isLastBeat
+      when(io.out_writeData.fire()) {
+        // check if we have any more beats in this burst
+        when(isLastBeat) { regState := sWaitReq }
+        .otherwise { regBeatsLeft := regBeatsLeft - UInt(1) }
+      }
+    }
+  }
+}
