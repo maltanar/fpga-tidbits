@@ -213,11 +213,13 @@ object MainObj {
     // build driver
     platformInst(accInst).generateRegDriver(s"$targetDir/")
     // copy emulator driver and SW support files
-    val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"
+    //val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"
+    val regDrvRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/"
     val files = Array("wrapperregdriver.h", "platform-tester.cpp",
       "platform.h", "testerdriver.hpp")
     for(f <- files) { fileCopy(regDrvRoot + f, s"$targetDir/" + f) }
-    val testRoot = getClass.getResource("/cpp/platform-wrapper-tests").getPath + "/"
+    //val testRoot = getClass.getResource("/cpp/platform-wrapper-tests").getPath + "/"
+    val testRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-tests/"
     fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
