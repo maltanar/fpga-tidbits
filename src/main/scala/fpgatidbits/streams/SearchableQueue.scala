@@ -7,7 +7,7 @@ import Chisel._
 
 class SearchableQueueIO[T <: Data](gen: T, n: Int) extends QueueIO(gen, n) {
   val searchVal = gen.cloneType.asInput
-  val foundVal = Bool(OUTPUT)
+  val foundVal = Output(Bool())
 
   override def cloneType: this.type = new SearchableQueueIO(gen, n).asInstanceOf[this.type]
 }
@@ -20,11 +20,11 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
   // - vector of registers instead of Mem, to expose all outputs
 
   val ram = Vec.fill(entries) { Reg(init = UInt(0, gen.getWidth())) }
-  val ramValid = Vec.fill(entries) { Reg(init = Bool(false)) }
+  val ramValid = Vec.fill(entries) { Reg(init = false.B) }
 
   val enq_ptr = Counter(entries)
   val deq_ptr = Counter(entries)
-  val maybe_full = Reg(init=Bool(false))
+  val maybe_full = Reg(init=false.B)
 
   val ptr_match = enq_ptr.value === deq_ptr.value
   val empty = ptr_match && !maybe_full
@@ -34,11 +34,11 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
   val do_deq = io.deq.ready && io.deq.valid
   when (do_enq) {
     ram(enq_ptr.value) := io.enq.bits
-    ramValid(enq_ptr.value) := Bool(true)
+    ramValid(enq_ptr.value) := true.B
     enq_ptr.inc()
   }
   when (do_deq) {
-    ramValid(deq_ptr.value) := Bool(false)
+    ramValid(deq_ptr.value) := false.B
     deq_ptr.inc()
   }
   when (do_enq != do_deq) {
@@ -60,7 +60,7 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
     io.count := Cat(maybe_full && ptr_match, ptr_diff)
   } else {
     io.count := Mux(ptr_match,
-                  Mux(maybe_full, UInt(entries), UInt(0)),
+                  Mux(maybe_full, UInt(entries), 0.U),
                   Mux(deq_ptr.value > enq_ptr.value,
                       UInt(entries) + ptr_diff, ptr_diff)
                     )

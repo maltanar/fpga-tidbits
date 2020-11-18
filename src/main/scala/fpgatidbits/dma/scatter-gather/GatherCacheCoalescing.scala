@@ -44,8 +44,8 @@ class GatherNBCache_Coalescing(
   // the +4 here is somewhat arbitrary, but vaguely represents the hit latency.
   val outstandingTxns = nbMisses + 4
 
-  val cacheOffsetBits = if(needOffset) log2Up(elemsPerLine) else 0
-  val cacheLineNumBits = log2Up(lines)
+  val cacheOffsetBits = if(needOffset) log2Ceil(elemsPerLine) else 0
+  val cacheLineNumBits = log2Ceil(lines)
   val cacheTagBits = indWidth - (cacheLineNumBits + cacheOffsetBits)
   // breakdown of gather index into cache fields:
   // MSB ===============================LSB
@@ -110,7 +110,7 @@ class GatherNBCache_Coalescing(
     int.cacheLine := cacheLine(ext.ind)
     int.cacheTag := cacheTag(ext.ind)
     if(needOffset) int.cacheOffset := cacheOffset(ext.ind)
-    else int.cacheOffset := UInt(0)
+    else int.cacheOffset := 0.U
     int
   }
 
@@ -154,18 +154,18 @@ class GatherNBCache_Coalescing(
   )).io
   val tagRd = tagStore.ports(0)
   val tagWr = tagStore.ports(1)
-  tagRd.req.writeEn := Bool(false)
-  tagRd.req.writeData := UInt(0)
-  tagWr.req.writeEn := Bool(false)
+  tagRd.req.writeEn := false.B
+  tagRd.req.writeData := 0.U
+  tagWr.req.writeEn := false.B
   val datStore = Module(new PipelinedDualPortBRAM(
     addrBits = cacheLineNumBits, dataBits = bitsPerLine,
     regIn = 0, regOut = pipelinedStorage
   )).io
   val datRd = datStore.ports(0)
   val datWr = datStore.ports(1)
-  datRd.req.writeEn := Bool(false)
-  datRd.req.writeData := UInt(0)
-  datWr.req.writeEn := Bool(false)
+  datRd.req.writeEn := false.B
+  datRd.req.writeData := 0.U
+  datWr.req.writeEn := false.B
 
   // various queues that hold intermediate results
   val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
@@ -184,15 +184,15 @@ class GatherNBCache_Coalescing(
 
   // ==========================================================================
   // initialize tags (all lines invalid) on reset, using the tagRd port
-  val regInitActive = Reg(init = Bool(true))
+  val regInitActive = Reg(init = true.B)
   val regTagInitAddr = Reg(init = UInt(0, 1+cacheLineNumBits))
 
 
   when(regInitActive) {
     tagRd.req.addr := regTagInitAddr
-    tagRd.req.writeEn := Bool(true)
-    regTagInitAddr := regTagInitAddr + UInt(1)
-    when(regTagInitAddr === UInt(lines-1)) { regInitActive := Bool(false)}
+    tagRd.req.writeEn := true.B
+    regTagInitAddr := regTagInitAddr + 1.U
+    when(regTagInitAddr === UInt(lines-1)) { regInitActive := false.B}
   }
 
   // ==========================================================================
@@ -225,7 +225,7 @@ class GatherNBCache_Coalescing(
   // move only the requested word at the correct offset if applicable
   if(needOffset) {
     val offsMin = UInt(datWidth) * tagRspQ.deq.bits.cacheOffset
-    val offsMax = UInt(datWidth) * (UInt(1) + tagRspQ.deq.bits.cacheOffset) - UInt(1)
+    val offsMax = UInt(datWidth) * (1.U + tagRspQ.deq.bits.cacheOffset) - 1.U
     hitQ.enq.bits.dat := tagRspQ.deq.bits.dat(offsMax, offsMin)
   }
 
@@ -234,7 +234,7 @@ class GatherNBCache_Coalescing(
 
   class CoalescingMissHandlerRsp(maxMissPerLine: Int) extends PrintableBundle {
     val cacheline = UInt(width = bitsPerLine)
-    val numMisses = UInt(width = log2Up(maxMissPerLine)+1)
+    val numMisses = UInt(width = log2Ceil(maxMissPerLine)+1)
     val misses = Vec.fill(maxMissPerLine){new InternalReq()}
 
     override val printfStr = "numMisses %d, missed line %d, missed tag %d, cacheline %x \n"
@@ -253,21 +253,21 @@ class GatherNBCache_Coalescing(
     }
     val sIdle :: sProcess :: Nil = Enum(UInt(), 2)
     val regState = Reg(init = UInt(sIdle))
-    val regNumLeft = Reg(init = UInt(0, width = log2Up(maxMissPerLine)+1))
+    val regNumLeft = Reg(init = UInt(0, width = log2Ceil(maxMissPerLine)+1))
     val regCacheline = Reg(init = UInt(0, width = bitsPerLine))
     val regMisses = Vec.fill(maxMissPerLine) {Reg(init = new InternalReq())}
 
-    io.in.ready := Bool(false)
-    io.out.valid := Bool(false)
+    io.in.ready := false.B
+    io.out.valid := false.B
 
-    val currentMiss = regMisses(regNumLeft-UInt(1))
+    val currentMiss = regMisses(regNumLeft-1.U)
     // copy same-named fields (cloakroom ID info) to handled miss
     io.out.bits := currentMiss
 
     if(needOffset) {
       // choose appropriate offset from cacheline
       val offsMin = UInt(datWidth) * currentMiss.cacheOffset
-      val offsMax = UInt(datWidth) * (UInt(1) + currentMiss.cacheOffset) - UInt(1)
+      val offsMax = UInt(datWidth) * (1.U + currentMiss.cacheOffset) - 1.U
       io.out.bits.dat := regCacheline(offsMax, offsMin)
     } else {
       // line size = word size, copy as-is
@@ -276,7 +276,7 @@ class GatherNBCache_Coalescing(
 
     switch(regState) {
         is(sIdle) {
-          io.in.ready := Bool(true)
+          io.in.ready := true.B
           regNumLeft := io.in.bits.numMisses
           regCacheline := io.in.bits.cacheline
           for(i <- 0 until maxMissPerLine) {
@@ -288,16 +288,16 @@ class GatherNBCache_Coalescing(
         }
 
         is(sProcess) {
-          when(regNumLeft === UInt(0)) {
+          when(regNumLeft === 0.U) {
             regState := sIdle
           } .otherwise {
-            io.out.valid := Bool(true)
+            io.out.valid := true.B
             //printf("miss offset: %d \n", currentMiss.cacheOffset)
             //printf("saved cacheline: %x\n", regCacheline)
             //printf("out data: %x \n", io.out.bits.dat)
             // decrement the number of misses left
             when(io.out.ready) {
-              regNumLeft := regNumLeft - UInt(1)
+              regNumLeft := regNumLeft - 1.U
             }
           }
         }
@@ -317,28 +317,28 @@ class GatherNBCache_Coalescing(
     }
     // content-associative storage for tracking pending cachelines
     val pendingLines = Module(new CAM(nbMisses,  cacheLineNumBits+cacheTagBits)).io
-    val regNumMiss = Vec.fill(nbMisses) {Reg(init = UInt(0, width = log2Up(maxMissPerLine)+1))}
+    val regNumMiss = Vec.fill(nbMisses) {Reg(init = UInt(0, width = log2Ceil(maxMissPerLine)+1))}
     val regTag = Vec.fill(nbMisses) {Reg(init = UInt(0, width = cacheLineNumBits+cacheTagBits))}
     // memory for keeping the pending requests to words
     val memReqs = Vec.fill(nbMisses) { Vec.fill(maxMissPerLine) {Reg(init = new InternalReq())}}
     // internal pool for ID management
-    val usedID = Module(new FPGAQueue(UInt(width = log2Up(nbMisses)), nbMisses)).io
+    val usedID = Module(new FPGAQueue(UInt(width = log2Ceil(nbMisses)), nbMisses)).io
     // burst upsizer for getting full cachelines as respnses
     val ups = Module(new BurstUpsizer(mrp, bitsPerLine)).io
     io.rspOrdered <> ups.in
 
     // default signal values
-    usedID.enq.valid := Bool(false)
-    usedID.deq.ready := Bool(false)
+    usedID.enq.valid := false.B
+    usedID.deq.ready := false.B
 
-    pendingLines.clear_hit := Bool(false)
-    pendingLines.write := Bool(false)
+    pendingLines.clear_hit := false.B
+    pendingLines.write := false.B
     val incomingLine = Cat(io.in.bits.cacheTag, io.in.bits.cacheLine)
     pendingLines.write_tag := incomingLine
     pendingLines.tag := incomingLine
 
     // set up signal values to emit mem request
-    io.reqOrdered.valid := Bool(false)
+    io.reqOrdered.valid := false.B
     io.reqOrdered.bits.addr := io.base + bytesPerLine * incomingLine
     io.reqOrdered.bits.numBytes := bytesPerLine
 
@@ -356,18 +356,18 @@ class GatherNBCache_Coalescing(
     when(io.in.fire()) {
       when(!pendingLines.hit) {
         // new entry
-        pendingLines.write := Bool(true)
-        usedID.enq.valid := Bool(true)
+        pendingLines.write := true.B
+        usedID.enq.valid := true.B
         // record miss
         regTag(newLineID) := incomingLine
-        regNumMiss(newLineID) := UInt(1)
+        regNumMiss(newLineID) := 1.U
         memReqs(newLineID)(0) := io.in.bits
         // emit memory request
-        io.reqOrdered.valid := Bool(true)
+        io.reqOrdered.valid := true.B
       } .otherwise {
         // update old entry with new miss information
         memReqs(foundLineID)(regNumMiss(foundLineID)) := io.in.bits
-        regNumMiss(foundLineID) := regNumMiss(foundLineID) + UInt(1)
+        regNumMiss(foundLineID) := regNumMiss(foundLineID) + 1.U
       }
     }
 
@@ -384,8 +384,8 @@ class GatherNBCache_Coalescing(
     when(ups.out.fire()) {
       //printf("ups fired, usedID size: %d\n", usedID.count)
       // clear pending line entry
-      pendingLines.clear_hit := Bool(true)
-      usedID.deq.ready := Bool(true)
+      pendingLines.clear_hit := true.B
+      usedID.deq.ready := true.B
     }
   }
 
@@ -402,13 +402,13 @@ class GatherNBCache_Coalescing(
 
   // update tag and data when handled miss response is available
   tagWr.req.addr := cmh.out.bits.misses(0).cacheLine
-  tagWr.req.writeData := Cat(Bool(true), cmh.out.bits.misses(0).cacheTag)
+  tagWr.req.writeData := Cat(true.B, cmh.out.bits.misses(0).cacheTag)
   datWr.req.addr := cmh.out.bits.misses(0).cacheLine
   datWr.req.writeData := cmh.out.bits.cacheline
 
   when(cmh.out.fire()) {
-    tagWr.req.writeEn := Bool(true)
-    datWr.req.writeEn := Bool(true)
+    tagWr.req.writeEn := true.B
+    datWr.req.writeEn := true.B
   }
 
   // =========================================================================
@@ -422,10 +422,10 @@ class GatherNBCache_Coalescing(
   // debug
 
   //val regCnt = Reg(init = UInt(0, 32))
-  //when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
-  //val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  //when(readyReqs.fire()) { regCnt := regCnt + 1.U}
+  //val doMon = (regCnt > 0.U) && (regCnt < UInt(5882))
   /*
-  val doMon = Bool(true)
+  val doMon = true.B
   val doVerboseDebug = true
 
   PrintableBundleStreamMonitor(io.in, doMon, "io.in", doVerboseDebug)
@@ -443,7 +443,7 @@ class GatherNBCache_Coalescing(
   */
 
   /*
-  PrintableBundleStreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
-  PrintableBundleStreamMonitor(io.memRdReq, Bool(true), "memRdReq", true)
+  PrintableBundleStreamMonitor(io.memRdRsp, true.B, "memRdRsp", true)
+  PrintableBundleStreamMonitor(io.memRdReq, true.B, "memRdReq", true)
   */
 }

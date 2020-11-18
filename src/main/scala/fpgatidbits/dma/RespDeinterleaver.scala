@@ -46,10 +46,10 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams,
   // - to avoid combinational paths, pipeline the deinterleaver
   for(i <- 0 until numPipes) {
     io.rspOut(i).bits := io.rspIn.bits
-    io.rspOut(i).valid := Bool(false)
+    io.rspOut(i).valid := false.B
   }
 
-  io.rspIn.ready := Bool(false)
+  io.rspIn.ready := false.B
   io.decodeErrors := regDecodeErrors
 
   val destPipe = routeFxn(io.rspIn.bits)
@@ -59,14 +59,14 @@ class RespDeinterleaver(numPipes: Int, p: MemReqParams,
   when (invalidChannel) {
     // do not let the entire pipe stall because head of line has invalid dest
     // increment error counter and move on
-    regDecodeErrors := regDecodeErrors + UInt(1)
-    io.rspIn.ready := Bool(true)
+    regDecodeErrors := regDecodeErrors + 1.U
+    io.rspIn.ready := true.B
     printf("RespDeinterleaver decode error! chanID = %d dest = %d \n",
       io.rspIn.bits.channelID, destPipe
     )
   }
   .elsewhen (canProceed) {
-    io.rspIn.ready := Bool(true)
-    io.rspOut(destPipe).valid := Bool(true)
+    io.rspIn.ready := true.B
+    io.rspOut(destPipe).valid := true.B
   }
 }

@@ -14,14 +14,14 @@ import fpgatidbits.streams._
 class TestMemLatency(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
+    val start = Input(Bool())
+    val finished = Output(Bool())
     val baseAddr = UInt(INPUT, width = 64)
     val byteCount = UInt(INPUT, width = 32)
     val sum = UInt(OUTPUT, width = 32)
     val cycleCount = UInt(OUTPUT, width = 32)
     // controls for ID pool reinit
-    val doInit = Bool(INPUT)                // pulse this to re-init ID pool
+    val doInit = Input(Bool())                // pulse this to re-init ID pool
     val initCount = UInt(INPUT, width = 8)  // # IDs to initialize
   }
   io.signature := makeDefaultSignature()
@@ -57,6 +57,6 @@ class TestMemLatency(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   val regCycleCount = Reg(init = UInt(0, 32))
   io.cycleCount := regCycleCount
-  when(!io.start) {regCycleCount := UInt(0)}
-  .elsewhen(io.start & !io.finished) {regCycleCount := regCycleCount + UInt(1)}
+  when(!io.start) {regCycleCount := 0.U}
+  .elsewhen(io.start & !io.finished) {regCycleCount := regCycleCount + 1.U}
 }

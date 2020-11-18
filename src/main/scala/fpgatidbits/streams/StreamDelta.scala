@@ -32,8 +32,8 @@ class StreamDelta(dataWidth: Int) extends Module {
 
   // default outputs
   io.deltas.bits := sampleDelta
-  io.deltas.valid := Bool(false)
-  io.samples.ready := Bool(false)
+  io.deltas.valid := false.B
+  io.samples.ready := false.B
 
   // state machine definitions
   val sIdle :: sWaitNextSample :: sWaitDelta :: sRun :: Nil = Enum(UInt(), 4)
@@ -42,7 +42,7 @@ class StreamDelta(dataWidth: Int) extends Module {
   // FSM for control
   switch ( regState ) {
     is ( sIdle ) {
-      io.samples.ready := Bool(true)
+      io.samples.ready := true.B
 
       when ( io.samples.valid ) {
         regState := sWaitNextSample
@@ -51,7 +51,7 @@ class StreamDelta(dataWidth: Int) extends Module {
     }
 
     is ( sWaitNextSample ) {
-      io.samples.ready := Bool(true)
+      io.samples.ready := true.B
 
       when ( io.samples.valid ) {
         regSample2 := io.samples.bits
@@ -61,7 +61,7 @@ class StreamDelta(dataWidth: Int) extends Module {
     }
 
     is ( sRun ) {
-      io.deltas.valid := Bool(true)
+      io.deltas.valid := true.B
 
       when ( io.deltas.ready ) {
         when ( io.samples.valid ) {
@@ -69,7 +69,7 @@ class StreamDelta(dataWidth: Int) extends Module {
           // staying in the same state
           regSample2 := io.samples.bits
           regSample1 := regSample2
-          io.samples.ready := Bool(true)
+          io.samples.ready := true.B
         } .otherwise {
           // next sample not quite ready yet, wait for it
           regState := sWaitNextSample

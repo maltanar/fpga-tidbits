@@ -50,7 +50,7 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     // TODO fix this: forces all writes bytelanes valid!
     writeBurstAdp.in_writeData.bits.strb := ~UInt(0, width=p.memDataBits/8)
     // burst adapter will set this appropriately
-    writeBurstAdp.in_writeData.bits.last := Bool(false)
+    writeBurstAdp.in_writeData.bits.last := false.B
     writeBurstAdp.in_writeData.valid := accel.io.memPort(i).memWrDat.valid
     accel.io.memPort(i).memWrDat.ready := writeBurstAdp.in_writeData.ready
     writeBurstAdp.out_writeAddr <> io.mem(i).writeAddr
@@ -74,25 +74,25 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   // slow and clumsy, but ctrl/status is not supposed to be performance-
   // critical anyway
 
-  io.csr.writeAddr.ready := Bool(false)
-  io.csr.writeData.ready := Bool(false)
-  io.csr.writeResp.valid := Bool(false)
-  io.csr.writeResp.bits := UInt(0)
-  io.csr.readAddr.ready := Bool(false)
-  io.csr.readData.valid := Bool(false)
+  io.csr.writeAddr.ready := false.B
+  io.csr.writeData.ready := false.B
+  io.csr.writeResp.valid := false.B
+  io.csr.writeResp.bits := 0.U
+  io.csr.readAddr.ready := false.B
+  io.csr.readData.valid := false.B
   io.csr.readData.bits.data := regFile.extIF.readData.bits
-  io.csr.readData.bits.resp := UInt(0)
+  io.csr.readData.bits.resp := 0.U
 
-  regFile.extIF.cmd.valid := Bool(false)
+  regFile.extIF.cmd.valid := false.B
   regFile.extIF.cmd.bits.driveDefaults()
 
   val sRead :: sReadRsp :: sWrite :: sWriteD :: sWriteRsp :: Nil = Enum(UInt(), 5)
   val regState = Reg(init = UInt(sRead))
 
-  val regModeWrite = Reg(init=Bool(false))
-  val regRdReq = Reg(init=Bool(false))
+  val regModeWrite = Reg(init=false.B)
+  val regRdReq = Reg(init=false.B)
   val regRdAddr = Reg(init=UInt(0, p.memAddrBits))
-  val regWrReq = Reg(init=Bool(false))
+  val regWrReq = Reg(init=false.B)
   val regWrAddr = Reg(init=UInt(0, p.memAddrBits))
   val regWrData = Reg(init=UInt(0, p.csrDataBits))
   // AXI typically uses byte addressing, whereas regFile indices are
@@ -104,23 +104,23 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
 
   when(!regModeWrite) {
     regFile.extIF.cmd.valid := regRdReq
-    regFile.extIF.cmd.bits.read := Bool(true)
+    regFile.extIF.cmd.bits.read := true.B
     regFile.extIF.cmd.bits.regID := regRdAddr / addrDiv
   } .otherwise {
     regFile.extIF.cmd.valid := regWrReq
-    regFile.extIF.cmd.bits.write := Bool(true)
+    regFile.extIF.cmd.bits.write := true.B
     regFile.extIF.cmd.bits.regID := regWrAddr / addrDiv
     regFile.extIF.cmd.bits.writeData := regWrData
   }
 
   switch(regState) {
       is(sRead) {
-        io.csr.readAddr.ready := Bool(true)
+        io.csr.readAddr.ready := true.B
 
         when(io.csr.readAddr.valid) {
-          regRdReq := Bool(true)
+          regRdReq := true.B
           regRdAddr := io.csr.readAddr.bits.addr
-          regModeWrite := Bool(false)
+          regModeWrite := false.B
           regState := sReadRsp
         }.otherwise {
           regState := sWrite
@@ -131,16 +131,16 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
         io.csr.readData.valid := regFile.extIF.readData.valid
         when (io.csr.readData.ready & regFile.extIF.readData.valid) {
           regState := sWrite
-          regRdReq := Bool(false)
+          regRdReq := false.B
         }
       }
 
       is(sWrite) {
-        io.csr.writeAddr.ready := Bool(true)
+        io.csr.writeAddr.ready := true.B
 
         when(io.csr.writeAddr.valid) {
-          regModeWrite := Bool(true)
-          regWrReq := Bool(false) // need to wait until data is here
+          regModeWrite := true.B
+          regWrReq := false.B // need to wait until data is here
           regWrAddr := io.csr.writeAddr.bits.addr
           regState := sWriteD
         } .otherwise {
@@ -149,18 +149,18 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
       }
 
       is(sWriteD) {
-        io.csr.writeData.ready := Bool(true)
+        io.csr.writeData.ready := true.B
         when(io.csr.writeData.valid) {
           regWrData := io.csr.writeData.bits.data
-          regWrReq := Bool(true) // now we can set the request
+          regWrReq := true.B // now we can set the request
           regState := sWriteRsp
         }
       }
 
       is(sWriteRsp) {
-        io.csr.writeResp.valid := Bool(true)
+        io.csr.writeResp.valid := true.B
         when(io.csr.writeResp.ready) {
-          regWrReq := Bool(false)
+          regWrReq := false.B
           regState := sRead
         }
       }

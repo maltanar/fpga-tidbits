@@ -33,7 +33,7 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   val readyReqs = StreamJoin(
     inA = freeReqID.idOut, inB = io.reqOrdered, genO = mreq,
     join = {(freeID: UInt, r: GenericMemoryRequest) => GenericMemoryRequest(
-      p = p.mrp, addr = r.addr, write = Bool(false), id = freeID,
+      p = p.mrp, addr = r.addr, write = false.B, id = freeID,
       numBytes = r.numBytes
     )}
   )
@@ -60,8 +60,8 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
 
   //==========================================================================
 
-  val ctrBits = log2Up(p.maxBurst)
-  val reqIDBits = log2Up(p.outstandingReqs)
+  val ctrBits = log2Ceil(p.maxBurst)
+  val reqIDBits = log2Ceil(p.outstandingReqs)
   // since burst responses can be interleaved, each in-flight burst can have
   // a number of elements it has already received. we use the following BRAM
   // as a counter to keep track of the number of elements received for each
@@ -71,11 +71,11 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   val ctrWr = rspCounters.ports(1)
   // an issued request always means its storage space is ready, so we can always
   // accept memory responses.
-  io.rspMem.ready := Bool(true)
+  io.rspMem.ready := true.B
   // subtract chanIDBase to get index of counter to read & use as read addr
   val ctrRdInd = io.rspMem.bits.channelID - UInt(p.chanIDBase)
   ctrRd.req.addr := ctrRdInd
-  ctrRd.req.writeEn := Bool(false)
+  ctrRd.req.writeEn := false.B
 
   val regCtrInd = Reg(next = ctrRdInd)
   val regCtrValid = Reg(next = io.rspMem.valid)
@@ -86,7 +86,7 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   val regNewVal = Reg(init = UInt(0, width = ctrBits))
   val ctrOldVal = Mux(regDoBypass, regNewVal, ctrRd.rsp.readData)
   // use regCtrLast to clear counter at end of burst
-  val ctrNewVal = Mux(regCtrLast, UInt(0), ctrOldVal + UInt(1))
+  val ctrNewVal = Mux(regCtrLast, 0.U, ctrOldVal + 1.U)
   regNewVal := ctrNewVal
   ctrWr.req.addr := regCtrInd
   ctrWr.req.writeEn := regCtrValid
@@ -97,12 +97,12 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   */
   // store received data in BRAM
   val storage = Module(new DualPortBRAM(
-    addrBits = log2Up(p.outstandingReqs * p.maxBurst),
+    addrBits = log2Ceil(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   )).io
   val dataRd = storage.ports(0)
   val dataWr = storage.ports(1)
-  dataRd.req.writeEn := Bool(false)
+  dataRd.req.writeEn := false.B
   dataWr.req.writeData := regCtrData
   // compute where the newly arrived data goes
   dataWr.req.addr := regCtrInd * UInt(p.maxBurst) + ctrOldVal
@@ -143,19 +143,19 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   headRsps.enq.bits.readData := dataRd.rsp.readData
   headRsps.enq.bits.channelID := Reg(next = headReqID)  // internal ID
   freeReqID.idIn.bits := headReqID
-  busyReqs.deq.ready := Bool(false)
-  freeReqID.idIn.valid := Bool(false)
+  busyReqs.deq.ready := false.B
+  freeReqID.idIn.valid := false.B
 
   when(doPopRsp) {
-    when(regRspsPopped === headReqBeats - UInt(1)) {
+    when(regRspsPopped === headReqBeats - 1.U) {
       // when emitted responses = burst size, we are done
       // pop from busyReqs, recycle the ID and reset the counter
-      regRspsPopped := UInt(0)
+      regRspsPopped := 0.U
       burstFinishedClr := UIntToOH(headReqID, p.outstandingReqs)
-      freeReqID.idIn.valid := Bool(true)
-      busyReqs.deq.ready := Bool(true)
+      freeReqID.idIn.valid := true.B
+      busyReqs.deq.ready := true.B
     } .otherwise {
-      regRspsPopped := regRspsPopped + UInt(1)
+      regRspsPopped := regRspsPopped + 1.U
     }
   }
 
@@ -165,8 +165,8 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
 
   // =========================================================================
   // debug
-  //StreamMonitor(io.reqOrdered, Bool(true), "reqOrdered", true)
-  //StreamMonitor(io.rspOrdered, Bool(true), "rspOrdered", true)
-  //StreamMonitor(io.reqMem, Bool(true), "memRdReq", true)
-  //StreamMonitor(io.rspMem, Bool(true), "memRdRsp", true)
+  //StreamMonitor(io.reqOrdered, true.B, "reqOrdered", true)
+  //StreamMonitor(io.rspOrdered, true.B, "rspOrdered", true)
+  //StreamMonitor(io.reqMem, true.B, "memRdReq", true)
+  //StreamMonitor(io.rspMem, true.B, "memRdRsp", true)
 }

@@ -46,8 +46,8 @@ class GatherNBCache_InOrderMissHandling(
   // the +4 here is somewhat arbitrary, but vaguely represents the hit latency.
   val outstandingTxns = nbMisses + 4
 
-  val cacheOffsetBits = if(needOffset) log2Up(elemsPerLine) else 0
-  val cacheLineNumBits = log2Up(lines)
+  val cacheOffsetBits = if(needOffset) log2Ceil(elemsPerLine) else 0
+  val cacheLineNumBits = log2Ceil(lines)
   val cacheTagBits = indWidth - (cacheLineNumBits + cacheOffsetBits)
   // breakdown of gather index into cache fields:
   // MSB ===============================LSB
@@ -112,7 +112,7 @@ class GatherNBCache_InOrderMissHandling(
     int.cacheLine := cacheLine(ext.ind)
     int.cacheTag := cacheTag(ext.ind)
     if(needOffset) int.cacheOffset := cacheOffset(ext.ind)
-    else int.cacheOffset := UInt(0)
+    else int.cacheOffset := 0.U
     int
   }
 
@@ -156,18 +156,18 @@ class GatherNBCache_InOrderMissHandling(
   )).io
   val tagRd = tagStore.ports(0)
   val tagWr = tagStore.ports(1)
-  tagRd.req.writeEn := Bool(false)
-  tagRd.req.writeData := UInt(0)
-  tagWr.req.writeEn := Bool(false)
+  tagRd.req.writeEn := false.B
+  tagRd.req.writeData := 0.U
+  tagWr.req.writeEn := false.B
   val datStore = Module(new PipelinedDualPortBRAM(
     addrBits = cacheLineNumBits, dataBits = bitsPerLine,
     regIn = 0, regOut = pipelinedStorage
   )).io
   val datRd = datStore.ports(0)
   val datWr = datStore.ports(1)
-  datRd.req.writeEn := Bool(false)
-  datRd.req.writeData := UInt(0)
-  datWr.req.writeEn := Bool(false)
+  datRd.req.writeEn := false.B
+  datRd.req.writeData := 0.U
+  datWr.req.writeEn := false.B
 
   // various queues that hold intermediate results
   val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
@@ -187,15 +187,15 @@ class GatherNBCache_InOrderMissHandling(
 
   // ==========================================================================
   // initialize tags (all lines invalid) on reset, using the tagRd port
-  val regInitActive = Reg(init = Bool(true))
+  val regInitActive = Reg(init = true.B)
   val regTagInitAddr = Reg(init = UInt(0, 1+cacheLineNumBits))
 
 
   when(regInitActive) {
     tagRd.req.addr := regTagInitAddr
-    tagRd.req.writeEn := Bool(true)
-    regTagInitAddr := regTagInitAddr + UInt(1)
-    when(regTagInitAddr === UInt(lines-1)) { regInitActive := Bool(false)}
+    tagRd.req.writeEn := true.B
+    regTagInitAddr := regTagInitAddr + 1.U
+    when(regTagInitAddr === UInt(lines-1)) { regInitActive := false.B}
   }
 
   // ==========================================================================
@@ -228,8 +228,8 @@ class GatherNBCache_InOrderMissHandling(
   // move only the requested word at the correct offset if applicable
   if(needOffset) {
     val offsMin = UInt(datWidth) * tagRspQ.deq.bits.cacheOffset
-    val offsMax = UInt(datWidth) * (UInt(1) + tagRspQ.deq.bits.cacheOffset)
-    hitQ.enq.bits.dat := tagRspQ.deq.bits.dat(offsMax-UInt(1), offsMin)
+    val offsMax = UInt(datWidth) * (1.U + tagRspQ.deq.bits.cacheOffset)
+    hitQ.enq.bits.dat := tagRspQ.deq.bits.dat(offsMax-1.U, offsMin)
   }
 
   // =========================================================================
@@ -253,8 +253,8 @@ class GatherNBCache_InOrderMissHandling(
     if(needOffset) {
       // move only the requested word at the correct offset
       val offsMin = UInt(datWidth) * a.cacheOffset
-      val offsMax = UInt(datWidth) * (UInt(1) + a.cacheOffset)
-      theRsp.dat := b.readData(offsMax-UInt(1), offsMin)
+      val offsMax = UInt(datWidth) * (1.U + a.cacheOffset)
+      theRsp.dat := b.readData(offsMax-1.U, offsMin)
     } else {
       theRsp.dat := b.readData
     }
@@ -283,12 +283,12 @@ class GatherNBCache_InOrderMissHandling(
 
   // update tag and data when miss is handled
   tagWr.req.addr := pendingQ.deq.bits.cacheLine
-  tagWr.req.writeData := Cat(Bool(true), pendingQ.deq.bits.cacheTag)
+  tagWr.req.writeData := Cat(true.B, pendingQ.deq.bits.cacheTag)
   datWr.req.addr := pendingQ.deq.bits.cacheLine
 
   when(handledQ.enq.fire()) {
-    tagWr.req.writeEn := Bool(true)
-    datWr.req.writeEn := Bool(true)
+    tagWr.req.writeEn := true.B
+    datWr.req.writeEn := true.B
   }
 
   // =========================================================================
@@ -302,8 +302,8 @@ class GatherNBCache_InOrderMissHandling(
   // debug
   /*
   val regCnt = Reg(init = UInt(0, 32))
-  when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
-  val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  when(readyReqs.fire()) { regCnt := regCnt + 1.U}
+  val doMon = (regCnt > 0.U) && (regCnt < UInt(5882))
   val doVerboseDebug = false
 
   StreamMonitor(cloakroom.extIn, doMon, "cloakroom.extIn", doVerboseDebug)
@@ -318,7 +318,7 @@ class GatherNBCache_InOrderMissHandling(
   */
 
   /*
-  PrintableBundleStreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
-  PrintableBundleStreamMonitor(io.memRdReq, Bool(true), "memRdReq", true)
+  PrintableBundleStreamMonitor(io.memRdRsp, true.B, "memRdRsp", true)
+  PrintableBundleStreamMonitor(io.memRdReq, true.B, "memRdReq", true)
   */
 }

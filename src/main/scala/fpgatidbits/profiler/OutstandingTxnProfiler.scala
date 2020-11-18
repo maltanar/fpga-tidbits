@@ -9,11 +9,11 @@ class OutstandingTxnProfilerOutput(w: Int) extends Bundle {
 
 class OutstandingTxnProfiler(w: Int) extends Module {
   val io = new Bundle {
-    val enable = Bool(INPUT)
-    val probeReqValid = Bool(INPUT)
-    val probeReqReady = Bool(INPUT)
-    val probeRspValid = Bool(INPUT)
-    val probeRspReady = Bool(INPUT)
+    val enable = Input(Bool())
+    val probeReqValid = Input(Bool())
+    val probeReqReady = Input(Bool())
+    val probeRspValid = Input(Bool())
+    val probeRspReady = Input(Bool())
 
     val out = new OutstandingTxnProfilerOutput(w)
   }
@@ -30,14 +30,14 @@ class OutstandingTxnProfiler(w: Int) extends Module {
 
   when(!regActive & io.enable) {
     // reset all counters when first enabled
-    regCycles := UInt(0)
-    regTotalReq := UInt(0)
-    regTotalRsp := UInt(0)
-    regActiveTxns := UInt(0)
+    regCycles := 0.U
+    regTotalReq := 0.U
+    regTotalRsp := 0.U
+    regActiveTxns := 0.U
   } .elsewhen(regActive & io.enable) {
-    regCycles := regCycles + UInt(1)
-    when(reqTxn) { regTotalReq := regTotalReq + UInt(1) }
-    when(rspTxn) { regTotalRsp := regTotalRsp + UInt(1) }
+    regCycles := regCycles + 1.U
+    when(reqTxn) { regTotalReq := regTotalReq + 1.U }
+    when(rspTxn) { regTotalRsp := regTotalRsp + 1.U }
     regActiveTxns := regActiveTxns + (regTotalReq - regTotalRsp)
   }
 

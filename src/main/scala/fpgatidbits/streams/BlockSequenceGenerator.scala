@@ -37,9 +37,9 @@ class BlockSequenceGenerator(w: Int) extends Module {
   val regBlockSize = Reg(init = UInt(0, w))
   val regElemsLeft = Reg(init = UInt(0, w))
 
-  io.cmd.ready := Bool(false)
-  io.out.valid := Bool(false)
-  io.out.bits.count := UInt(0)
+  io.cmd.ready := false.B
+  io.out.valid := false.B
+  io.out.bits.count := 0.U
   io.out.bits.start := regPtr
 
   val sIdle :: sRun :: sLast :: Nil = Enum(UInt(), 3)
@@ -47,7 +47,7 @@ class BlockSequenceGenerator(w: Int) extends Module {
 
   switch(regState) {
     is(sIdle) {
-      io.cmd.ready := Bool(true)
+      io.cmd.ready := true.B
       when(io.cmd.valid) {
         regPtr := io.cmd.bits.start
         regBlockSize := io.cmd.bits.blockSize
@@ -58,7 +58,7 @@ class BlockSequenceGenerator(w: Int) extends Module {
 
     is(sRun) {
       when(regElemsLeft > regBlockSize) {
-        io.out.valid := Bool(true)
+        io.out.valid := true.B
         io.out.bits.count := regBlockSize
         when(io.out.ready) {
           regElemsLeft := regElemsLeft - regBlockSize
@@ -70,7 +70,7 @@ class BlockSequenceGenerator(w: Int) extends Module {
     }
 
     is(sLast) {
-      io.out.valid := Bool(true)
+      io.out.valid := true.B
       io.out.bits.count := regElemsLeft
       when(io.out.ready) {
         regState := sIdle

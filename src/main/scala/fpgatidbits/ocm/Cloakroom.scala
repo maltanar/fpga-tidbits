@@ -18,7 +18,7 @@ import fpgatidbits.dma._
 
 
 class CloakroomBundle(num: Int) extends PrintableBundle {
-  val id = UInt(width = log2Up(num))
+  val id = UInt(width = log2Ceil(num))
 
   val printfStr = "id = %d\n"
   val printfElems = {() => Seq(id)}
@@ -50,7 +50,7 @@ extends Module {
   // context store (where the "cloaks" will be kept)
   val ctxStore = Mem(genA.cloneType, num)
   // pool of available request IDs ("tickets" in the cloakrooms)
-  val idPool = Module(new ReqIDQueue(log2Up(num), num, 0)).io
+  val idPool = Module(new ReqIDQueue(log2Ceil(num), num, 0)).io
 
   // define join fnuction based on the undress function
   def joinFxn(a: TA, b: UInt): TB = {
@@ -73,7 +73,7 @@ extends Module {
   val readyRespCtx = ctxStore(io.intIn.bits.id)
 
   val readyResps = Module(new StreamFork(
-    genIn = genC.cloneType, genA = UInt(width = log2Up(num)),
+    genIn = genC.cloneType, genA = UInt(width = log2Ceil(num)),
     genB = genC.cloneType,
     forkA = {c: TC => c.id},
     forkB = {c: TC => c}
@@ -98,12 +98,12 @@ extends Module {
   // context store (where the "cloaks" will be kept)
   val ctxSize = genA.getWidth()
   val ctxLat = 1  // latency to read context
-  val ctxStore = Module(new DualPortBRAM(log2Up(num), ctxSize)).io
+  val ctxStore = Module(new DualPortBRAM(log2Ceil(num), ctxSize)).io
   val ctxWrite = ctxStore.ports(0)
   val ctxRead = ctxStore.ports(1)
 
   // pool of available request IDs ("tickets" in the cloakrooms)
-  val idPool = Module(new ReqIDQueueBRAM(log2Up(num), num, 0)).io
+  val idPool = Module(new ReqIDQueueBRAM(log2Ceil(num), num, 0)).io
 
   // define join fnuction based on the undress function
   def joinFxn(a: TA, b: UInt): TB = {
@@ -118,12 +118,12 @@ extends Module {
   ) <> io.intOut
 
   // add to context store when intOut is ready to go
-  ctxWrite.req.writeEn := Bool(false)
+  ctxWrite.req.writeEn := false.B
   ctxWrite.req.writeData := io.extIn.bits.toBits
   ctxWrite.req.addr := idPool.idOut.bits
 
   when(io.intOut.ready & io.intOut.valid) {
-    ctxWrite.req.writeEn := Bool(true)
+    ctxWrite.req.writeEn := true.B
   }
 
   // load context for incoming intIn
@@ -140,7 +140,7 @@ extends Module {
   val intInWithCtxQ = Module(new FPGAQueue(intInWithCtx, ctxLat + 2)).io
   val canDoRead = (intInWithCtxQ.count < UInt(2))
 
-  ctxRead.req.writeEn := Bool(false)
+  ctxRead.req.writeEn := false.B
   ctxRead.req.addr := io.intIn.bits.id
 
   intInWithCtxQ.enq.valid := ShiftRegister(io.intIn.valid & canDoRead, ctxLat)
@@ -150,7 +150,7 @@ extends Module {
 
   // feed queue through StreamFork to recycle IDs and generate responses
   val readyResps = Module(new StreamFork(
-    genIn = intInWithCtx.cloneType, genA = UInt(width = log2Up(num)),
+    genIn = intInWithCtx.cloneType, genA = UInt(width = log2Ceil(num)),
     genB = io.extOut.bits.cloneType,
     forkA = {x: IntInWithCtx => x.intIn.id},
     forkB = {x: IntInWithCtx => dress(x.ctx, x.intIn)}
@@ -167,13 +167,13 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
     val in = Decoupled(genC.cloneType).flip
     val out = Decoupled(genC.cloneType)
   }
-  val idBits = log2Up(num)
+  val idBits = log2Ceil(num)
   // index of expected (next in order) response
   val regHeadInd = Reg(init = UInt(0, idBits))
 
   // order buffer is dimensioned after the cloakroom, so we are always ready to
   // accept incoming responses
-  io.in.ready := Bool(true)
+  io.in.ready := true.B
 
   // TODO do we need bypass logic?
 
@@ -209,7 +209,7 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
   // ===========================================================================
   // read path
   val headReadyToGo = regFinished(regHeadInd)
-  dataRd.req.writeEn := Bool(false)
+  dataRd.req.writeEn := false.B
 
   // handshaking-over-latency to read out results
   val canPopRsp = headRsps.count < UInt(2)
@@ -221,8 +221,8 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
   headRsps.enq.bits := genC.fromBits(dataRd.rsp.readData)
 
   when(doPopRsp) {
-    when(regHeadInd === UInt(num-1)) { regHeadInd := UInt(0) }
-    .otherwise { regHeadInd := regHeadInd + UInt(1) }
+    when(regHeadInd === UInt(num-1)) { regHeadInd := 0.U }
+    .otherwise { regHeadInd := regHeadInd + 1.U }
     finishedClr := UIntToOH(regHeadInd, num)
   }
 

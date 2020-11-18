@@ -4,10 +4,10 @@ import Chisel._
 
 class StateProfiler(StateCount: Int) extends Module {
   val io = new Bundle {
-    val start = Bool(INPUT)
+    val start = Input(Bool())
     val probe = UInt(INPUT, 32)
     val count = UInt(OUTPUT, 32)
-    val sel = UInt(INPUT, log2Up(StateCount))
+    val sel = UInt(INPUT, log2Ceil(StateCount))
   }
 
   // create profiling registers for keeping state counts
@@ -29,13 +29,13 @@ class StateProfiler(StateCount: Int) extends Module {
           regState := sRun
           // reset all profiling registers
           for(i <- 0 until StateCount) {
-            regStateCount(i) := UInt(0)
+            regStateCount(i) := 0.U
           }
         }
       }
 
       is(sRun) {
-        regStateCount(regInState) := regStateCount(regInState) + UInt(1)
+        regStateCount(regInState) := regStateCount(regInState) + 1.U
         // finish profiling when start goes low
         when( !io.start ) {
           regState := sIdle

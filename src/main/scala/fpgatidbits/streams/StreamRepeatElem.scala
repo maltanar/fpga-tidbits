@@ -45,9 +45,9 @@ class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
     val out = new AXIStreamMasterIF(UInt(width = dataWidth))
   }
 
-  io.inElem.ready := Bool(false)
-  io.inRepCnt.ready := Bool(false)
-  io.out.valid := Bool(false)
+  io.inElem.ready := false.B
+  io.inRepCnt.ready := false.B
+  io.out.valid := false.B
 
   val regElem = Reg(init = UInt(0, dataWidth))
   val regRep = Reg(init = UInt(0, repWidth))
@@ -56,26 +56,26 @@ class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
 
   val bothValid = io.inElem.valid & io.inRepCnt.valid
 
-  when(regRep === UInt(0)) {
+  when(regRep === 0.U) {
     when (bothValid) {
       regElem := io.inElem.bits
       regRep := io.inRepCnt.bits
-      io.inElem.ready := Bool(true)
-      io.inRepCnt.ready := Bool(true)
+      io.inElem.ready := true.B
+      io.inRepCnt.ready := true.B
     }
   }
   .otherwise {
-    io.out.valid := Bool(true)
+    io.out.valid := true.B
     when(io.out.ready) {
-      regRep := regRep - UInt(1)
+      regRep := regRep - 1.U
       // last repetition? prefetch in read
-      when(regRep === UInt(1)) {
+      when(regRep === 1.U) {
         // prefetch elem and repcount, if possible
         when (bothValid) {
           regElem := io.inElem.bits
           regRep := io.inRepCnt.bits
-          io.inElem.ready := Bool(true)
-          io.inRepCnt.ready := Bool(true)
+          io.inElem.ready := true.B
+          io.inRepCnt.ready := true.B
         }
       }
     }

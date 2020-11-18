@@ -17,7 +17,7 @@ extends Module {
 
   // assign zero to readData to enable partial assignment in loop
   for(p <- 0 until 2) {
-    io.ports(p).rsp.readData := UInt(0)
+    io.ports(p).rsp.readData := 0.U
   }
 
   for(i <- 0 until numBanks) {

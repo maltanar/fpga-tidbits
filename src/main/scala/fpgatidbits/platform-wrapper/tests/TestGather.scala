@@ -9,8 +9,8 @@ import fpgatidbits.ocm._
 class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
+    val start = Input(Bool())
+    val finished = Output(Bool())
     val indsBase = UInt(INPUT, 64)
     val valsBase = UInt(INPUT, 64)
     val count = UInt(INPUT, 32)
@@ -76,12 +76,12 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val regResultsOK = Reg(init = UInt(0, 32))
   val regResultsNotOK = Reg(init = UInt(0, 32))
   val regTotal = Reg(init = UInt(0, 32))
-  val regActive = Reg(init = Bool(false))
+  val regActive = Reg(init = false.B)
   val regCycles = Reg(init = UInt(0, 32))
   val regNumOutOfOrder = Reg(init = UInt(0, 32))
 
-  gather.out.ready := Bool(true)
-  io.finished := Bool(false)
+  gather.out.ready := true.B
+  io.finished := false.B
 
   regTotal := regResultsOK + regResultsNotOK
 
@@ -98,19 +98,19 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
 
   when(!regActive) {
-    regResultsOK := UInt(0)
-    regResultsNotOK := UInt(0)
-    regCycles := UInt(0)
-    regNumOutOfOrder := UInt(0)
+    regResultsOK := 0.U
+    regResultsNotOK := 0.U
+    regCycles := 0.U
+    regNumOutOfOrder := 0.U
     regActive := io.start
   } .otherwise {
     // watch incoming gather responses
     when(gather.out.ready & gather.out.valid) {
       val expVal = gather.out.bits.tag
       when(expVal === gather.out.bits.dat) {
-        regResultsOK := regResultsOK + UInt(1)
+        regResultsOK := regResultsOK + 1.U
       } .otherwise {
-        regResultsNotOK := regResultsNotOK + UInt(1)
+        regResultsNotOK := regResultsNotOK + 1.U
       }
       // increment OoO response counter if appropriate
       when(orderCheckQ.deq.bits.tag != gather.out.bits.tag) {
@@ -118,21 +118,21 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
           regResultsOK+regResultsNotOK,
           orderCheckQ.deq.bits.tag, gather.out.bits.tag
         )
-        regNumOutOfOrder := regNumOutOfOrder + UInt(1)
+        regNumOutOfOrder := regNumOutOfOrder + 1.U
       }
     }
 
     when(regTotal === regIndCount) {
-      io.finished := Bool(true)
-      when(!io.start) {regActive := Bool(false)}
+      io.finished := true.B
+      when(!io.start) {regActive := false.B}
     } .otherwise {
       // still some work to do, keep track of # cycles
-      regCycles := regCycles + UInt(1)
+      regCycles := regCycles + 1.U
     }
   }
 
-  // PrintableBundleStreamMonitor(gather.in, Bool(true), "in", true)
-  // PrintableBundleStreamMonitor(gather.out, Bool(true), "out", true)
+  // PrintableBundleStreamMonitor(gather.in, true.B, "in", true)
+  // PrintableBundleStreamMonitor(gather.out, true.B, "out", true)
 
   io.resultsOK := regResultsOK
   io.resultsNotOK := regResultsNotOK

@@ -46,7 +46,7 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val readyReqs = StreamJoin(
     inA = freeReqID.idOut, inB = io.reqOrdered, genO = mreq,
     join = {(freeID: UInt, r: UInt) => GenericMemoryRequest(
-      p = p.mrp, addr = r, write = Bool(false), id = freeID,
+      p = p.mrp, addr = r, write = false.B, id = freeID,
       numBytes = UInt(burstBytes)
     )}
   )
@@ -66,8 +66,8 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
 
   //==========================================================================
 
-  val ctrBits = log2Up(p.maxBurst)
-  val reqIDBits = log2Up(p.outstandingReqs)
+  val ctrBits = log2Ceil(p.maxBurst)
+  val reqIDBits = log2Ceil(p.outstandingReqs)
   // since burst responses can be interleaved, each in-flight burst can have
   // a number of elements it has already received. we use the following BRAM
   // as a counter to keep track of the number of elements received for each
@@ -77,11 +77,11 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val ctrWr = rspCounters.ports(1)
   // an issued request always means its storage space is ready, so we can always
   // accept memory responses.
-  io.rspMem.ready := Bool(true)
+  io.rspMem.ready := true.B
   // subtract chanIDBase to get index of counter to read & use as read addr
   val ctrRdInd = io.rspMem.bits.channelID - UInt(p.chanIDBase)
   ctrRd.req.addr := ctrRdInd
-  ctrRd.req.writeEn := Bool(false)
+  ctrRd.req.writeEn := false.B
 
   val regCtrInd = Reg(next = ctrRdInd)
   val regCtrValid = Reg(next = io.rspMem.valid)
@@ -92,7 +92,7 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val regNewVal = Reg(init = UInt(0, width = ctrBits))
   val ctrOldVal = Mux(regDoBypass, regNewVal, ctrRd.rsp.readData)
   // use regCtrLast to clear counter at end of burst
-  val ctrNewVal = Mux(regCtrLast, UInt(0), ctrOldVal + UInt(1))
+  val ctrNewVal = Mux(regCtrLast, 0.U, ctrOldVal + 1.U)
   regNewVal := ctrNewVal
   ctrWr.req.addr := regCtrInd
   ctrWr.req.writeEn := regCtrValid
@@ -104,12 +104,12 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // store received data in bank-writable BRAM, each bank is as wide as the
   // mem data bus
   val storage = Module(new DualPortMaskedBRAM(
-    addrBits = log2Up(p.outstandingReqs), dataBits = burstBits,
+    addrBits = log2Ceil(p.outstandingReqs), dataBits = burstBits,
     unit = p.mrp.dataWidth
   )).io
   val dataRd = storage.ports(0)
   val dataWr = storage.ports(1)
-  dataRd.req.writeEn := Bool(false)
+  dataRd.req.writeEn := false.B
   // compute where the newly arrived data goes
   dataWr.req.addr := regCtrInd
   // store data when available
@@ -153,14 +153,14 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   headRsps.enq.bits.readData := dataRd.rsp.readData
   headRsps.enq.bits.channelID := Reg(next = headReqID)  // internal ID
   freeReqID.idIn.bits := headReqID
-  busyReqs.deq.ready := Bool(false)
-  freeReqID.idIn.valid := Bool(false)
+  busyReqs.deq.ready := false.B
+  freeReqID.idIn.valid := false.B
 
   when(doPopRsp) {
     // pop from busyReqs, recycle the ID and reset the counter
     burstFinishedClr := UIntToOH(headReqID, p.outstandingReqs)
-    freeReqID.idIn.valid := Bool(true)
-    busyReqs.deq.ready := Bool(true)
+    freeReqID.idIn.valid := true.B
+    busyReqs.deq.ready := true.B
   }
 
   headRsps.deq <> io.rspOrdered
@@ -168,10 +168,10 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
 
   // =========================================================================
   // debug
-  //StreamMonitor(io.reqOrdered, Bool(true), "reqOrdered", true)
-  //StreamMonitor(io.rspOrdered, Bool(true), "rspOrdered", true)
-  //PrintableBundleStreamMonitor(io.reqMem, Bool(true), "memRdReq", true)
-  //PrintableBundleStreamMonitor(io.rspMem, Bool(true), "memRdRsp", true)
+  //StreamMonitor(io.reqOrdered, true.B, "reqOrdered", true)
+  //StreamMonitor(io.rspOrdered, true.B, "rspOrdered", true)
+  //PrintableBundleStreamMonitor(io.reqMem, true.B, "memRdReq", true)
+  //PrintableBundleStreamMonitor(io.rspMem, true.B, "memRdRsp", true)
 }
 
 

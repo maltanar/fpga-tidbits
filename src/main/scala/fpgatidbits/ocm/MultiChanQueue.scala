@@ -7,7 +7,7 @@ import fpgatidbits.streams._
 class MultiChanQueueIO[T <: Data](gen: T, chans: Int) extends Bundle {
   val in = Decoupled(gen).flip
   val out = Decoupled(gen)
-  val outSel = UInt(INPUT, log2Up(chans))
+  val outSel = UInt(INPUT, log2Ceil(chans))
 }
 
 // a super simple multichannel queue implementation: basically a bunch of queues,
@@ -43,18 +43,18 @@ class MultiChanQueueBRAM[T <: Data](
 
   val bramWidthBits = gen.getWidth()
   val bramDepth = chans * elemsPerChan
-  val bramAddrBits = log2Up(bramDepth)
+  val bramAddrBits = log2Ceil(bramDepth)
 
   if(!isPow2(elemsPerChan))
     throw new Exception("Elements per channel must be power of 2")
 
-  val ctrBits = log2Up(elemsPerChan)
+  val ctrBits = log2Ceil(elemsPerChan)
 
   val storage = Module(new DualPortBRAM(bramAddrBits, bramWidthBits)).io
 
   val vec_enq_ptr = Vec.fill(chans) {Reg(init=UInt(0, ctrBits))}
   val vec_deq_ptr = Vec.fill(chans) {Reg(init=UInt(0, ctrBits))}
-  val vec_maybe_full = Vec.fill(chans) {Reg(init=Bool(false))}
+  val vec_maybe_full = Vec.fill(chans) {Reg(init=false.B)}
   val vec_ptr_match = Vec.tabulate(chans) {
     i: Int => vec_enq_ptr(i) === vec_deq_ptr(i)
   }
@@ -85,11 +85,11 @@ class MultiChanQueueBRAM[T <: Data](
   val writePort = storage.ports(0)
   val readPort = storage.ports(1)
   writePort.req.writeData := io.in.bits.toBits
-  writePort.req.writeEn := Bool(false)
+  writePort.req.writeEn := false.B
   writePort.req.addr := enq_ptr + enq_offs
 
-  readPort.req.writeData := UInt(0)
-  readPort.req.writeEn := Bool(false)
+  readPort.req.writeData := 0.U
+  readPort.req.writeEn := false.B
   readPort.req.addr := deq_ptr + deq_offs
 
   val ptr_match_enq = vec_ptr_match(enqChan)
@@ -104,8 +104,8 @@ class MultiChanQueueBRAM[T <: Data](
   val do_deq = canPrefetch && !empty && io.out.ready
 
   // update maybe_full regs for each channel
-  val vec_do_enq = Mux(do_enq, UIntToOH(enqChan, chans), UInt(0))
-  val vec_do_deq = Mux(do_deq, UIntToOH(deqChan, chans), UInt(0))
+  val vec_do_enq = Mux(do_enq, UIntToOH(enqChan, chans), 0.U)
+  val vec_do_deq = Mux(do_deq, UIntToOH(deqChan, chans), 0.U)
 
   for(i <- 0 until chans) {
     when(vec_do_enq(i) != vec_do_deq(i)) {
@@ -114,16 +114,16 @@ class MultiChanQueueBRAM[T <: Data](
   }
 
   when (do_enq) {
-    writePort.req.writeEn := Bool(true)
-    enq_ptr := enq_ptr + UInt(1)
+    writePort.req.writeEn := true.B
+    enq_ptr := enq_ptr + 1.U
   }
   when (do_deq) {
-    deq_ptr := deq_ptr + UInt(1)
+    deq_ptr := deq_ptr + 1.U
   }
 
   io.in.ready := !full
 
-  pf.enq.valid := Reg(init = Bool(false), next = do_deq)
+  pf.enq.valid := Reg(init = false.B, next = do_deq)
   pf.enq.bits := pf.enq.bits.fromBits(readPort.rsp.readData)
 
   pf.deq <> io.out

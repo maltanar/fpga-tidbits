@@ -12,7 +12,7 @@ class AXIAddress(addrWidthBits: Int, idBits: Int) extends Bundle {
   // address for the transaction, should be burst aligned if bursts are used
   val addr    = UInt(width = addrWidthBits)
   // size of data beat in bytes
-  // set to UInt(log2Up((dataBits/8)-1)) for full-width bursts
+  // set to UInt(log2Ceil((dataBits/8)-1)) for full-width bursts
   val size    = UInt(width = 3)
   // number of data beats -1 in burst: max 255 for incrementing, 15 for wrapping
   val len     = UInt(width = 8)
@@ -73,35 +73,35 @@ class AXIMasterIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) extends B
 
   // drive default/"harmless" values to leave no output uninitialized
   def driveDefaults() {
-    writeAddr.valid := Bool(false)
-    writeData.valid := Bool(false)
-    writeResp.ready := Bool(false)
-    readAddr.valid := Bool(false)
-    readData.ready := Bool(false)
+    writeAddr.valid := false.B
+    writeData.valid := false.B
+    writeResp.ready := false.B
+    readAddr.valid := false.B
+    readData.ready := false.B
     // write address channel
-    writeAddr.bits.addr := UInt(0)
-    writeAddr.bits.prot := UInt(0)
-    writeAddr.bits.size := UInt(0)
-    writeAddr.bits.len := UInt(0)
-    writeAddr.bits.burst := UInt(0)
-    writeAddr.bits.lock := Bool(false)
-    writeAddr.bits.cache := UInt(0)
-    writeAddr.bits.qos := UInt(0)
-    writeAddr.bits.id := UInt(0)
+    writeAddr.bits.addr := 0.U
+    writeAddr.bits.prot := 0.U
+    writeAddr.bits.size := 0.U
+    writeAddr.bits.len := 0.U
+    writeAddr.bits.burst := 0.U
+    writeAddr.bits.lock := false.B
+    writeAddr.bits.cache := 0.U
+    writeAddr.bits.qos := 0.U
+    writeAddr.bits.id := 0.U
     // write data channel
-    writeData.bits.data := UInt(0)
-    writeData.bits.strb := UInt(0)
-    writeData.bits.last := Bool(false)
+    writeData.bits.data := 0.U
+    writeData.bits.strb := 0.U
+    writeData.bits.last := false.B
     // read address channel
-    readAddr.bits.addr := UInt(0)
-    readAddr.bits.prot := UInt(0)
-    readAddr.bits.size := UInt(0)
-    readAddr.bits.len := UInt(0)
-    readAddr.bits.burst := UInt(0)
-    readAddr.bits.lock := Bool(false)
-    readAddr.bits.cache := UInt(0)
-    readAddr.bits.qos := UInt(0)
-    readAddr.bits.id := UInt(0)
+    readAddr.bits.addr := 0.U
+    readAddr.bits.prot := 0.U
+    readAddr.bits.size := 0.U
+    readAddr.bits.len := 0.U
+    readAddr.bits.burst := 0.U
+    readAddr.bits.lock := false.B
+    readAddr.bits.cache := 0.U
+    readAddr.bits.qos := 0.U
+    readAddr.bits.id := 0.U
   }
 
   // rename signals to be compatible with those in the Xilinx template

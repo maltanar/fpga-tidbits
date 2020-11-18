@@ -4,13 +4,13 @@ import Chisel._
 
 class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox {
   val io = new Bundle {
-    val iValid = Bool(INPUT)
+    val iValid = Input(Bool())
     val iData = UInt(INPUT, width = widthBits)
-    val iBackPressure = Bool(OUTPUT)
-    val oValid = Bool(OUTPUT)
+    val iBackPressure = Output(Bool())
+    val oValid = Output(Bool())
     val oData = UInt(OUTPUT, width = widthBits)
-    val oBackPressure = Bool(INPUT)
-    val count = UInt(OUTPUT, width = log2Up(depthElems+1))
+    val oBackPressure = Input(Bool())
+    val count = UInt(OUTPUT, width = log2Ceil(depthElems+1))
 
     iValid.setName("i_v")
     iData.setName("i_d")
@@ -72,7 +72,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
   val enq_ptr = Counter(entries)
   val deq_ptr = Counter(entries)
-  val maybe_full = Reg(init=Bool(false))
+  val maybe_full = Reg(init=false.B)
 
   // due to the 1-cycle read latency of BRAMs, we add a small regular
   // SRLQueue at the output to correct the interface semantics by
@@ -84,15 +84,15 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   // the threshold here needs to be (pfQueueCap-BRAM latency)
   val canPrefetch = (pf.count < UInt(2))
 
-  val bram = Module(new DualPortBRAM(log2Up(entries), gen.getWidth())).io
+  val bram = Module(new DualPortBRAM(log2Ceil(entries), gen.getWidth())).io
   val writePort = bram.ports(0)
   val readPort = bram.ports(1)
   writePort.req.writeData := io.enq.bits.toBits
-  writePort.req.writeEn := Bool(false)
+  writePort.req.writeEn := false.B
   writePort.req.addr := enq_ptr.value
 
-  readPort.req.writeData := UInt(0)
-  readPort.req.writeEn := Bool(false)
+  readPort.req.writeData := 0.U
+  readPort.req.writeEn := false.B
   readPort.req.addr := deq_ptr.value
 
   val ptr_match = enq_ptr.value === deq_ptr.value
@@ -102,7 +102,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val do_enq = io.enq.ready && io.enq.valid
   val do_deq = canPrefetch && !empty
   when (do_enq) {
-    writePort.req.writeEn := Bool(true)
+    writePort.req.writeEn := true.B
     enq_ptr.inc()
   }
   when (do_deq) {
@@ -114,7 +114,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
   io.enq.ready := !full
 
-  pf.enq.valid := Reg(init = Bool(false), next = do_deq)
+  pf.enq.valid := Reg(init = false.B, next = do_deq)
   pf.enq.bits := pf.enq.bits.fromBits(readPort.rsp.readData)
 
   pf.deq <> io.deq
@@ -126,7 +126,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   } else {
     io.count := Mux(ptr_match,
                     Mux(maybe_full,
-                      UInt(entries), UInt(0)),
+                      UInt(entries), 0.U),
                     Mux(deq_ptr.value > enq_ptr.value,
                       UInt(entries) + ptr_diff, ptr_diff)) + pf.count
   }

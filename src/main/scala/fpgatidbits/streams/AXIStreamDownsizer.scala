@@ -8,10 +8,10 @@ class ParallelInSerialOut(parWidth: Int, serWidth: Int) extends Module {
 
   val io = new Bundle {
     val parIn = UInt(INPUT, parWidth)
-    val parWrEn = Bool(INPUT)
+    val parWrEn = Input(Bool())
     val serIn = UInt(INPUT, serWidth)
     val serOut = UInt(OUTPUT, serWidth)
-    val shiftEn = Bool(INPUT)
+    val shiftEn = Input(Bool())
   }
 
   val stages = Vec.fill(numShiftSteps) { Reg(init = UInt(0, serWidth)) }
@@ -76,42 +76,42 @@ class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
   // the shift register
   val shiftReg = Module(new ParallelInSerialOut(inWidth, outWidth))
   shiftReg.io.parIn := io.in.bits
-  shiftReg.io.serIn := UInt(0)
+  shiftReg.io.serIn := 0.U
   io.out.bits := UInt(shiftReg.io.serOut)
-  shiftReg.io.parWrEn := Bool(false)
-  shiftReg.io.shiftEn := Bool(false)
+  shiftReg.io.parWrEn := false.B
+  shiftReg.io.shiftEn := false.B
 
   // FSM and register definitions
   val sWaitInput :: sShift :: sLastStep :: Nil = Enum(UInt(), 3)
   val regState = Reg(init = UInt(sWaitInput))
-  val regShiftCount = Reg(init = UInt(0, width = log2Up(numShiftSteps)))
+  val regShiftCount = Reg(init = UInt(0, width = log2Ceil(numShiftSteps)))
 
   // default outputs
-  io.in.ready := Bool(false)
-  io.out.valid := Bool(false)
+  io.in.ready := false.B
+  io.out.valid := false.B
 
   // state machine
   switch( regState ) {
     is( sWaitInput ) {
       // enable parallel load to shift register
-      shiftReg.io.parWrEn := Bool(true)
+      shiftReg.io.parWrEn := true.B
       // signal to input that we are ready to go
-      io.in.ready := Bool(true)
+      io.in.ready := true.B
       // reset the count register
-      regShiftCount := UInt(0)
+      regShiftCount := 0.U
       // wait until data is available at the input
       when ( io.in.valid ) { regState := sShift }
     }
 
     is( sShift ) {
       // signal to output that data is available
-      io.out.valid := Bool(true)
+      io.out.valid := true.B
       // wait for ack from output
       when (io.out.ready) {
         // increment shift counter
-        regShiftCount := regShiftCount + UInt(1)
+        regShiftCount := regShiftCount + 1.U
         // enable shift
-        shiftReg.io.shiftEn := Bool(true)
+        shiftReg.io.shiftEn := true.B
         // go to last state when appropriate, stay here otherwise
         // note that we don't have to shift the very last step,
         // hence the one before last is numShiftSteps-2
@@ -121,16 +121,16 @@ class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
 
     is( sLastStep ) {
       // signal to output that data is available
-      io.out.valid := Bool(true)
+      io.out.valid := true.B
       // wait for ack from output
       when (io.out.ready) {
         // next action depends on both the in and out sides
         when ( io.in.valid ) {
           // new data already available on input, grab it
-          shiftReg.io.parWrEn := Bool(true)
-          io.in.ready := Bool(true)
+          shiftReg.io.parWrEn := true.B
+          io.in.ready := true.B
           // reset counter and go to shift state
-          regShiftCount := UInt(0)
+          regShiftCount := 0.U
           regState := sShift
         } .otherwise {
           // go to sWaitInput

@@ -20,14 +20,14 @@ object StreamLimiter {
 
 class StreamLimiter(w: Int) extends Module {
   val io = new Bundle {
-    val start = Bool(INPUT)
-    val done = Bool(OUTPUT)
+    val start = Input(Bool())
+    val done = Output(Bool())
     val byteCount = UInt(INPUT, 32)
     val streamIn = Decoupled(UInt(width=w)).flip
     val streamOut = Decoupled(UInt(width=w))
   }
 
-  io.done := Bool(false)
+  io.done := false.B
 
   io.streamOut.bits := io.streamIn.bits
   io.streamOut.valid := io.streamIn.valid
@@ -54,11 +54,11 @@ class StreamLimiter(w: Int) extends Module {
 
       is(sFinished) {
         // do not let any more transactions through towards out
-        io.streamOut.valid := Bool(false)
+        io.streamOut.valid := false.B
         // let upstream sources continue, do not clog the pipes
-        io.streamIn.ready := Bool(true)
+        io.streamIn.ready := true.B
         // signal finished
-        io.done := Bool(true)
+        io.done := true.B
         when(!io.start) {regState := sIdle}
       }
   }

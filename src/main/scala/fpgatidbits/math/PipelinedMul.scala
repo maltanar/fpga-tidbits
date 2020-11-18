@@ -28,10 +28,10 @@ class SystolicSInt64Mul_5Stage extends BinaryMathOp(64) {
   val fxnS0 = {i: BinaryMathOperands => val m = new PipelinedMultStageData(64, wMul)
     m.signA := i.first(63)
     m.signB := i.second(63)
-    m.a := Mux(i.first(63), UInt(~i.first + UInt(1), width = 64), i.first)
-    m.b := Mux(i.second(63), UInt(~i.second + UInt(1), width = 64), i.second)
-    m.mulRes := UInt(0)
-    m.addRes := UInt(0)
+    m.a := Mux(i.first(63), UInt(~i.first + 1.U, width = 64), i.first)
+    m.b := Mux(i.second(63), UInt(~i.second + 1.U, width = 64), i.second)
+    m.mulRes := 0.U
+    m.addRes := 0.U
     m
   }
   val s0 = SystolicReg(io.in.bits, metad, fxnS0, io.in)
@@ -66,5 +66,5 @@ class SystolicSInt64Mul_5Stage extends BinaryMathOp(64) {
 
   val magnRes = Cat(UInt(0, width=1), s4.bits.addRes(62, 0))
   val isResultNegative = s4.bits.signA ^ s4.bits.signB
-  io.out.bits := Mux(isResultNegative, ~magnRes + UInt(1), magnRes)
+  io.out.bits := Mux(isResultNegative, ~magnRes + 1.U, magnRes)
 }

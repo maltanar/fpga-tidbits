@@ -29,9 +29,9 @@ class StreamMonitor(
   dbg: Boolean = false
 ) extends Module {
   val io = new Bundle {
-    val enable = Bool(INPUT)
-    val validIn = Bool(INPUT)
-    val readyIn = Bool(INPUT)
+    val enable = Input(Bool())
+    val validIn = Input(Bool())
+    val readyIn = Input(Bool())
     val out = new StreamMonitorOutIF()
   }
   val sIdle :: sRun :: Nil = Enum(UInt(), 2)
@@ -57,10 +57,10 @@ class StreamMonitor(
       is(sIdle) {
         when(regEnable) {
           regState := sRun
-          regActiveCycles := UInt(0)
-          regTotalCycles := UInt(0)
-          regNoValidButReady := UInt(0)
-          regNoReadyButValid := UInt(0)
+          regActiveCycles := 0.U
+          regTotalCycles := 0.U
+          regNoValidButReady := 0.U
+          regNoReadyButValid := 0.U
         }
       }
 
@@ -72,15 +72,15 @@ class StreamMonitor(
           )
         }
         .otherwise {
-          regTotalCycles := regTotalCycles + UInt(1)
+          regTotalCycles := regTotalCycles + 1.U
           when (regValidIn & !regReadyIn) {
-            regNoReadyButValid := regNoReadyButValid + UInt(1)
+            regNoReadyButValid := regNoReadyButValid + 1.U
           }
           when (!regValidIn & regReadyIn) {
-            regNoValidButReady := regNoValidButReady + UInt(1)
+            regNoValidButReady := regNoValidButReady + 1.U
           }
           when (regValidIn & regReadyIn) {
-            regActiveCycles := regActiveCycles + UInt(1)
+            regActiveCycles := regActiveCycles + 1.U
             if(dbg) {
               // printf only active in Chisel C++ emulator
               printf(streamName + " txn: %d \n", regActiveCycles)
@@ -114,9 +114,9 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
   dbg: Boolean = false
 ) extends Module {
   val io = new Bundle {
-    val enable = Bool(INPUT)
-    val validIn = Bool(INPUT)
-    val readyIn = Bool(INPUT)
+    val enable = Input(Bool())
+    val validIn = Input(Bool())
+    val readyIn = Input(Bool())
     val bitsIn = gen.cloneType.asInput
     val out = new StreamMonitorOutIF()
   }
@@ -142,10 +142,10 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
       is(sIdle) {
         when(regEnable) {
           regState := sRun
-          regActiveCycles := UInt(0)
-          regTotalCycles := UInt(0)
-          regNoValidButReady := UInt(0)
-          regNoReadyButValid := UInt(0)
+          regActiveCycles := 0.U
+          regTotalCycles := 0.U
+          regNoValidButReady := 0.U
+          regNoReadyButValid := 0.U
         }
       }
 
@@ -157,18 +157,18 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
           )
         }
         .otherwise {
-          regTotalCycles := regTotalCycles + UInt(1)
+          regTotalCycles := regTotalCycles + 1.U
           if(dbg) {
             // use nonregistered probes to avoid stale data
             // this is in emulation, so no timing closure problems anyway
             when (io.validIn & !io.readyIn) {
-              regNoReadyButValid := regNoReadyButValid + UInt(1)
+              regNoReadyButValid := regNoReadyButValid + 1.U
             }
             when (!io.validIn & io.readyIn) {
-              regNoValidButReady := regNoValidButReady + UInt(1)
+              regNoValidButReady := regNoValidButReady + 1.U
             }
             when(io.validIn & io.readyIn) {
-              regActiveCycles := regActiveCycles + UInt(1)
+              regActiveCycles := regActiveCycles + 1.U
               // printf only active in Chisel C++ emulator or verilog sim
               printf(streamName + " (%d) ", regActiveCycles)
               printf(io.bitsIn.printfStr, io.bitsIn.printfElems():_*)
@@ -177,13 +177,13 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
             // assume StreamMonitor used as part of synthesis - use registered
             // probes
             when (regValidIn & !regReadyIn) {
-              regNoReadyButValid := regNoReadyButValid + UInt(1)
+              regNoReadyButValid := regNoReadyButValid + 1.U
             }
             when (!regValidIn & regReadyIn) {
-              regNoValidButReady := regNoValidButReady + UInt(1)
+              regNoValidButReady := regNoValidButReady + 1.U
             }
             when (regValidIn & regReadyIn) {
-              regActiveCycles := regActiveCycles + UInt(1)
+              regActiveCycles := regActiveCycles + 1.U
             }
           }
         }

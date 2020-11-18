@@ -11,14 +11,14 @@ class Counter(w: Int) extends Module {
   val io = new Bundle {
     val nsteps = UInt(INPUT, width = w)
     val current = UInt(OUTPUT, width = w)
-    val enable = Bool(INPUT)
-    val full = Bool(OUTPUT)
+    val enable = Input(Bool())
+    val full = Output(Bool())
   }
   val regCount = Reg(init = UInt(0, w))
-  val regMax = Reg(next = io.nsteps - UInt(1))
+  val regMax = Reg(next = io.nsteps - 1.U)
   val limitReached = (regCount === regMax)
   when(io.enable) {
-    regCount := Mux(limitReached, UInt(0, w), regCount + UInt(1))
+    regCount := Mux(limitReached, UInt(0, w), regCount + 1.U)
   }
   io.full := limitReached
   io.current := regCount

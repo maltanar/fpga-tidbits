@@ -5,8 +5,8 @@ import Chisel._
 class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module {
 
   val io = new Bundle {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
+    val start = Input(Bool())
+    val finished = Output(Bool())
     val reduced = UInt(OUTPUT, width = w )
     val byteCount = UInt(INPUT, width = 32)
     val streamIn = Decoupled(UInt(width = w)).flip
@@ -18,9 +18,9 @@ class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module
   val regReduced = Reg(init = UInt(initVal, width = w))
   val regBytesLeft = Reg(init = UInt(0, 32))
 
-  io.finished := Bool(false)
+  io.finished := false.B
   io.reduced := regReduced
-  io.streamIn.ready := Bool(false)
+  io.streamIn.ready := false.B
 
   switch(regState) {
       is(sIdle) {
@@ -31,9 +31,9 @@ class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module
       }
 
       is(sRunning) {
-        when (regBytesLeft === UInt(0)) { regState := sFinished}
+        when (regBytesLeft === 0.U) { regState := sFinished}
         .otherwise {
-          io.streamIn.ready := Bool(true)
+          io.streamIn.ready := true.B
           when (io.streamIn.valid) {
             regReduced := fxn(regReduced, io.streamIn.bits)
             regBytesLeft := regBytesLeft - UInt(bytesPerElem)
@@ -42,7 +42,7 @@ class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module
       }
 
       is(sFinished) {
-        io.finished := Bool(true)
+        io.finished := true.B
         when (!io.start) { regState := sIdle}
       }
   }

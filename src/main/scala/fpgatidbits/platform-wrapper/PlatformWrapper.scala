@@ -59,7 +59,7 @@ extends Module {
   def platformDriverFiles: Array[String]  // additional files
 
   // instantiate the accelerator
-  val regWrapperReset = Reg(init = Bool(false), clock = Driver.implicitClock)
+  val regWrapperReset = Reg(init = false.B, clock = Driver.implicitClock)
   val accel = Module(instFxn(p))
   // permits controlling the accelerator's reset from both the wrapper's reset,
   // and by using a special register file command (see hack further down :)
@@ -72,7 +72,8 @@ extends Module {
   val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
 
   import scala.collection.immutable.ListMap
-  val ownIO = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
+  //val ownIO = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
+  val ownIO = accel.io
 
   // each I/O is assigned to at least one register index, possibly more if wide
   // round each I/O width to nearest csrWidth multiple, sum, divide by csrWidth
@@ -82,12 +83,12 @@ extends Module {
   val numRegs = ownIO.map(fxn).reduce({_+_}) / wCSR
 
   // instantiate the register file
-  val regAddrBits = log2Up(numRegs)
+  val regAddrBits = log2Ceil(numRegs)
   val regFile = Module(new RegFile(numRegs, regAddrBits, wCSR)).io
 
   // hack: detect writes to register 0 to control accelerator reset
   val rfcmd = regFile.extIF.cmd
-  when(rfcmd.valid & rfcmd.bits.write & rfcmd.bits.regID === UInt(0)) {
+  when(rfcmd.valid & rfcmd.bits.write & rfcmd.bits.regID === 0.U) {
     regWrapperReset := rfcmd.bits.writeData(0)
   }
 
@@ -97,7 +98,7 @@ extends Module {
   var allocReg = 0
   // hand-place the signature register at 0
   regFileMap("signature") = Array(allocReg)
-  regFile.regIn(allocReg).valid := Bool(true)
+  regFile.regIn(allocReg).valid := true.B
   regFile.regIn(allocReg).bits := ownIO("signature")
   println("Signal signature mapped to single reg " + allocReg.toString)
   allocReg += 1
@@ -114,11 +115,11 @@ extends Module {
           // concatanate all assigned registers, connect to input
           bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
           for(i <- 0 until numRegsToAlloc) {
-            regFile.regIn(allocReg + i).valid := Bool(false)
+            regFile.regIn(allocReg + i).valid := false.B
           }
         } else if(bits.dir == OUTPUT) {
           for(i <- 0 until numRegsToAlloc) {
-            regFile.regIn(allocReg + i).valid := Bool(true)
+            regFile.regIn(allocReg + i).valid := true.B
             val ubound = math.min(i*wCSR+wCSR-1, w-1)
             regFile.regIn(allocReg + i).bits := bits(ubound, i*wCSR)
           }
@@ -136,11 +137,11 @@ extends Module {
             bits := regFile.regOut(allocReg)(0)
           } else { bits := regFile.regOut(allocReg) }
           // disable internal write for this register
-          regFile.regIn(allocReg).valid := Bool(false)
+          regFile.regIn(allocReg).valid := false.B
 
         } else if(bits.dir == OUTPUT) {
           // TODO don't always write (change detect?)
-          regFile.regIn(allocReg).valid := Bool(true)
+          regFile.regIn(allocReg).valid := true.B
           regFile.regIn(allocReg).bits := bits
         } else { throw new Exception("Wire in IO: "+name) }
 
@@ -205,7 +206,7 @@ extends Module {
     val expected_signature: String = accel.hexSignature()
     var readWriteFxns: String = ""
     for((name, bits) <- ownIO) {
-      if(bits.dir == INPUT) {
+      if(bits.dir ==) {
         readWriteFxns += makeRegWriteFxn(name) + "\n"
       } else if(bits.dir == OUTPUT) {
         readWriteFxns += makeRegReadFxn(name) + "\n"

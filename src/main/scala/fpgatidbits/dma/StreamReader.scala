@@ -17,10 +17,10 @@ class StreamReaderParams(
 )
 
 class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
-  val start = Bool(INPUT)
-  val active = Bool(OUTPUT)
-  val finished = Bool(OUTPUT)
-  val error = Bool(OUTPUT)
+  val start = Input(Bool())
+  val active = Output(Bool())
+  val finished = Output(Bool())
+  val error = Output(Bool())
   val baseAddr = UInt(INPUT, p.addrWidth)
   val byteCount = UInt(INPUT, 32)
   // stream data output
@@ -29,7 +29,7 @@ class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
   val req = Decoupled(new GenericMemoryRequest(p))
   val rsp = Decoupled(new GenericMemoryResponse(p)).flip
   // controls for ID queue reinit
-  val doInit = Bool(INPUT)                // re-initialize queue
+  val doInit = Input(Bool())                // re-initialize queue
   val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
 }
 
@@ -38,12 +38,12 @@ class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
 // concatenate zeroes as the lower bits and return
 object RoundUpAlign {
   def apply(align: Int, x: UInt): UInt = {
-    val numZeroAddrBits = log2Up(align)
+    val numZeroAddrBits = log2Ceil(align)
     val numOtherBits = x.getWidth()-numZeroAddrBits
     val lower = x(numZeroAddrBits-1, 0)
     val upper = x(x.getWidth()-1, numZeroAddrBits)
-    val isAligned = (lower === UInt(0))
-    return Mux(isAligned, x, Cat(upper+UInt(1), UInt(0, width = numZeroAddrBits)))
+    val isAligned = (lower === 0.U)
+    return Mux(isAligned, x, Cat(upper+1.U, UInt(0, width = numZeroAddrBits)))
   }
 }
 
@@ -66,7 +66,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   rg.ctrl.byteCount := RoundUpAlign(memWidthBytes, io.byteCount)
 
   val regDoneBytes = Reg(init = UInt(0, width = 32))
-  when(!io.start) { regDoneBytes := UInt(0) }
+  when(!io.start) { regDoneBytes := 0.U }
   .elsewhen(io.out.valid & io.out.ready) {
     regDoneBytes := regDoneBytes + UInt(p.streamWidth/8)
   }
@@ -119,7 +119,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // expose FIFO output as the stream output
   fifo.deq <> io.out
 
-  if(p.disableThrottle) { rg.ctrl.throttle := Bool(false) }
+  if(p.disableThrottle) { rg.ctrl.throttle := false.B }
   else {
     // throttling logic: don't ask more than what we can chew, limit the #
     // outstanding requested bytes to FIFO capacity
@@ -137,8 +137,8 @@ class StreamReader(val p: StreamReaderParams) extends Module {
     // calculate per-cycle updates to # bytes in flight
     val outReqBytes = UInt(width = 32)
     val inRspBytes = UInt(width = 32)
-    outReqBytes := UInt(0)
-    inRspBytes := UInt(0)
+    outReqBytes := 0.U
+    inRspBytes := 0.U
     when(rsp.valid & rsp.ready) { inRspBytes := UInt(memWidthBytes) }
     when(io.req.valid & io.req.ready) { outReqBytes := io.req.bits.numBytes }
     regBytesInFlight := regBytesInFlight + outReqBytes - inRspBytes
@@ -157,12 +157,12 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   val act = io.start & !io.finished
   val regWasActive = Reg(next = act)
   when(io.active) {
-    regCycleCount := regCycleCount + UInt(1)
+    regCycleCount := regCycleCount + 1.U
     when(!fifo.deq.valid) {
-      regCycleFifoNotValid := regCycleFifoNotValid + UInt(1)
+      regCycleFifoNotValid := regCycleFifoNotValid + 1.U
     }
     when(!rsp.valid) {
-      regCycleMemRspNotValid := regCycleMemRspNotValid + UInt(1)
+      regCycleMemRspNotValid := regCycleMemRspNotValid + 1.U
       if(p.streamName == "nzdata")
       printf("mem rsp for " + p.streamName + "not valid: %d \n", regCycleCount)
     }

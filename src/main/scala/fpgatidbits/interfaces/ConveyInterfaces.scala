@@ -51,8 +51,8 @@ class ConveyMemMasterIF(rtnCtlBits: Int) extends Bundle {
   // (instead of ready/valid as defined here) -- needs adapter
   val req         = Decoupled(new ConveyMemRequest(rtnCtlBits, 48, 64))
   val rsp         = Decoupled(new ConveyMemResponse(rtnCtlBits, 64)).flip
-  val flushReq    = Bool(OUTPUT)
-  val flushOK     = Bool(INPUT)
+  val flushReq    = Output(Bool())
+  val flushOK     = Input(Bool())
 
   override def clone = {
     new ConveyMemMasterIF(rtnCtlBits).asInstanceOf[this.type] }
@@ -73,18 +73,18 @@ class ConveyPersonalityIF(numMemPorts: Int, rtnCtlBits: Int) extends Bundle {
 // correct number of memory ports and RTNCTL_WIDTH in the cae_pers.v)
 class ConveyPersonalityVerilogIF(numMemPorts: Int, rtnctl: Int) extends Bundle {
   // dispatch interface
-  val dispInstValid = Bool(INPUT)
+  val dispInstValid = Input(Bool())
   val dispInstData  = UInt(INPUT, width = 5)
   val dispRegID     = UInt(INPUT, width = 18)
-  val dispRegRead   = Bool(INPUT)
-  val dispRegWrite  = Bool(INPUT)
+  val dispRegRead   = Input(Bool())
+  val dispRegWrite  = Input(Bool())
   val dispRegWrData = UInt(INPUT, width = 64)
   val dispAegCnt    = UInt(OUTPUT, width = 18)
   val dispException = UInt(OUTPUT, width = 16)
-  val dispIdle      = Bool(OUTPUT)
-  val dispRtnValid  = Bool(OUTPUT)
+  val dispIdle      = Output(Bool())
+  val dispRtnValid  = Output(Bool())
   val dispRtnData   = UInt(OUTPUT, width = 64)
-  val dispStall     = Bool(OUTPUT)
+  val dispStall     = Output(Bool())
   // memory controller interface
   // request
   val mcReqValid    = UInt(OUTPUT, width = numMemPorts)
@@ -106,11 +106,11 @@ class ConveyPersonalityVerilogIF(numMemPorts: Int, rtnctl: Int) extends Bundle {
   val mcReqFlush    = UInt(OUTPUT, width = numMemPorts)
   val mcResFlushOK  = UInt(INPUT, width = numMemPorts)
   // control-status register interface
-  val csrWrValid      = Bool(INPUT)
-  val csrRdValid      = Bool(INPUT)
+  val csrWrValid      = Input(Bool())
+  val csrRdValid      = Input(Bool())
   val csrAddr         = UInt(INPUT, 16)
   val csrWrData       = UInt(INPUT, 64)
-  val csrReadAck      = Bool(OUTPUT)
+  val csrReadAck      = Output(Bool())
   val csrReadData     = UInt(OUTPUT, 64)
   // misc -- IDs for each AE
   val aeid            = UInt(INPUT, 4)

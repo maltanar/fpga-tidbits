@@ -11,7 +11,7 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
   // minimum port width
   val minW: Int = math.min(rWidth, wWidth)
   // address width is determined by min port width
-  val addrWidth: Int = log2Up(b/minW)
+  val addrWidth: Int = log2Ceil(b/minW)
   val readDepth: Int = b/rWidth
   val readWidth: Int = rWidth
   val writeDepth: Int = b/wWidth
@@ -21,11 +21,11 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
   val bits: Int = b
 
   def makeReadAddr(x: UInt): UInt = {
-    if (rWidth <= wWidth) x else (x << UInt(log2Up(rWidth/wWidth)))
+    if (rWidth <= wWidth) x else (x << UInt(log2Ceil(rWidth/wWidth)))
   }
 
   def makeWriteAddr(x: UInt): UInt = {
-    if (wWidth <= rWidth) x else (x << UInt(log2Up(wWidth/rWidth)))
+    if (wWidth <= rWidth) x else (x << UInt(log2Ceil(wWidth/rWidth)))
   }
 
   def printParams() {
@@ -51,9 +51,9 @@ class OCMRequest(writeWidth: Int, addrWidth: Int) extends Bundle {
 object NullOCMRequest {
   def apply(p: OCMParameters) = {
     val ocmr = new OCMRequest(p.writeWidth, p.addrWidth)
-    ocmr.addr := UInt(0)
-    ocmr.writeEn := Bool(false)
-    ocmr.writeData := UInt(0)
+    ocmr.addr := 0.U
+    ocmr.writeEn := false.B
+    ocmr.writeData := 0.U
     ocmr
   }
 }
@@ -111,11 +111,11 @@ class OnChipMemory(p: OCMParameters, ocmName: String) extends BlackBox {
 class OCMControllerIF(p: OCMParameters) extends Bundle {
   // control/status interface
   val mode = UInt(INPUT, 1)
-  val start = Bool(INPUT)
-  val done = Bool(OUTPUT)
+  val start = Input(Bool())
+  val done = Output(Bool())
   val fillPort = Decoupled(UInt(width = p.writeWidth)).flip
   val dumpPort = Decoupled(UInt(width = p.readWidth))
-  val busy = Bool(OUTPUT)
+  val busy = Output(Bool())
   // word index to start with during fill/dump
   val fillDumpStart = UInt(INPUT, width = p.addrWidth+1)
   // number of OCM words to fill/dump
@@ -142,7 +142,7 @@ class OCMController(p: OCMParameters) extends Module {
   // use a FIFO queue to make burst reads with latency easier
   // TODO parametrize # entires in dump queue
   val fifoCapacity = 16
-  val regDumpValid = Reg(init = Bool(false))
+  val regDumpValid = Reg(init = false.B)
   val dumpQ = Module(new Queue(UInt(width = p.readWidth), entries = fifoCapacity))
   // shift registers to compensate for OCM read latency (address to valid)
   // -1 since this is already sourced from a register
@@ -161,33 +161,33 @@ class OCMController(p: OCMParameters) extends Module {
   val regFillDumpCount = Reg(init = UInt(0, p.addrWidth+1))
 
   // default outputs
-  io.mcif.done := Bool(false)
-  io.mcif.fillPort.ready := Bool(false)
-  ocm.req.addr := UInt(0)
-  ocm.req.writeEn := Bool(false)
+  io.mcif.done := false.B
+  io.mcif.fillPort.ready := false.B
+  ocm.req.addr := 0.U
+  ocm.req.writeEn := false.B
   ocm.req.writeData := io.mcif.fillPort.bits
 
   // default assignment to valid shiftreg
-  regDumpValid := Bool(false)
+  regDumpValid := false.B
 
   switch(regState) {
       is(sIdle) {
         regAddr := io.mcif.fillDumpStart
         regFillDumpCount := io.mcif.fillDumpCount
         when(io.mcif.start) {
-          when (io.mcif.mode === UInt(0)) { regState := sFill }
-          .elsewhen (io.mcif.mode === UInt(1)) { regState := sDump }
+          when (io.mcif.mode === 0.U) { regState := sFill }
+          .elsewhen (io.mcif.mode === 1.U) { regState := sDump }
         }
       }
 
       is(sFill) {
-        io.mcif.fillPort.ready := Bool(true)
+        io.mcif.fillPort.ready := true.B
         ocm.req.addr := p.makeWriteAddr(regAddr)
 
         when (regAddr === regFillDumpCount) {regState := sFinished}
         .elsewhen (io.mcif.fillPort.valid) {
-          ocm.req.writeEn := Bool(true)
-          regAddr := regAddr + UInt(1)
+          ocm.req.writeEn := true.B
+          regAddr := regAddr + 1.U
         }
       }
 
@@ -195,13 +195,13 @@ class OCMController(p: OCMParameters) extends Module {
         ocm.req.addr := p.makeReadAddr(regAddr)
         when (regAddr === regFillDumpCount) {regState := sFinished}
         .elsewhen (hasRoom & dumpQ.io.enq.ready) {
-          regDumpValid := Bool(true)
-          regAddr := regAddr + UInt(1)
+          regDumpValid := true.B
+          regAddr := regAddr + 1.U
         }
       }
 
       is(sFinished) {
-        io.mcif.done := Bool(true)
+        io.mcif.done := true.B
         when (!io.mcif.start) {regState := sIdle}
       }
   }

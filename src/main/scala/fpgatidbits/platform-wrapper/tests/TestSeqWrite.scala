@@ -8,8 +8,8 @@ import fpgatidbits.streams._
 class TestSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
+    val start = Input(Bool())
+    val finished = Output(Bool())
     val baseAddr = UInt(INPUT, width = 64)
     val init = UInt(INPUT, width = 32)
     val step = UInt(INPUT, width = 32)

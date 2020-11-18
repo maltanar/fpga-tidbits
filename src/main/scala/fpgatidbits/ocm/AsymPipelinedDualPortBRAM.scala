@@ -20,8 +20,8 @@ class AsymPipelinedDualPortBRAM(
   val maxWidth = math.max(p.writeWidth, p.readWidth)
   val asymRatio = maxWidth / minWidth
   val memBits = p.writeDepth * p.writeWidth
-  val addr_bits = log2Up(memBits / minWidth)
-  val addrOfUnit_bits = log2Up(asymRatio)
+  val addr_bits = log2Ceil(memBits / minWidth)
+  val addrOfUnit_bits = log2Ceil(asymRatio)
   val addrInUnit_bits = addr_bits - addrOfUnit_bits
   if(asymRatio == 1) {
     // just instantiate a regular PipelinedDualPortBRAM

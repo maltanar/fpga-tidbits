@@ -47,7 +47,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   // instantiate the reduction operator, since we'll use its latency to size
   // various components in StreamingReducer
   val op = Module(makeReducer())
-  val internalIDWidth = log2Up(op.latency + 8)
+  val internalIDWidth = log2Ceil(op.latency + 8)
   val txns = 1 << internalIDWidth
 
   // ==========================================================================
@@ -91,30 +91,30 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       val in = Decoupled(wu).flip
       val out = Decoupled(wup)
     }
-    val regPendingUpsize = Reg(init = Bool(false))
+    val regPendingUpsize = Reg(init = false.B)
     val regPendingIndex = Reg(init = UInt(0, indWidth))
     val regPendingData = Reg(init = UInt(0, valWidth))
 
-    io.in.ready := Bool(false)
-    io.out.valid := Bool(false)
+    io.in.ready := false.B
+    io.out.valid := false.B
     io.out.bits.internalID := regPendingIndex
     io.out.bits.valueA := regPendingData
     io.out.bits.valueB := io.in.bits.value
     // upsizer is intended to sit right after newQ, will only see opsDone=0
-    io.out.bits.opsDone := UInt(0)
+    io.out.bits.opsDone := 0.U
 
     when(!regPendingUpsize) {
       when(io.in.valid & io.in.bits.needZeroPad) {
-        io.out.valid := Bool(true)
+        io.out.valid := true.B
         io.in.ready := io.out.ready
         io.out.bits.internalID := io.in.bits.internalID
         io.out.bits.valueA := io.in.bits.value
-        io.out.bits.valueB := UInt(0)   // TODO zero from semiring!
+        io.out.bits.valueB := 0.U   // TODO zero from semiring!
       } .otherwise {
         // fill up register buffers
-        io.in.ready := Bool(true)
+        io.in.ready := true.B
         when(io.in.fire()) {
-          regPendingUpsize := Bool(true)
+          regPendingUpsize := true.B
           regPendingIndex := io.in.bits.internalID
           regPendingData := io.in.bits.value
         }
@@ -124,7 +124,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       io.out.valid := io.in.valid
       io.in.ready := io.out.ready
       when(io.in.fire()) {
-        regPendingUpsize := Bool(false)
+        regPendingUpsize := false.B
         assert(io.in.bits.internalID === regPendingIndex, "Unmatched IDs in upsizer")
       }
     }
@@ -145,8 +145,8 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
     val prevData = memData(inGroupID)
     val prevOpsLeft = memOpsLeft(inGroupID)
 
-    io.out.valid := Bool(false)
-    inQ.ready := Bool(false)
+    io.out.valid := false.B
+    inQ.ready := false.B
     io.out.bits.internalID := inGroupID
     io.out.bits.valueA := prevData
     io.out.bits.valueB := inQ.bits.value
@@ -154,22 +154,22 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
 
     // incoming input has no previously stored data: pop input and store in mem
     when(inQ.valid & !hasPrevData) {
-      inQ.ready := Bool(true)
-      memValid(inGroupID) := Bool(true)
+      inQ.ready := true.B
+      memValid(inGroupID) := true.B
       memOpsLeft(inGroupID) := inQ.bits.opsDone
       memData(inGroupID) := inQ.bits.value
     }
 
     // incoming input does have stored data, make output available
     when(inQ.valid & hasPrevData) {
-      io.out.valid := Bool(true)
+      io.out.valid := true.B
       inQ.ready := io.out.ready
     }
 
     // when output is popped, the storage for the corresponding groupID position
     // is set to empty again
     when(io.out.valid & io.out.ready) {
-      memValid(inGroupID) := Bool(false)
+      memValid(inGroupID) := false.B
     }
   }
 
@@ -194,7 +194,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
     val ret = new InternalWU()
     ret.internalID := a.internalID
     // increment ops done when coming out of the cloakroom
-    ret.opsDone := a.opsDone + UInt(1)
+    ret.opsDone := a.opsDone + 1.U
     ret.value := b
     return ret
   }
@@ -240,12 +240,12 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   // currently used internal ID, initialized s.t. increment gives 0 as first ID
   val regCurrentInternalID = Reg(init = UInt(0, internalIDWidth))
   // currently active group ID, initialized to invalid group
-  val regGroupID = Reg(init = Fill(indWidth, Bool(true)))
+  val regGroupID = Reg(init = Fill(indWidth, true.B))
 
   val newGroupID = io.in.bits.groupID
   val newGroupLen = io.in.bits.groupLen
-  val newGroupIsSingle = newGroupLen === UInt(1)
-  idPool.idOut.ready := Bool(false)
+  val newGroupIsSingle = newGroupLen === 1.U
+  idPool.idOut.ready := false.B
 
   val inTargets = DecoupledOutputDemux(
     sel = newGroupIsSingle, chans = Seq(newQ.enq, oneQ.enq)
@@ -257,12 +257,12 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   inTargets.bits <> io.in.bits
   io.in.ready := inTargets.ready & !stallIn
 
-  oneQ.enq.bits.opsDone := UInt(0)
-  newQ.enq.bits.opsDone := UInt(0)
+  oneQ.enq.bits.opsDone := 0.U
+  newQ.enq.bits.opsDone := 0.U
   newQ.enq.bits.internalID := regCurrentInternalID
   oneQ.enq.bits.internalID := regCurrentInternalID
-  oneQ.enq.bits.needZeroPad := Bool(false)
-  newQ.enq.bits.needZeroPad := Bool(false)
+  oneQ.enq.bits.needZeroPad := false.B
+  newQ.enq.bits.needZeroPad := false.B
 
   when(regGroupID != newGroupID) {
     when(io.in.valid & io.in.ready) {
@@ -274,12 +274,12 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       memGroupID(idPool.idOut.bits) := newGroupID
       regGroupID := newGroupID
       // save number of ops needed for group, add +1 for zero padding as needed
-      memGroupLen(idPool.idOut.bits) := Mux(newGroupLen(0), newGroupLen, newGroupLen - UInt(1))
+      memGroupLen(idPool.idOut.bits) := Mux(newGroupLen(0), newGroupLen, newGroupLen - 1.U)
       // add a zero to make group length even, if needed
       newQ.enq.bits.needZeroPad := newGroupLen(0)
       // update the current internal ID and pop from id pool
       regCurrentInternalID := idPool.idOut.bits
-      idPool.idOut.ready := Bool(true)
+      idPool.idOut.ready := true.B
       assert(idPool.idOut.valid, "idPool output not valid")
     }
   }
@@ -297,13 +297,13 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   oneQ.deq <> retQArb.in(1)
   retQArb.out <> retQ.enq
 
-  idPool.idIn.valid := Bool(false)
+  idPool.idIn.valid := false.B
   idPool.idIn.bits := retQArb.out.bits.internalID
   retQ.enq.bits.groupID := memGroupID(retQArb.out.bits.internalID)
 
   when(retQ.enq.fire()) {
     assert(idPool.idIn.ready, "idPool input not ready")
-    idPool.idIn.valid := Bool(true)
+    idPool.idIn.valid := true.B
   }
 
   retQ.deq <> io.out

@@ -53,17 +53,17 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
 
   // drive default values for memory read port i
   def plugMemReadPort(i: Int) {
-    io.memPort(i).memRdReq.valid := Bool(false)
+    io.memPort(i).memRdReq.valid := false.B
     io.memPort(i).memRdReq.bits.driveDefaults()
-    io.memPort(i).memRdRsp.ready := Bool(false)
+    io.memPort(i).memRdRsp.ready := false.B
   }
   // drive default values for memory write port i
   def plugMemWritePort(i: Int) {
-    io.memPort(i).memWrReq.valid := Bool(false)
+    io.memPort(i).memWrReq.valid := false.B
     io.memPort(i).memWrReq.bits.driveDefaults()
-    io.memPort(i).memWrDat.valid := Bool(false)
-    io.memPort(i).memWrDat.bits := UInt(0)
-    io.memPort(i).memWrRsp.ready := Bool(false)
+    io.memPort(i).memWrDat.valid := false.B
+    io.memPort(i).memWrDat.bits := 0.U
+    io.memPort(i).memWrRsp.ready := false.B
   }
   // use the class name as the accel name
   // just set to something else in derived class if needed

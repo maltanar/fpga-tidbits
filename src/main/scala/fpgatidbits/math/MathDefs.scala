@@ -56,7 +56,7 @@ extends Module {
     val in = Decoupled(p.tIn.cloneType).flip
     val out = Decoupled(p.tOut.cloneType)
   }
-  val regValid = Reg(init = Bool(false))
+  val regValid = Reg(init = false.B)
   val resetVal = UInt(0, width = p.tOut.getWidth())
   val regData = RegInit[TO](p.tOut.fromBits(resetVal))
   val allowNewData = (!regValid || io.out.ready)

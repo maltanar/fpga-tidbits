@@ -24,10 +24,10 @@ extends Module {
 
   for(i <- 0 until numDests) {
     io.out(i).bits := io.in.bits
-    io.out(i).valid := Bool(false)
+    io.out(i).valid := false.B
   }
 
-  io.in.ready := Bool(false)
+  io.in.ready := false.B
   io.decodeErrors := regDecodeErrors
 
   val destPipe = route(io.in.bits)
@@ -37,12 +37,12 @@ extends Module {
   when (invalidChannel) {
     // do not let the entire pipe stall because head of line has invalid dest
     // increment error counter and move on
-    regDecodeErrors := regDecodeErrors + UInt(1)
-    io.in.ready := Bool(true)
+    regDecodeErrors := regDecodeErrors + 1.U
+    io.in.ready := true.B
   }
   .elsewhen (canProceed) {
-    io.in.ready := Bool(true)
-    io.out(destPipe).valid := Bool(true)
+    io.in.ready := true.B
+    io.out(destPipe).valid := true.B
   }
 }
 

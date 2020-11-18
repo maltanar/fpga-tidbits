@@ -21,7 +21,7 @@ class ReadOrderCacheIO(p: MemReqParams, maxBurst: Int) extends Bundle {
   val rspMem = Decoupled(new GenericMemoryResponse(p)).flip
 
   // controls for ID queue reinit
-  val doInit = Bool(INPUT)                // re-initialize queue
+  val doInit = Input(Bool())                // re-initialize queue
   val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
 }
 
@@ -51,7 +51,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val readyReqs = StreamJoin(
     inA = freeReqID.idOut, inB = io.reqOrdered, genO = mreq,
     join = {(freeID: UInt, r: GenericMemoryRequest) => GenericMemoryRequest(
-      p = p.mrp, addr = r.addr, write = Bool(false), id = freeID,
+      p = p.mrp, addr = r.addr, write = false.B, id = freeID,
       numBytes = r.numBytes
     )}
   )
@@ -63,7 +63,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
     origReqID(freeReqID.idOut.bits) := io.reqOrdered.bits.channelID
   }
 
-  //StreamMonitor(readyReqs, Bool(true), "readyReqs")
+  //StreamMonitor(readyReqs, true.B, "readyReqs")
 
   // issued requests go to both mem req channel and busyReqs queue
   val reqIssueFork = Module(new StreamFork(
@@ -82,12 +82,12 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
 
   // ordered response data comes from the appropriate storage queue
   io.rspOrdered.bits.readData := storage.out.bits.readData
-  io.rspOrdered.bits.isWrite := Bool(false)
-  io.rspOrdered.bits.metaData := UInt(0)
+  io.rspOrdered.bits.isWrite := false.B
+  io.rspOrdered.bits.metaData := 0.U
 
   // create a "repeated" version of the head of the busy queue -- each repeat
   // corresponds to one burst beat
-  val repBitWidth = 1 + log2Up(p.maxBurst)
+  val repBitWidth = 1 + log2Ceil(p.maxBurst)
   val busyRep = Module(new StreamRepeatElem(mreq.getWidth(), repBitWidth)).io
   val bytesInBeat = UInt(p.mrp.dataWidth/8) // TODO correct for sub-word reads?
   busyRep.inElem.valid := busyReqs.deq.valid
@@ -105,7 +105,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   busyRep.out.ready := io.rspOrdered.ready & storage.out.valid
 
   // the head-of-line ID will be recycled when we are done with it
-  freeReqID.idIn.valid := Bool(false)
+  freeReqID.idIn.valid := false.B
   freeReqID.idIn.bits := busyRepHead.channelID
 
   // restore the original request's channel ID with lookup
@@ -113,10 +113,10 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
 
   val regBeatCounter = Reg(init = UInt(0, repBitWidth))
   when(busyRep.out.valid & busyRep.out.ready) {
-    regBeatCounter := regBeatCounter + UInt(1)
-    when(regBeatCounter === (busyRepHead.numBytes / bytesInBeat) - UInt(1)) {
-      regBeatCounter := UInt(0)
-      freeReqID.idIn.valid := Bool(true) // always room in the ID pool
+    regBeatCounter := regBeatCounter + 1.U
+    when(regBeatCounter === (busyRepHead.numBytes / bytesInBeat) - 1.U) {
+      regBeatCounter := 0.U
+      freeReqID.idIn.valid := true.B // always room in the ID pool
     }
   }
 }
@@ -131,19 +131,19 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
 class ReqIDQueue(idWidth: Int, maxEntries: Int, startID: Int) extends Module {
   val idElem = UInt(width = idWidth)
   val io = new Bundle {
-    val doInit = Bool(INPUT)                // re-initialize queue
+    val doInit = Input(Bool())                // re-initialize queue
     val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
     val idIn = Decoupled(idElem).flip       // recycled IDs into the pool
     val idOut = Decoupled(idElem)           // available IDs from the pool
   }
   val initGen = Module(new SequenceGenerator(idWidth)).io
   // initialize contents once upon reset, and when requested afterwards
-  val regFirstInit = Reg(init = Bool(true))  // distinguish reset & manual init
-  val regDoInit = Reg(init = Bool(true))
-  when(io.doInit) { regDoInit := Bool(true) } // trigger manual reinit
+  val regFirstInit = Reg(init = true.B)  // distinguish reset & manual init
+  val regDoInit = Reg(init = true.B)
+  when(io.doInit) { regDoInit := true.B } // trigger manual reinit
   when(regDoInit & initGen.finished) {
-    regDoInit := Bool(false)
-    regFirstInit := Bool(false)
+    regDoInit := false.B
+    regFirstInit := false.B
   }
   // clear queue contents prior to manual reinit
   val resetQueue = reset | (io.doInit & !regDoInit)
@@ -153,7 +153,7 @@ class ReqIDQueue(idWidth: Int, maxEntries: Int, startID: Int) extends Module {
   initGen.start := regDoInit
   // on-reset init fills the queue with max # elements
   initGen.count := Mux(regFirstInit, UInt(maxEntries), io.initCount)
-  initGen.step := UInt(1)
+  initGen.step := 1.U
   initGen.init := UInt(startID)
 
   val idSources = Seq(io.idIn, initGen.seq)
@@ -170,9 +170,9 @@ class ReqIDQueueBRAM(idWidth: Int, maxEntries: Int, startID: Int) extends Module
   }
   val initGen = Module(new SequenceGenerator(idWidth)).io
   // initialize contents once upon reset, and when requested afterwards
-  val regDoInit = Reg(init = Bool(true))
+  val regDoInit = Reg(init = true.B)
   when(regDoInit & initGen.finished) {
-    regDoInit := Bool(false)
+    regDoInit := false.B
   }
 
   val idQ = Module(new BRAMQueue(idElem, maxEntries)).io
@@ -181,7 +181,7 @@ class ReqIDQueueBRAM(idWidth: Int, maxEntries: Int, startID: Int) extends Module
   initGen.start := regDoInit
   // on-reset init fills the queue with max # elements
   initGen.count := UInt(maxEntries)
-  initGen.step := UInt(1)
+  initGen.step := 1.U
   initGen.init := UInt(startID)
 
   val idSources = Seq(io.idIn, initGen.seq)

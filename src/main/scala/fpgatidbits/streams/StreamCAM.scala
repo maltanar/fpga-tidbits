@@ -11,8 +11,8 @@ import Chisel._
 
 class StreamCAM(entries: Int, tag_bits: Int) extends Module {
   val io = new Bundle {
-    val hazard = Bool(OUTPUT)
-    val full = Bool(OUTPUT)
+    val hazard = Output(Bool())
+    val full = Output(Bool())
     val in = Decoupled(UInt(width=tag_bits)).flip
     val rm = Decoupled(UInt(width=tag_bits)).flip
   }
@@ -38,24 +38,24 @@ class StreamCAM(entries: Int, tag_bits: Int) extends Module {
 // interface & implementation for a combinational content-addressable memory
 
 class CAMIO(entries: Int, addr_bits: Int, tag_bits: Int) extends Bundle {
-  val clear_hit = Bool(INPUT)
-  val is_clear_hit = Bool(OUTPUT)
+  val clear_hit = Input(Bool())
+  val is_clear_hit = Output(Bool())
   val clear_tag = Bits(INPUT, tag_bits)
 
   val tag = Bits(INPUT, tag_bits)
-  val hit = Bool(OUTPUT)
+  val hit = Output(Bool())
   val hits = UInt(OUTPUT, entries)
   val valid_bits = Bits(OUTPUT, entries)
-  val write = Bool(INPUT)
+  val write = Input(Bool())
   val write_tag = Bits(INPUT, tag_bits)
-  val hasFree = Bool(OUTPUT)
-  val freeInd = UInt(OUTPUT, log2Up(entries))
+  val hasFree = Output(Bool())
+  val freeInd = UInt(OUTPUT, log2Ceil(entries))
 }
 
 // TODO make the CAM search/match function customizable?
 // (e.g compare only a subset of tag bits or such)
 class CAM(entries: Int, tag_bits: Int) extends Module {
-  val addr_bits = log2Up(entries)
+  val addr_bits = log2Ceil(entries)
   val io = new CAMIO(entries, addr_bits, tag_bits)
   val cam_tags = Mem(Bits(width = tag_bits), entries)
   // valid (fullness) of each slot in the CAM

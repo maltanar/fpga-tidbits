@@ -23,8 +23,8 @@ class TestReqInterleaverWrapper() extends Module {
   val burstBeats = 8
   val io = new Bundle {
     val reqOut = Decoupled(new GenericMemoryRequest(p))
-    val allFinished = Bool(OUTPUT)
-    val allActive = Bool(OUTPUT)
+    val allFinished = Output(Bool())
+    val allActive = Output(Bool())
   }
   val N = 4
   val bytesPerPipe = 1024
@@ -32,8 +32,8 @@ class TestReqInterleaverWrapper() extends Module {
   val dut = Module(new ReqInterleaver(N, p))
   for(i <- 0 until N) {
     reqPipes(i).reqs <> dut.io.reqIn(i)
-    reqPipes(i).ctrl.throttle := Bool(false)
-    reqPipes(i).ctrl.start := Bool(true)
+    reqPipes(i).ctrl.throttle := false.B
+    reqPipes(i).ctrl.start := true.B
     reqPipes(i).ctrl.baseAddr := UInt(bytesPerPipe*i)
     reqPipes(i).ctrl.byteCount := UInt(bytesPerPipe)
   }

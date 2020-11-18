@@ -10,11 +10,11 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val numChans = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
+    val start = Input(Bool())
     val baseAddr = Vec.fill(numChans) {UInt(INPUT, width=64)}
     val byteCount = Vec.fill(numChans) {UInt(INPUT, width=32)}
     val sum = Vec.fill(numChans) {UInt(OUTPUT, width=32)}
-    val status = Bool(OUTPUT)
+    val status = Output(Bool())
   }
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()

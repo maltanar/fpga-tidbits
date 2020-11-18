@@ -6,7 +6,7 @@ import fpgatidbits.axi._
 class SerialInParallelOutIO(parWidth: Int, serWidth: Int) extends Bundle {
   val serIn = UInt(INPUT, serWidth)
   val parOut = UInt(OUTPUT, parWidth)
-  val shiftEn = Bool(INPUT)
+  val shiftEn = Input(Bool())
 
   override def cloneType: this.type =
     new SerialInParallelOutIO(parWidth, serWidth).asInstanceOf[this.type]
@@ -45,10 +45,10 @@ class AXIStreamUpsizer(inWidth: Int, outWidth: Int) extends Module {
   val numShiftSteps = outWidth/inWidth
   val shiftReg = Module(new SerialInParallelOut(outWidth, inWidth)).io
   shiftReg.serIn := io.in.bits
-  shiftReg.shiftEn := Bool(false)
+  shiftReg.shiftEn := false.B
 
-  io.in.ready := Bool(false)
-  io.out.valid := Bool(false)
+  io.in.ready := false.B
+  io.out.valid := false.B
   io.out.bits := shiftReg.parOut
 
   val sWaitInput :: sWaitOutput :: Nil = Enum(UInt(), 2)
@@ -59,17 +59,17 @@ class AXIStreamUpsizer(inWidth: Int, outWidth: Int) extends Module {
 
   switch(regState) {
       is(sWaitInput) {
-        io.in.ready := Bool(true)
+        io.in.ready := true.B
         when (io.in.valid) {
-          shiftReg.shiftEn := Bool(true)
-          regAcquiredStages := regAcquiredStages + UInt(1)
+          shiftReg.shiftEn := true.B
+          regAcquiredStages := regAcquiredStages + 1.U
           regState := Mux(readyForOutput, sWaitOutput, sWaitInput)
         }
       }
       is(sWaitOutput) {
-        io.out.valid := Bool(true)
+        io.out.valid := true.B
         when (io.out.ready) {
-          regAcquiredStages := UInt(0)
+          regAcquiredStages := 0.U
           regState := sWaitInput
         }
       }

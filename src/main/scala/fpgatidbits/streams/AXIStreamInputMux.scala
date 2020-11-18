@@ -15,16 +15,16 @@ class AXIStreamInputMux(dataWidth: Int) extends Module {
   io.in0.renameSignals("in0")
   io.in1.renameSignals("in1")
 
-  io.strm.bits := Mux(io.sel === UInt(0), io.in0.bits, io.in1.bits)
-  io.strm.valid := Mux(io.sel === UInt(0), io.in0.valid, io.in1.valid)
+  io.strm.bits := Mux(io.sel === 0.U, io.in0.bits, io.in1.bits)
+  io.strm.valid := Mux(io.sel === 0.U, io.in0.valid, io.in1.valid)
 
-  io.in0.ready := (io.sel === UInt(0)) & io.strm.ready
-  io.in1.ready := (io.sel === UInt(1)) & io.strm.ready
+  io.in0.ready := (io.sel === 0.U) & io.strm.ready
+  io.in1.ready := (io.sel === 1.U) & io.strm.ready
 }
 
 
 class DecoupledInputMuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {
-  val sel = UInt(INPUT, width = log2Up(numChans))
+  val sel = UInt(INPUT, width = log2Ceil(numChans))
   val in = Vec.fill(numChans) {Decoupled(gen).flip}
   val out = Decoupled(gen)
 }

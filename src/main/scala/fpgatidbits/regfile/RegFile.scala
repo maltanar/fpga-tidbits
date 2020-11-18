@@ -12,10 +12,10 @@ class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
   override def clone = { new RegCommand(idBits, dataBits).asInstanceOf[this.type] }
 
   def driveDefaults() = {
-    regID := UInt(0)
-    read := Bool(false)
-    write := Bool(false)
-    writeData := UInt(0)
+    regID := 0.U
+    read := false.B
+    write := false.B
+    writeData := 0.U
   }
 }
 
@@ -51,7 +51,7 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
 
   // latch the incoming commands
   val regCommand = Reg(next = io.extIF.cmd.bits)
-  val regDoCmd = Reg(init = Bool(false), next = io.extIF.cmd.valid)
+  val regDoCmd = Reg(init = false.B, next = io.extIF.cmd.valid)
 
   val hasExtReadCommand = (regDoCmd && regCommand.read)
   val hasExtWriteCommand = (regDoCmd && regCommand.write)
@@ -63,7 +63,7 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
     io.extIF.readData.bits  := regFile(regCommand.regID)
   } .otherwise {
     // return 0 otherwise
-    io.extIF.readData.bits  := UInt(0)
+    io.extIF.readData.bits  := 0.U
   }
 
   // register write logic

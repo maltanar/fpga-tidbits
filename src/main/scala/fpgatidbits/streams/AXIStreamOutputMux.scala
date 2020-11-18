@@ -18,14 +18,14 @@ class AXIStreamOutputMux(dataWidth: Int) extends Module {
   io.out0.bits := io.strm.bits
   io.out1.bits := io.strm.bits
 
-  io.out0.valid := (io.sel === UInt(0)) & io.strm.valid
-  io.out1.valid := (io.sel === UInt(1)) & io.strm.valid
+  io.out0.valid := (io.sel === 0.U) & io.strm.valid
+  io.out1.valid := (io.sel === 1.U) & io.strm.valid
 
-  io.strm.ready := Mux(io.sel === UInt(0), io.out0.ready, io.out1.ready)
+  io.strm.ready := Mux(io.sel === 0.U, io.out0.ready, io.out1.ready)
 }
 
 class DecoupledOutputDemuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {
-  val sel = UInt(INPUT, width = log2Up(numChans))
+  val sel = UInt(INPUT, width = log2Ceil(numChans))
   val in = Decoupled(gen).flip
   val out = Vec.fill(numChans) {Decoupled(gen)}
 }

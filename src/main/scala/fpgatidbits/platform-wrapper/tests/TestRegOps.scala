@@ -16,7 +16,7 @@ class TestRegOps(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   io.sum := io.op(0) + io.op(1)
 
   val regCC = Reg(init = UInt(0, 32))
-  regCC := regCC + UInt(1)
+  regCC := regCC + 1.U
 
   io.cc := regCC
 }
