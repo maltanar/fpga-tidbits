@@ -2,13 +2,13 @@ package fpgatidbits
 
 import Chisel._
 import fpgatidbits.Testbenches._
-import fpgatidbits.ocm._
-import fpgatidbits.streams._
-import fpgatidbits.SimUtils._
+//import fpgatidbits.ocm._
+//import fpgatidbits.streams._
+//import fpgatidbits.SimUtils._
 import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.PlatformWrapper._
-import fpgatidbits.hlstools._
+//import fpgatidbits.hlstools._
 import java.io.{File,FileInputStream,FileOutputStream}
 import sys.process._
 
@@ -20,13 +20,13 @@ object TidbitsMakeUtils {
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> {f => new ZedBoardWrapper(f)},
     "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
-    "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
-    "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
-    "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
-    "PYNQZCU104CC" -> {f => new PYNQZCU104CCWrapper(f)},
-    "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
-    "ZC706" -> {f => new ZC706Wrapper(f)},
-    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
+ //   "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
+  //  "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
+   // "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
+    //"PYNQZCU104CC" -> {f => new PYNQZCU104CCWrapper(f)},
+    //"GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
+    //"ZC706" -> {f => new ZC706Wrapper(f)},
+    //"WX690T" -> {f => new WolverinePlatformWrapper(f)},
     "VerilatedTester" -> {f => new VerilatedTesterWrapper(f)},
     "Tester" -> {f => new TesterWrapper(f)}
   )
@@ -35,14 +35,14 @@ object TidbitsMakeUtils {
   val fpgaPartMap = Map(
     "ZedBoard" -> "xc7z020clg400-1",
     "PYNQZ1" -> "xc7z020clg400-1",
-    "PYNQU96" -> "xczu3eg-sbva484-1-i",
-    "PYNQU96CC" -> "xczu3eg-sbva484-1-i",
-    "PYNQZCU104" -> "xczu7ev-ffvc1156-2-e",
-    "PYNQZCU104CC" -> "xczu7ev-ffvc1156-2-e",
-    "ZC706" -> "xc7z045ffg900-2",
-    "KU115" -> "xcku115-flvb2104-2-e",
-    "VerilatedTester" -> "xczu3eg-sbva484-1-i", // use Ultra96 part for tester
-    "VU9P" -> "xcvu9p-flgb2104-2-i"
+    //"PYNQU96" -> "xczu3eg-sbva484-1-i",
+    //"PYNQU96CC" -> "xczu3eg-sbva484-1-i",
+    //"PYNQZCU104" -> "xczu7ev-ffvc1156-2-e",
+    //"PYNQZCU104CC" -> "xczu7ev-ffvc1156-2-e",
+    //"ZC706" -> "xc7z045ffg900-2",
+    //"KU115" -> "xcku115-flvb2104-2-e",
+    "VerilatedTester" -> "xczu3eg-sbva484-1-i" // use Ultra96 part for tester
+    //"VU9P" -> "xcvu9p-flgb2104-2-i"
   )
 
   def fileCopy(from: String, to: String) = {
@@ -118,6 +118,7 @@ object TidbitsMakeUtils {
     platformInst(accInst).generateRegDriver(destDir)
   }
 
+  /*
   def makeHLSDependencies(
     // the accelerator instantiation function
     accInst: AccelInstFxn,
@@ -157,6 +158,7 @@ object TidbitsMakeUtils {
       )
     }
   }
+  */
 }
 
 object MainObj {
@@ -167,16 +169,16 @@ object MainObj {
 
 
   val accelMap: AccelMap  = Map(
-    "TestRegOps" -> {p => new TestRegOps(p)},
-    "TestSum" -> {p => new TestSum(p)},
-    "TestMultiChanSum" -> {p => new TestMultiChanSum(p)},
-    "TestSeqWrite" -> {p => new TestSeqWrite(p)},
-    "TestCopy" -> {p => new TestCopy(p)},
-    "TestRandomRead" -> {p => new TestRandomRead(p)},
-    "TestBRAM" -> {p => new TestBRAM(p)},
-    "TestBRAMMasked" -> {p => new TestBRAMMasked(p)},
-    "TestMemLatency" -> {p => new TestMemLatency(p)},
-    "TestGather" -> {p => new TestGather(p)}
+   // "TestRegOps" -> {p => new TestRegOps(p)},
+    "TestSum" -> {p => new TestSum(p)}
+   // "TestMultiChanSum" -> {p => new TestMultiChanSum(p)},
+   // "TestSeqWrite" -> {p => new TestSeqWrite(p)},
+   // "TestCopy" -> {p => new TestCopy(p)},
+   // "TestRandomRead" -> {p => new TestRandomRead(p)},
+   // "TestBRAM" -> {p => new TestBRAM(p)},
+   // "TestBRAMMasked" -> {p => new TestBRAMMasked(p)},
+   // "TestMemLatency" -> {p => new TestMemLatency(p)},
+   // "TestGather" -> {p => new TestGather(p)}
   )
 
   val platformMap = TidbitsMakeUtils.platformMap
@@ -214,12 +216,12 @@ object MainObj {
     platformInst(accInst).generateRegDriver(s"$targetDir/")
     // copy emulator driver and SW support files
     //val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"
-    val regDrvRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/"
+    val regDrvRoot = "/Users/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/"
     val files = Array("wrapperregdriver.h", "platform-tester.cpp",
       "platform.h", "testerdriver.hpp")
     for(f <- files) { fileCopy(regDrvRoot + f, s"$targetDir/" + f) }
     //val testRoot = getClass.getResource("/cpp/platform-wrapper-tests").getPath + "/"
-    val testRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-tests/"
+    val testRoot = "/Users/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-tests/"
     fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
