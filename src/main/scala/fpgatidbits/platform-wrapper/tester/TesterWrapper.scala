@@ -29,7 +29,7 @@ object TesterWrapperParams extends PlatformWrapperParams {
 
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(TesterWrapperParams, instFxn) {
-  setName("TesterWrapper")
+  suggestName("TesterWrapper")
 
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-tester.cpp", "testerdriver.hpp"
@@ -178,6 +178,8 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
   }
 }
 
+/*
+
 class GenericAccelTester(c: TesterWrapper) extends Tester(c) {
   // TODO add functions for initializing memory
   val memUnitBytes = c.memUnitBytes.litValue()
@@ -299,7 +301,7 @@ class GenericAccelTester(c: TesterWrapper) extends Tester(c) {
   step(10)
   // TODO launch the default test, as defined by the accelerator
 }
-
+*/
 class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
 extends TesterWrapper(instFxn) {
   override val platformDriverFiles = baseDriverFiles ++ Array[String](

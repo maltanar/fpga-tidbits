@@ -67,5 +67,5 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   }
   // use the class name as the accel name
   // just set to something else in derived class if needed
-  setName(this.getClass.getSimpleName)
+  suggestName(this.getClass.getSimpleName)
 }

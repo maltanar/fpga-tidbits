@@ -13,8 +13,8 @@ import fpgatidbits.axi._
 object StreamRepeatElem {
   def apply(inElem: DecoupledIO[UInt], inRepCnt: DecoupledIO[UInt]):
   DecoupledIO[UInt] = {
-    val repgen = Module(new StreamRepeatElem(inElem.bits.getWidth(),
-                        inRepCnt.bits.getWidth())).io
+    val repgen = Module(new StreamRepeatElem(inElem.bits.getWidth,
+                        inRepCnt.bits.getWidth)).io
     repgen.inElem <> inElem
     repgen.inRepCnt <> inRepCnt
     repgen.out
@@ -22,8 +22,8 @@ object StreamRepeatElem {
 
   def apply[Te <: Data](gen: Te, inElem: DecoupledIO[Te], inRepCnt: DecoupledIO[UInt]):
   DecoupledIO[Te] = {
-    val repgen = Module(new StreamRepeatElem(gen.getWidth(),
-                        inRepCnt.bits.getWidth())).io
+    val repgen = Module(new StreamRepeatElem(gen.getWidth,
+                        inRepCnt.bits.getWidth)).io
     val ret = Decoupled(gen)
     repgen.inElem.bits := inElem.bits.toBits
     repgen.inElem.valid := inElem.valid
@@ -82,6 +82,8 @@ class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
   }
 }
 
+/*
+
 class StreamRepeatElemTester(c: StreamRepeatElem) extends Tester(c) {
   var elems = Array(100, 200, 300, 400)
   var reps = Array(3, 0, 2, 1)
@@ -132,3 +134,4 @@ class StreamRepeatElemTester(c: StreamRepeatElem) extends Tester(c) {
 
   expect(res.deep == golden.deep, "Result equals golden")
 }
+*/

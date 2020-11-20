@@ -34,6 +34,8 @@ class ParallelInSerialOut(parWidth: Int, serWidth: Int) extends Module {
   io.serOut := stages(0)
 }
 
+/*
+
 class PISOTester(c: ParallelInSerialOut) extends Tester(c) {
   peek(c.io.serOut)
   poke(c.io.shiftEn, 0)
@@ -54,9 +56,11 @@ class PISOTester(c: ParallelInSerialOut) extends Tester(c) {
 
 }
 
+ */
+
 object StreamDownsizer {
   def apply(in: DecoupledIO[UInt], outW: Int): DecoupledIO[UInt] = {
-    val ds = Module(new AXIStreamDownsizer(in.bits.getWidth(), outW)).io
+    val ds = Module(new AXIStreamDownsizer(in.bits.getWidth, outW)).io
     ds.in <> in
     ds.out
   }
@@ -141,6 +145,8 @@ class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
   }
 }
 
+
+/*
 class AXIStreamDownsizerTester(c: AXIStreamDownsizer) extends Tester(c) {
   // simple tester for a 64-to-16 bit downsizer
   poke(c.io.in.valid, 0)
@@ -221,3 +227,5 @@ class AXIStreamDownsizerTester(c: AXIStreamDownsizer) extends Tester(c) {
   expect(c.io.in.ready, 1)  // ready to pull data
   expect(c.io.out.valid, 0) // no data on output
 }
+
+*/

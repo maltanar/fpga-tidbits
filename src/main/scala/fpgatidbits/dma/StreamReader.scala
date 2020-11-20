@@ -39,9 +39,9 @@ class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
 object RoundUpAlign {
   def apply(align: Int, x: UInt): UInt = {
     val numZeroAddrBits = log2Ceil(align)
-    val numOtherBits = x.getWidth()-numZeroAddrBits
+    val numOtherBits = x.getWidth-numZeroAddrBits
     val lower = x(numZeroAddrBits-1, 0)
-    val upper = x(x.getWidth()-1, numZeroAddrBits)
+    val upper = x(x.getWidth-1, numZeroAddrBits)
     val isAligned = (lower === 0.U)
     return Mux(isAligned, x, Cat(upper+1.U, UInt(0, width = numZeroAddrBits)))
   }

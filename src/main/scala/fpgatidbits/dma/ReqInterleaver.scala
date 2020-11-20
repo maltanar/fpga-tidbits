@@ -1,11 +1,13 @@
 package fpgatidbits.dma
 
-import Chisel._
+//import Chisel._
+import chisel3._
+import chisel3.util._
 
 class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
   val io = new Bundle {
     // individual request pipes
-    val reqIn = Vec.fill(numPipes) {Decoupled(new GenericMemoryRequest(p)).flip}
+    val reqIn = VecInit(Seq.fill(numPipes) {Flipped(Decoupled(new GenericMemoryRequest(p)))})
     // interleaved request pipe
     val reqOut = Decoupled(new GenericMemoryRequest(p))
   }
@@ -28,14 +30,14 @@ class TestReqInterleaverWrapper() extends Module {
   }
   val N = 4
   val bytesPerPipe = 1024
-  val reqPipes = Vec.tabulate(N) {i => Module(new ReadReqGen(p, i, burstBeats)).io}
+  val reqPipes = VecInit.tabulate(N) {i => Module(new ReadReqGen(p, i, burstBeats)).io}
   val dut = Module(new ReqInterleaver(N, p))
   for(i <- 0 until N) {
     reqPipes(i).reqs <> dut.io.reqIn(i)
     reqPipes(i).ctrl.throttle := false.B
     reqPipes(i).ctrl.start := true.B
-    reqPipes(i).ctrl.baseAddr := UInt(bytesPerPipe*i)
-    reqPipes(i).ctrl.byteCount := UInt(bytesPerPipe)
+    reqPipes(i).ctrl.baseAddr := (bytesPerPipe*i).U
+    reqPipes(i).ctrl.byteCount := bytesPerPipe.U
   }
   val reqQ = Module(new Queue(new GenericMemoryRequest(p), 1024))
   reqQ.io.enq <> dut.io.reqOut
@@ -45,7 +47,8 @@ class TestReqInterleaverWrapper() extends Module {
   io.allActive := reqPipes.forall( x => x.stat.active )
 }
 
-class TestReqInterleaver(c: TestReqInterleaverWrapper) extends Tester(c) {
+/*
+class TestReqInterleaver(c: TestReqInterleaverWrapper) extends PeekPokeTester(c) {
   poke(c.io.reqOut.ready, 0)
   step(1)
   expect(c.io.allActive, 1)
@@ -79,3 +82,4 @@ class TestReqInterleaver(c: TestReqInterleaverWrapper) extends Tester(c) {
     expect(reqsFromChannel(i) == expReqsPerPipe, "Channel has correct #reqs")
   }
 }
+*/

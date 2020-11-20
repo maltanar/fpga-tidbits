@@ -7,7 +7,10 @@ expected by GenericAccelerator.
 
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
+import chisel3.experimental._
+
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
 import scala.collection.mutable.LinkedHashMap
@@ -59,27 +62,35 @@ extends Module {
   def platformDriverFiles: Array[String]  // additional files
 
   // instantiate the accelerator
-  val regWrapperReset = Reg(init = false.B, clock = Driver.implicitClock)
+  //val regWrapperReset = Reg(init = false.B, clock = Driver.implicitClock)
+  val regWrapperReset = RegInit(false.B)
   val accel = Module(instFxn(p))
   // permits controlling the accelerator's reset from both the wrapper's reset,
   // and by using a special register file command (see hack further down :)
-  accel.reset := reset | regWrapperReset
+  accel.reset := reset.asBool | regWrapperReset
 
   val fullName: String = accel.getClass.getSimpleName+p.platformName
-  setName(fullName)
-
+  //suggestName(fullName)
+  suggestName(fullName)
   // separate out the mem port signals, won't map the to the regfile
-  val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
-
+  //val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
+  val ownFilter = {x : (Element) => !(x.instanceName.startsWith("io_memPort"))}
   import scala.collection.immutable.ListMap
-  //val ownIO = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
-  val ownIO = accel.io
+  //val ownIO2 = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
+  def flatten(data: Data): Seq[Element] = data match {
+    case elt: Element => Seq(elt)
+    case agg: Aggregate => agg.getElements.flatMap(flatten)
+  }
+  val ownIO = flatten(accel.io)
+
 
   // each I/O is assigned to at least one register index, possibly more if wide
   // round each I/O width to nearest csrWidth multiple, sum, divide by csrWidth
   val wCSR = p.csrDataBits
   def roundMultiple(n: Int, m: Int) = { (n + m-1) / m * m}
-  val fxn = {x: (String, Bits) => (roundMultiple(x._2.getWidth(), wCSR))}
+  //val fxn = {x: (String, Data) => (roundMultiple(x._2.getWidth, wCSR))}
+  val fxn = { x: (Element) => (roundMultiple(x.getWidth, wCSR))}
+
   val numRegs = ownIO.map(fxn).reduce({_+_}) / wCSR
 
   // instantiate the register file
@@ -99,25 +110,27 @@ extends Module {
   // hand-place the signature register at 0
   regFileMap("signature") = Array(allocReg)
   regFile.regIn(allocReg).valid := true.B
-  regFile.regIn(allocReg).bits := ownIO("signature")
+  regFile.regIn(allocReg).bits := ownIO.filter(p => p.instanceName.startsWith("io_signature"))(0)
   println("Signal signature mapped to single reg " + allocReg.toString)
   allocReg += 1
 
-  for((name, bits) <- ownIO) {
+  for(element <- ownIO) {
+    val name = element.instanceName.substring(3)
+    val bits = element.asUInt()
     if(name != "signature") {
-      val w = bits.getWidth()
+      val w = bits.getWidth
       if(w > wCSR) {
         // signal is wide, maps to several registers
         val numRegsToAlloc = roundMultiple(w, wCSR) / wCSR
         regFileMap(name) = (allocReg until allocReg + numRegsToAlloc).toArray
         // connect the I/O signal to the register file appropriately
-        if(bits.dir == INPUT) {
+        if(DataMirror.directionOf(bits) == Input) {
           // concatanate all assigned registers, connect to input
           bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := false.B
           }
-        } else if(bits.dir == OUTPUT) {
+        } else if(DataMirror.directionOf(bits) == Output)  {
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := true.B
             val ubound = math.min(i*wCSR+wCSR-1, w-1)
@@ -131,15 +144,15 @@ extends Module {
         // signal is narrow enough, maps to a single register
         regFileMap(name) = Array(allocReg)
         // connect the I/O signal to the register file appropriately
-        if(bits.dir == INPUT) {
+        if(DataMirror.directionOf(bits) == Input)  {
           // handle Bool input cases,"multi-bit signal to Bool" error
-          if(bits.getWidth() == 1) {
+          if(bits.getWidth == 1) {
             bits := regFile.regOut(allocReg)(0)
           } else { bits := regFile.regOut(allocReg) }
           // disable internal write for this register
           regFile.regIn(allocReg).valid := false.B
 
-        } else if(bits.dir == OUTPUT) {
+        } else if(DataMirror.directionOf(bits) == Input)  {
           // TODO don't always write (change detect?)
           regFile.regIn(allocReg).valid := true.B
           regFile.regIn(allocReg).bits := bits
@@ -205,10 +218,12 @@ extends Module {
     val driverName: String = accel.name
     val expected_signature: String = accel.hexSignature()
     var readWriteFxns: String = ""
-    for((name, bits) <- ownIO) {
-      if(bits.dir ==) {
+    for(element <- ownIO) {
+      val name = element.instanceName.substring(3)
+      val bits = element.asUInt()
+      if(DataMirror.directionOf(bits) == Input) {
         readWriteFxns += makeRegWriteFxn(name) + "\n"
-      } else if(bits.dir == OUTPUT) {
+      } else if(DataMirror.directionOf(bits) == Output) {
         readWriteFxns += makeRegReadFxn(name) + "\n"
       }
     }
@@ -217,13 +232,14 @@ extends Module {
       val inds = regFileMap(regName).map(_.toString).reduce(_ + ", " + _)
       return s""" {"$regName", {$inds}} """
     }
-    val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
+    //val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
+    val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == Output).map(_.instanceName.substring(3))
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
 
     var hlsBlackBoxTemplateDefines = ""
-    if(accel.hlsBlackBoxes.size != 0) {
-      hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
-    }
+  //  if(accel.hlsBlackBoxes.size != 0) {
+  //    hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
+  //  }
 
     driverStr += s"""
 #ifndef ${driverName}_H

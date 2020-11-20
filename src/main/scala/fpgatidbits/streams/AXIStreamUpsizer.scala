@@ -78,11 +78,14 @@ class AXIStreamUpsizer(inWidth: Int, outWidth: Int) extends Module {
 
 object StreamUpsizer {
   def apply(in: DecoupledIO[UInt], outW: Int): DecoupledIO[UInt] = {
-    val ds = Module(new AXIStreamUpsizer(in.bits.getWidth(), outW)).io
+    val ds = Module(new AXIStreamUpsizer(in.bits.getWidth, outW)).io
     ds.in <> in
     ds.out
   }
 }
+
+
+/*
 
 class AXIStreamUpsizerTester(c: AXIStreamUpsizer) extends Tester(c) {
   // simple test 8 -> 32 upsizing
@@ -108,3 +111,4 @@ class AXIStreamUpsizerTester(c: AXIStreamUpsizer) extends Tester(c) {
   expect(c.io.in.ready, 1)
   expect(c.io.out.valid, 0)
 }
+*/

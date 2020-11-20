@@ -22,6 +22,6 @@ class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-genericsdaccel.cpp", "xclhalwrapper.hpp"
   )
-  setName("GenericSDAccelWrapper")
+  suggestName("GenericSDAccelWrapper")
   setModuleName("GenericSDAccelWrapper")
 }

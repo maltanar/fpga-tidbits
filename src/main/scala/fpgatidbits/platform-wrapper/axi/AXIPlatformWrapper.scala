@@ -2,9 +2,9 @@ package fpgatidbits.PlatformWrapper
 
 import Chisel._
 import fpgatidbits.dma._
-import fpgatidbits.regfile._
+//import fpgatidbits.regfile._
 import fpgatidbits.axi._
-import fpgatidbits.ocm._
+//import fpgatidbits.ocm._
 
 // wrapper for AXI platforms
 

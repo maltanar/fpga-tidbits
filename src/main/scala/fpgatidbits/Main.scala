@@ -60,7 +60,9 @@ object TidbitsMakeUtils {
     val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
     val chiselArgs = Array("--backend","c","--targetDir", fullDir) ++ chiselOpts
 
-    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+
     val p = platformInst(accInst)
     // build reg driver
     p.generateRegDriver(s"$fullDir")
@@ -103,7 +105,8 @@ object TidbitsMakeUtils {
     val platformInst = {f => new VerilatedTesterWrapper(f)}
     val chiselArgs = Array("--backend","v","--targetDir", s"$destDir")
     // generate verilog for the accelerator
-    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
     val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
     val scriptFiles = Seq("verilator-build.sh")
     val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
@@ -199,7 +202,8 @@ object MainObj {
     val platformInst = platformMap(platformName)
     val chiselArgs = Array("--backend", "v")
 
-    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
   }
 
   def makeEmulator(args: Array[String]) = {
@@ -211,7 +215,9 @@ object MainObj {
     val platformInst = platformMap("Tester")
     val chiselArgs = Array("--backend","c","--targetDir", targetDir)
 
-    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+//    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+
     // build driver
     platformInst(accInst).generateRegDriver(s"$targetDir/")
 
@@ -242,7 +248,9 @@ object MainObj {
     val platformInst = {f => new VerilatedTesterWrapper(f)}
     val chiselArgs = Array("--backend","v","--targetDir", "verilator")
     // generate verilog for the accelerator
-    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+   // chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+
     val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
     val scriptFiles = Seq("verilator-build.sh")
     val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",

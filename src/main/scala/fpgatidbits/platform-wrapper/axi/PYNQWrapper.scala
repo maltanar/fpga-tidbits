@@ -22,6 +22,6 @@ class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-xlnk.cpp", "xlnkdriver.hpp"
   )
-  setName("PYNQZ1Wrapper")
+  suggestName("PYNQZ1Wrapper")
   setModuleName("PYNQZ1Wrapper")
 }

@@ -10,7 +10,7 @@ import Chisel._
 
 object StreamLimiter {
   def apply(in: DecoupledIO[UInt], start: Bool, count: UInt): DecoupledIO[UInt] = {
-    val limiter = Module(new StreamLimiter(in.bits.getWidth())).io
+    val limiter = Module(new StreamLimiter(in.bits.getWidth)).io
     limiter.start := start
     limiter.byteCount := count
     limiter.streamIn <> in
