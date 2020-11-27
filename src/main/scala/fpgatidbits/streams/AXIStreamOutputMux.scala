@@ -1,42 +1,43 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.axi._
 
 class AXIStreamOutputMux(dataWidth: Int) extends Module {
-  val io = new Bundle {
-    val sel = UInt(INPUT, width = 1)
-    val strm = new AXIStreamSlaveIF(UInt(width = dataWidth))
-    val out0 = new AXIStreamMasterIF(UInt(width = dataWidth))
-    val out1 = new AXIStreamMasterIF(UInt(width = dataWidth))
-  }
+  val io = IO(new Bundle {
+    val sel = Input(UInt(1.W))
+    val strm = Flipped(new AXIStreamIF(UInt(dataWidth.W)))
+    val out0 = new AXIStreamIF(UInt(dataWidth.W))
+    val out1 = new AXIStreamIF(UInt(dataWidth.W))
+  })
 
-  io.strm.renameSignals("strm")
-  io.out0.renameSignals("out0")
-  io.out1.renameSignals("out1")
+  io.strm.suggestName("strm")
+  io.out0.suggestName("out0")
+  io.out1.suggestName("out1")
 
-  io.out0.bits := io.strm.bits
-  io.out1.bits := io.strm.bits
+  io.out0.TDATA := io.strm.TDATA
+  io.out1.TDATA := io.strm.TDATA
 
-  io.out0.valid := (io.sel === 0.U) & io.strm.valid
-  io.out1.valid := (io.sel === 1.U) & io.strm.valid
+  io.out0.TVALID := (io.sel === 0.U) & io.strm.TVALID
+  io.out1.TVALID := (io.sel === 1.U) & io.strm.TVALID
 
-  io.strm.ready := Mux(io.sel === 0.U, io.out0.ready, io.out1.ready)
+  io.strm.TREADY := Mux(io.sel === 0.U, io.out0.TREADY, io.out1.TREADY)
 }
 
 class DecoupledOutputDemuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {
-  val sel = UInt(INPUT, width = log2Ceil(numChans))
-  val in = Decoupled(gen).flip
-  val out = Vec.fill(numChans) {Decoupled(gen)}
+  val sel = Input(UInt(log2Ceil(numChans).W))
+  val in = Flipped(Decoupled(gen))
+  val out = Vec(numChans,Decoupled(gen))
 }
 
 class DecoupledOutputDemux[T <: Data](gen: T, numChans: Int) extends Module {
-  val io = new DecoupledOutputDemuxIO(gen, numChans)
+  val io = IO(new DecoupledOutputDemuxIO(gen, numChans))
 
   io.in.ready := io.out(io.sel).ready
 
   for(i <- 0 until numChans) {
-    io.out(i).valid := io.in.valid & (io.sel === UInt(i))
+    io.out(i).valid := io.in.valid & (io.sel === i.U)
     io.out(i).bits := io.in.bits
   }
 }

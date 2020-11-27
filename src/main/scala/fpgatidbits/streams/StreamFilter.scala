@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 class StreamFilter[Tin <: Data, Tout <: Data]
   (genI: Tin, genO: Tout, filterFxn: Tin => Tout  ) extends Module {

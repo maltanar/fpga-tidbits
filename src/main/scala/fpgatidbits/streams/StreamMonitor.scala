@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // while enabled, monitors the ready-valid inputs of a given stream
 // and keeps track of #active cycles (where both ready and valid were high)
@@ -18,35 +19,35 @@ object StreamMonitor {
 }
 
 class StreamMonitorOutIF() extends Bundle {
-  val totalCycles = UInt(OUTPUT, 32)
-  val activeCycles = UInt(OUTPUT, 32)
-  val noValidButReady = UInt(OUTPUT, 32)
-  val noReadyButValid = UInt(OUTPUT, 32)
+  val totalCycles = Output(UInt(32.W))
+  val activeCycles = Output(UInt(32.W))
+  val noValidButReady = Output(UInt(32.W))
+  val noReadyButValid = Output(UInt(32.W))
 }
 
 class StreamMonitor(
   streamName: String = "stream",
   dbg: Boolean = false
 ) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val enable = Input(Bool())
     val validIn = Input(Bool())
     val readyIn = Input(Bool())
     val out = new StreamMonitorOutIF()
-  }
-  val sIdle :: sRun :: Nil = Enum(UInt(), 2)
+  })
+  val sIdle :: sRun :: Nil = Enum(2)
 
   // registered version of the inputs
-  val regEnable = Reg(next = io.enable)
-  val regValidIn = Reg(next = io.validIn)
-  val regReadyIn = Reg(next = io.readyIn)
+  val regEnable = RegNext(io.enable)
+  val regValidIn = RegNext(io.validIn)
+  val regReadyIn = RegNext(io.readyIn)
 
-  val regState = Reg(init = UInt(sIdle))
+  val regState = RegInit(sIdle)
 
-  val regActiveCycles = Reg(init = UInt(0, 32))
-  val regTotalCycles = Reg(init = UInt(0, 32))
-  val regNoValidButReady = Reg(init = UInt(0, 32))
-  val regNoReadyButValid = Reg(init = UInt(0, 32))
+  val regActiveCycles = RegInit(0.U(32.W))
+  val regTotalCycles = RegInit(0.U(32.W))
+  val regNoValidButReady = RegInit(0.U(32.W))
+  val regNoReadyButValid = RegInit(0.U(32.W))
 
   io.out.totalCycles := regTotalCycles
   io.out.activeCycles := regActiveCycles
@@ -93,7 +94,7 @@ class StreamMonitor(
 
 abstract class PrintableBundle extends Bundle {
   def printfStr: String
-  def printfElems: () => Seq[Node]
+  def printfElems: () => Seq[Element]
 }
 
 object PrintableBundleStreamMonitor {
@@ -113,25 +114,25 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
   streamName: String = "stream",
   dbg: Boolean = false
 ) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val enable = Input(Bool())
     val validIn = Input(Bool())
     val readyIn = Input(Bool())
-    val bitsIn = gen.cloneType.asInput
+    val bitsIn = Input(gen)
     val out = new StreamMonitorOutIF()
-  }
-  val sIdle :: sRun :: Nil = Enum(UInt(), 2)
+  })
+  val sIdle :: sRun :: Nil = Enum(2)
   // registered version of the inputs
-  val regEnable = Reg(next = io.enable)
-  val regValidIn = Reg(next = io.validIn)
-  val regReadyIn = Reg(next = io.readyIn)
+  val regEnable = RegNext(io.enable)
+  val regValidIn = RegNext(io.validIn)
+  val regReadyIn = RegNext(io.readyIn)
 
-  val regState = Reg(init = UInt(sIdle))
+  val regState = RegInit(sIdle)
 
-  val regActiveCycles = Reg(init = UInt(0, 32))
-  val regTotalCycles = Reg(init = UInt(0, 32))
-  val regNoValidButReady = Reg(init = UInt(0, 32))
-  val regNoReadyButValid = Reg(init = UInt(0, 32))
+  val regActiveCycles = RegInit(0.U(32.W))
+  val regTotalCycles = RegInit(0.U(32.W))
+  val regNoValidButReady = RegInit(0.U(32.W))
+  val regNoReadyButValid = RegInit(0.U(32.W))
 
   io.out.totalCycles := regTotalCycles
   io.out.activeCycles := regActiveCycles
@@ -171,7 +172,7 @@ class PrintableBundleStreamMonitor[T <: PrintableBundle](
               regActiveCycles := regActiveCycles + 1.U
               // printf only active in Chisel C++ emulator or verilog sim
               printf(streamName + " (%d) ", regActiveCycles)
-              printf(io.bitsIn.printfStr, io.bitsIn.printfElems():_*)
+              //printf(io.bitsIn.printfStr, io.bitsIn.printfElems():_*)
             }
           } else {
             // assume StreamMonitor used as part of synthesis - use registered

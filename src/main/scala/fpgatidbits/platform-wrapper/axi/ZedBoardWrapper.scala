@@ -1,6 +1,7 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // platform wrapper for the ZedBoard
 

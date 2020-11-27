@@ -1,6 +1,7 @@
 package fpgatidbits.ocm
 
-//import Chisel._
+//import chisel3._
+import chisel3.util._
 import chisel3._
 import chisel3.util._
 
@@ -69,7 +70,7 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
 
 class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
-  val io = new QueueIO(gen, entries)
+  val io = IO(new QueueIO(gen, entries))
 
   // create a big queue that will use FPGA BRAMs as storage
   // the source code here is mostly copy-pasted from the regular Chisel
@@ -135,9 +136,9 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   } else {
     io.count := Mux(ptr_match,
                     Mux(maybe_full,
-                      UInt(entries), 0.U),
+                      entries.U, 0.U),
                     Mux(deq_ptr.value > enq_ptr.value,
-                      UInt(entries) + ptr_diff, ptr_diff)) + pf.count
+                      entries.U + ptr_diff, ptr_diff)) + pf.count
   }
 }
 
@@ -146,7 +147,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
 // or with FPGA TDP BRAMs as the storage (for larger queues)
 class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val thresholdBigQueue = 64 // threshold for deciding big or small queue impl
-  val io = new QueueIO(gen, entries)
+  val io = IO(new QueueIO(gen, entries))
   if(entries < thresholdBigQueue) {
     // create a shift register (SRL)-based queue
     val theQueue = Module(new SRLQueue(gen, entries)).io

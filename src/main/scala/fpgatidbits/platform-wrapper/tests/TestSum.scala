@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -8,14 +9,14 @@ import fpgatidbits.streams._
 // read and sum a contiguous stream of 32-bit uints from main memory
 class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
+  val io = IO(new GenericAcceleratorIF(numMemPorts, p) {
     val start = Input(Bool())
     val finished = Output(Bool())
-    val baseAddr = UInt(INPUT, width = 64)
-    val byteCount = UInt(INPUT, width = 32)
-    val sum = UInt(OUTPUT, width = 32)
-    val cycleCount = UInt(OUTPUT, width = 32)
-  }
+    val baseAddr = Input(UInt(64.W))
+    val byteCount = Input(UInt(32.W))
+    val sum = Output(UInt(32.W))
+    val cycleCount = Output(UInt(32.W))
+  })
   io.signature := makeDefaultSignature()
   plugMemWritePort(0)
 
@@ -42,7 +43,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   reader.out <> red.streamIn
 
-  val regCycleCount = Reg(init = UInt(0, 32))
+  val regCycleCount = RegInit(0.U(32.W))
   io.cycleCount := regCycleCount
   when(!io.start) {regCycleCount := 0.U}
   .elsewhen(io.start & !io.finished) {regCycleCount := regCycleCount + 1.U}

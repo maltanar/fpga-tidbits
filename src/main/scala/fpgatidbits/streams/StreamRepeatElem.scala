@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.axi._
 
 
@@ -12,7 +13,7 @@ import fpgatidbits.axi._
 
 object StreamRepeatElem {
   def apply(inElem: DecoupledIO[UInt], inRepCnt: DecoupledIO[UInt]):
-  DecoupledIO[UInt] = {
+  AXIStreamIF[UInt] = {
     val repgen = Module(new StreamRepeatElem(inElem.bits.getWidth,
                         inRepCnt.bits.getWidth)).io
     repgen.inElem <> inElem
@@ -25,57 +26,57 @@ object StreamRepeatElem {
     val repgen = Module(new StreamRepeatElem(gen.getWidth,
                         inRepCnt.bits.getWidth)).io
     val ret = Decoupled(gen)
-    repgen.inElem.bits := inElem.bits.toBits
-    repgen.inElem.valid := inElem.valid
-    inElem.ready := repgen.inElem.ready
+    repgen.inElem.TDATA := inElem.bits
+    repgen.inElem.TVALID := inElem.valid
+    inElem.ready := repgen.inElem.TREADY
 
     repgen.inRepCnt <> inRepCnt
-    ret.valid := repgen.out.valid
-    ret.bits := gen.fromBits(repgen.out.bits)
-    repgen.out.ready := ret.ready
+    ret.valid := repgen.out.TVALID
+    ret.bits := repgen.out.TDATA
+    repgen.out.TREADY := ret.ready
 
     ret
   }
 }
 
 class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
-  val io = new Bundle {
-    val inElem = new AXIStreamSlaveIF(UInt(width = dataWidth))
-    val inRepCnt = new AXIStreamSlaveIF(UInt(width = repWidth))
-    val out = new AXIStreamMasterIF(UInt(width = dataWidth))
-  }
+  val io = IO(new Bundle {
+    val inElem =Flipped(new AXIStreamIF(UInt(dataWidth.W)))
+    val inRepCnt =Flipped(new AXIStreamIF(UInt(repWidth.W)))
+    val out = new AXIStreamIF(UInt(dataWidth.W))
+  })
 
-  io.inElem.ready := false.B
-  io.inRepCnt.ready := false.B
-  io.out.valid := false.B
+  io.inElem.TREADY := false.B
+  io.inRepCnt.TREADY := false.B
+  io.out.TVALID := false.B
 
-  val regElem = Reg(init = UInt(0, dataWidth))
-  val regRep = Reg(init = UInt(0, repWidth))
+  val regElem = RegInit(0.U(dataWidth))
+  val regRep = RegInit(0.U(repWidth))
 
-  io.out.bits := regElem
+  io.out.TDATA := regElem
 
-  val bothValid = io.inElem.valid & io.inRepCnt.valid
+  val bothValid = io.inElem.TVALID & io.inRepCnt.TVALID
 
   when(regRep === 0.U) {
     when (bothValid) {
-      regElem := io.inElem.bits
-      regRep := io.inRepCnt.bits
-      io.inElem.ready := true.B
-      io.inRepCnt.ready := true.B
+      regElem := io.inElem.TDATA
+      regRep := io.inRepCnt.TDATA
+      io.inElem.TREADY := true.B
+      io.inRepCnt.TREADY := true.B
     }
   }
   .otherwise {
-    io.out.valid := true.B
-    when(io.out.ready) {
+    io.out.TVALID := true.B
+    when(io.out.TREADY) {
       regRep := regRep - 1.U
       // last repetition? prefetch in read
       when(regRep === 1.U) {
         // prefetch elem and repcount, if possible
         when (bothValid) {
-          regElem := io.inElem.bits
-          regRep := io.inRepCnt.bits
-          io.inElem.ready := true.B
-          io.inRepCnt.ready := true.B
+          regElem := io.inElem.TDATA
+          regRep := io.inRepCnt.TDATA
+          io.inElem.TREADY := true.B
+          io.inRepCnt.TREADY := true.B
         }
       }
     }

@@ -5,7 +5,7 @@ import chisel3.util._
 
 // Define simple extensions of the Chisel Decoupled interfaces,
 // with signal renaming to support auto inference of AXI stream interfaces in Vivado
-
+/*
 
 class AXIStreamMasterIF[T <: Data](gen: T) extends DecoupledIO(gen) {
   def renameSignals(ifName: String) {
@@ -26,4 +26,12 @@ class AXIStreamSlaveIF[T <: Data](gen: T) extends DecoupledIO(gen) {
   }
 
   override def clone: this.type = { new AXIStreamSlaveIF(gen).asInstanceOf[this.type]; }
+}
+*/
+
+
+class AXIStreamIF[T <: Data](private val gen: T) extends Bundle {
+  val TREADY = Output(Bool())
+  val TVALID = Input(Bool())
+  val TDATA = Input(gen)
 }

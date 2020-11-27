@@ -1,6 +1,7 @@
 package fpgatidbits
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.Testbenches._
 //import fpgatidbits.ocm._
 //import fpgatidbits.streams._
@@ -213,12 +214,13 @@ object MainObj {
     println(s"Creating emulator in $targetDir")
     val accInst = accelMap(accelName)
     val platformInst = platformMap("Tester")
-    val chiselArgs = Array("--backend","c","--targetDir", targetDir)
-
+    //val chiselArgs = Array("--backend","c","--targetDir", targetDir)
+    val chiselArgs = Array("")
 //    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(Array[String](), () => platformInst(accInst))
 
     // build driver
+    //chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst).generateRegDriver(s"$targetDir/")))
     platformInst(accInst).generateRegDriver(s"$targetDir/")
 
     // copy emulator driver and SW support files

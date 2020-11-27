@@ -1,6 +1,9 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+
+import chisel3._
+import chisel3.util._
+
 import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
@@ -29,7 +32,8 @@ object TesterWrapperParams extends PlatformWrapperParams {
 
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(TesterWrapperParams, instFxn) {
-  suggestName("TesterWrapper")
+  //override def desiredName  = "TesterWrapper"
+  //suggestName("TesterWrapper")
 
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-tester.cpp", "testerdriver.hpp"
@@ -38,30 +42,31 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
   val memWords = 64 * 1024 * 1024
   val mrp = p.toMemReqParams()
   val memAddrBits = log2Ceil(memWords)
-  val memUnitBytes = UInt(p.memDataBits/8)
-  val io = new Bundle {
+  val memUnitBytes = (p.memDataBits/8).U
+  val io = IO(new Bundle {
     // register file access
     val regFileIF = new RegFileSlaveIF(regAddrBits, p.csrDataBits)
     // memory access for the testbench
-    val memAddr = UInt(INPUT, p.memAddrBits)
+    val memAddr = Input(UInt(p.memAddrBits.W))
     val memWriteEn = Input(Bool())
-    val memWriteData = UInt(INPUT, p.memDataBits)
-    val memReadData = UInt(OUTPUT, p.memDataBits)
-  }
+    val memWriteData = Input(UInt(p.memDataBits.W))
+    val memReadData = Output(UInt(p.memDataBits.W))
+  })
   val accio = accel.io
 
   // expose regfile interface for testbench
   io.regFileIF <> regFile.extIF
 
   // instantiate the "main memory"
-  val mem = Mem(UInt(width=p.memDataBits), memWords)
+  //val mem = Mem(UInt(width=p.memDataBits), memWords)
+  val mem = SyncReadMem(memWords, UInt(p.memDataBits.W))
 
   // testbench memory access
-  def addrToWord(x: UInt) = {x >> UInt(log2Ceil(p.memDataBits/8))}
+  def addrToWord(x: UInt) = {x >> (log2Ceil(p.memDataBits/8))}
   val memWord = addrToWord(io.memAddr)
-  io.memReadData := mem(memWord)
+  io.memReadData := mem.read(memWord)
 
-  when (io.memWriteEn) {mem(memWord) := io.memWriteData}
+  when (io.memWriteEn) {mem.write(memWord, io.memWriteData)}
 
   def addLatency[T <: Data](n: Int, prod: DecoupledIO[T]): DecoupledIO[T] = {
     if(n == 1) {
@@ -75,9 +80,9 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
   // one FSM per port, rather simple, but supports bursts
   for(i <- 0 until accel.numMemPorts) {
     // reads
-    val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
-    val regStateRead = Reg(init = UInt(sWaitRd))
-    val regReadRequest = Reg(init = GenericMemoryRequest(mrp))
+    val sWaitRd :: sRead :: Nil = Enum(2)
+    val regStateRead = RegInit(sWaitRd)
+    val regReadRequest = RegInit(GenericMemoryRequest(mrp))
 
     val accmp = accio.memPort(i)
     val accRdReq = addLatency(15, accmp.memRdReq)
@@ -114,7 +119,7 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
           accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
           when (accRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
-            regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
+            regReadRequest.addr := regReadRequest.addr + (memUnitBytes)
 
             // was this the last beat of burst transferred?
             when(regReadRequest.numBytes === memUnitBytes) {
@@ -131,12 +136,12 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
     }
 
     // writes
-    val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
-    val regStateWrite = Reg(init = UInt(sWaitWr))
-    val regWriteRequest = Reg(init = GenericMemoryRequest(mrp))
+    val sWaitWr :: sWrite :: Nil = Enum(2)
+    val regStateWrite = RegInit(sWaitWr)
+    val regWriteRequest = RegInit(GenericMemoryRequest(mrp))
     // write data queue to avoid deadlocks (state machine expects rspQ and data
     // available simultaneously)
-    val wrDatQ = Module(new Queue(UInt(width = p.memDataBits), 16)).io
+    val wrDatQ = Module(new Queue(UInt(p.memDataBits.W), 16)).io
     wrDatQ.enq <> accmp.memWrDat
 
     // queue on write response port (to avoid combinational loops)
@@ -170,7 +175,7 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
             wrDatQ.deq.ready := true.B
             mem(addrToWord(regWriteRequest.addr)) := wrDatQ.deq.bits
             regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
-            regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
+            regWriteRequest.addr := regWriteRequest.addr + (memUnitBytes)
           }
         }
       }

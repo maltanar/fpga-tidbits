@@ -1,6 +1,7 @@
 package fpgatidbits.ocm
 
-//import Chisel._
+//import chisel3._
+import chisel3.util._
 import chisel3._
 import chisel3.util._
 
@@ -34,7 +35,7 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
   regIn: Int,   // number of registers at input
   regOut: Int   // number of registers at output
 ) extends Module {
-  val io = new DualPortBRAMIO(addrBits, dataBits)
+  val io = IO(new DualPortBRAMIO(addrBits, dataBits))
   // instantiate the desired BRAM
   val bram = if(dataBits <= 36 && addrBits <= 4) {
     // use pure Chisel for small memories (just synth to LUTs)
@@ -51,7 +52,7 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
 }
 
 class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->dataBits, "ADDR" -> addrBits)) {
-  val io = new DualPortBRAMIO(addrBits, dataBits)
+  val io = IO(new DualPortBRAMIO(addrBits, dataBits))
 /*  setVerilogParameters(new VerilogParameters {
     val DATA = dataBits
     val ADDR = addrBits
@@ -85,7 +86,7 @@ class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->da
 // no BlackBox (pure Chisel) version. won't synthesize to BRAM, but sometimes
 // (if the depth is small) this may be more desirable.
 class DualPortBRAM_NoBlackBox(addrBits: Int, dataBits: Int) extends Module {
-  val io = new DualPortBRAMIO(addrBits, dataBits)
+  val io = IO(new DualPortBRAMIO(addrBits, dataBits))
 
   //val mem = Mem(UInt(width = dataBits), 1 << addrBits)
   val mem = SyncReadMem(1 << addrBits, UInt(dataBits.W))

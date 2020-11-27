@@ -1,6 +1,7 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // platform wrapper for PYNQ
 
@@ -23,5 +24,5 @@ class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
     "platform-xlnk.cpp", "xlnkdriver.hpp"
   )
   suggestName("PYNQZ1Wrapper")
-  setModuleName("PYNQZ1Wrapper")
+  override def desiredName = "PYNQZ1Wrapper"
 }

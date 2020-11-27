@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.streams._
 import fpgatidbits.ocm._
 
@@ -21,16 +22,16 @@ class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
   val active = Output(Bool())
   val finished = Output(Bool())
   val error = Output(Bool())
-  val baseAddr = UInt(INPUT, p.addrWidth)
-  val byteCount = UInt(INPUT, 32)
+  val baseAddr = Input(UInt(p.addrWidth.W))
+  val byteCount = Input(UInt(32.W))
   // stream data output
-  val out = Decoupled(UInt(width = w))
+  val out = Decoupled(UInt(w.W))
   // interface towards memory port
   val req = Decoupled(new GenericMemoryRequest(p))
-  val rsp = Decoupled(new GenericMemoryResponse(p)).flip
+  val rsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
   // controls for ID queue reinit
   val doInit = Input(Bool())                // re-initialize queue
-  val initCount = UInt(INPUT, width = 8)  // # IDs to initializes
+  val initCount = Input(UInt(8.W))  // # IDs to initializes
 }
 
 // size alignment in hardware
@@ -43,19 +44,19 @@ object RoundUpAlign {
     val lower = x(numZeroAddrBits-1, 0)
     val upper = x(x.getWidth-1, numZeroAddrBits)
     val isAligned = (lower === 0.U)
-    return Mux(isAligned, x, Cat(upper+1.U, UInt(0, width = numZeroAddrBits)))
+    return Mux(isAligned, x, Cat(upper+1.U, 0.U(numZeroAddrBits.W)))
   }
 }
 
 class StreamReader(val p: StreamReaderParams) extends Module {
-  val io = new StreamReaderIF(p.streamWidth, p.mem)
-  val StreamElem = UInt(width = p.streamWidth)
+  val io = IO(new StreamReaderIF(p.streamWidth, p.mem))
+  val StreamElem = UInt(p.streamWidth.W)
 
   // read request generator
   val rg = Module(new ReadReqGen(p.mem, p.chanID, p.maxBeats)).io
   // FIFO to store read data
   val fifo = Module(new FPGAQueue(StreamElem, p.fifoElems)).io
-  val streamBytes = UInt(p.streamWidth/8)
+  val streamBytes = (p.streamWidth/8).U
   val memWidthBytes = p.mem.dataWidth/8
 
   rg.ctrl.start := io.start
@@ -65,10 +66,10 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // the superflous (alignment) bytes will be removed later
   rg.ctrl.byteCount := RoundUpAlign(memWidthBytes, io.byteCount)
 
-  val regDoneBytes = Reg(init = UInt(0, width = 32))
+  val regDoneBytes = RegInit(0.U(32.W))
   when(!io.start) { regDoneBytes := 0.U }
   .elsewhen(io.out.valid & io.out.ready) {
-    regDoneBytes := regDoneBytes + UInt(p.streamWidth/8)
+    regDoneBytes := regDoneBytes + (p.streamWidth/8).U
   }
   val allResponsesDone = (regDoneBytes === io.byteCount)
   io.active := io.start & !allResponsesDone
@@ -110,7 +111,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // TODO add a StreamResizer to handle all 3 cases
   if (p.mem.dataWidth == p.streamWidth) { lim(rsp) <> fifo.enq }
   else if (p.mem.dataWidth > p.streamWidth) {
-    lim(StreamDownsizer(rsp, p.streamWidth)) <> fifo.enq
+    lim(StreamDownsizer(rsp, p.streamWidth, fifo.enq)) <> fifo.enq
   } else if (p.mem.dataWidth < p.streamWidth) {
     // TODO implement upsizing
     throw new Exception("StreamUpsizer not yet implemented")
@@ -123,27 +124,25 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   else {
     // throttling logic: don't ask more than what we can chew, limit the #
     // outstanding requested bytes to FIFO capacity
-    val regBytesInFlight = Reg(init = UInt(0, 32))
-    val fifoCount = UInt(width = 32)
+    val regBytesInFlight = RegInit(0.U(32.W))
+    //val fifoCount = 0.U(32.W)
     val maxElemsInReq = (memWidthBytes * p.maxBeats / (p.streamWidth/8))
     if(p.fifoElems < 2*maxElemsInReq)
       throw new Exception("Too small FIFO in StreamReader")
     // cap the FIFO capacity at size-2*burst to have some slack; might overflow
     // due to stale feedback
-    val fifoMax = UInt(p.fifoElems-2*maxElemsInReq, width = 32)
+    val fifoMax = (p.fifoElems-2*maxElemsInReq).U(32.W)
     // cap off the returned count at fifoMax to prevent underflows
-    fifoCount := Mux(fifo.count > fifoMax, fifoMax, fifo.count)
+    val fifoCount = Mux(fifo.count > fifoMax, fifoMax, fifo.count)
     val fifoAvailBytes = (fifoMax - fifoCount) * streamBytes
     // calculate per-cycle updates to # bytes in flight
-    val outReqBytes = UInt(width = 32)
-    val inRspBytes = UInt(width = 32)
-    outReqBytes := 0.U
-    inRspBytes := 0.U
-    when(rsp.valid & rsp.ready) { inRspBytes := UInt(memWidthBytes) }
+    val outReqBytes = 0.U
+    val inRspBytes = 0.U
+    when(rsp.valid & rsp.ready) { inRspBytes := (memWidthBytes).U }
     when(io.req.valid & io.req.ready) { outReqBytes := io.req.bits.numBytes }
     regBytesInFlight := regBytesInFlight + outReqBytes - inRspBytes
     // throttle when we start getting too many requests
-    rg.ctrl.throttle := Reg(next=regBytesInFlight >= fifoAvailBytes)
+    rg.ctrl.throttle := RegNext(regBytesInFlight >= fifoAvailBytes)
   }
 
   // TODO add support for statistics?

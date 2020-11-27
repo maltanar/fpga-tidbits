@@ -1,8 +1,9 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
-import fpgatidbits.hlstools.TemplatedHLSBlackBox
+//import fpgatidbits.hlstools.TemplatedHLSBlackBox
 import scala.collection.mutable.ArrayBuffer
 
 // TODO should the parameters for GenericAccelerator be separated from the
@@ -11,9 +12,9 @@ import scala.collection.mutable.ArrayBuffer
 // interface definition for GenericAccelerator-derived modules
 class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends Bundle {
   // memory ports
-  val memPort = Vec.fill(numMemPorts) {new GenericMemoryMasterPort(p.toMemReqParams())}
+  val memPort = Vec(numMemPorts,new GenericMemoryMasterPort(p.toMemReqParams()))
   // use the signature field for sanity and version checks
-  val signature = UInt(OUTPUT, p.csrDataBits)
+  val signature = Output(UInt(p.csrDataBits.W))
 }
 
 // GenericAccelerator, serving as a base class for creating portable accelerators
@@ -21,12 +22,16 @@ class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends B
 abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   def io: GenericAcceleratorIF
   def numMemPorts: Int
+
+  /*
   val hlsBlackBoxes = ArrayBuffer[TemplatedHLSBlackBox]()
 
   def HLSBlackBox[T <: TemplatedHLSBlackBox](blackBox: T): T = {
     hlsBlackBoxes += blackBox
     return blackBox
   }
+  */
+
 
   def hexcrc32(s: String): String = {
     import java.util.zip.CRC32
@@ -48,7 +53,7 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   }
 
   def makeDefaultSignature(): UInt = {
-    return UInt("h" + hexSignature())
+    return ("h" + hexSignature()).U
   }
 
   // drive default values for memory read port i

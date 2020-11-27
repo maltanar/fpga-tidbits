@@ -1,30 +1,31 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // Generates an arithmetic sequence with a given <init> and <step>
 // with <count> elements. Example: <init>=1 <step>=2 <count>=4
 // seq = 1 3 5 7
 class SequenceGenerator(w: Int, a: Int = 32) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val start = Input(Bool())
-    val init = UInt(INPUT, width = w)
-    val count = UInt(INPUT, width = a)
-    val step = UInt(INPUT, width = w)
+    val init = Input(UInt(w.W))
+    val count = Input(UInt(a.W))
+    val step = Input(UInt(w.W))
     val finished = Output(Bool())
-    val seq = Decoupled(UInt(width = w))
-  }
+    val seq = Decoupled(UInt(w.W))
+  })
 
-  val regSeqElem = Reg(init = UInt(0, w))
-  val regCounter = Reg(init = UInt(0, a))
-  val regMaxCount = Reg(init = UInt(0, a))
-  val regStep = Reg(init = UInt(0, a))
+  val regSeqElem = RegInit(0.U(w.W))
+  val regCounter = RegInit(0.U(a.W))
+  val regMaxCount = RegInit(0.U(a.W))
+  val regStep = RegInit(0.U(a.W))
   io.finished := false.B
   io.seq.valid := false.B
   io.seq.bits := regSeqElem
 
-  val sIdle :: sRun :: sFinished :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sIdle))
+  val sIdle :: sRun :: sFinished :: Nil = Enum(3)
+  val regState = RegInit((sIdle))
 
   switch(regState) {
       is(sIdle) {

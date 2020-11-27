@@ -1,10 +1,11 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
-//import fpgatidbits.regfile._
+import fpgatidbits.regfile._
 import fpgatidbits.axi._
-//import fpgatidbits.ocm._
+import fpgatidbits.ocm._
 
 // wrapper for AXI platforms
 
@@ -12,18 +13,16 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   instFxn: PlatformWrapperParams => GenericAccelerator)
   extends PlatformWrapper(p, instFxn) {
 
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // AXI slave interface for control-status registers
     val csr = new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits)
     // AXI master interfaces for reading and writing memory
-    val mem = Vec.fill (p.numMemPorts) {
-      new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)
-    }
-  }
+    val mem = Vec(p.numMemPorts, new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits))
+  })
 
   // rename signals to support Vivado interface inference
-  io.csr.renameSignals("csr")
-  for(i <- 0 until p.numMemPorts) {io.mem(i).renameSignals(s"mem$i")}
+  io.csr.suggestName("csr")
+  for(i <- 0 until p.numMemPorts) {io.mem(i).suggestName(s"mem$i")}
 
   // memory port adapters and connections
   // TODO use accel numMemPorts and plug unused
@@ -48,7 +47,7 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     writeReqAdp.axiReqOut <> writeBurstAdp.in_writeAddr
     writeBurstAdp.in_writeData.bits.data := accel.io.memPort(i).memWrDat.bits
     // TODO fix this: forces all writes bytelanes valid!
-    writeBurstAdp.in_writeData.bits.strb := ~UInt(0, width=p.memDataBits/8)
+    writeBurstAdp.in_writeData.bits.strb := ~0.U((p.memDataBits/8).W)
     // burst adapter will set this appropriately
     writeBurstAdp.in_writeData.bits.last := false.B
     writeBurstAdp.in_writeData.valid := accel.io.memPort(i).memWrDat.valid
@@ -86,21 +85,21 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   regFile.extIF.cmd.valid := false.B
   regFile.extIF.cmd.bits.driveDefaults()
 
-  val sRead :: sReadRsp :: sWrite :: sWriteD :: sWriteRsp :: Nil = Enum(UInt(), 5)
-  val regState = Reg(init = UInt(sRead))
+  val sRead :: sReadRsp :: sWrite :: sWriteD :: sWriteRsp :: Nil = Enum(5)
+  val regState = RegInit(sRead)
 
-  val regModeWrite = Reg(init=false.B)
-  val regRdReq = Reg(init=false.B)
-  val regRdAddr = Reg(init=UInt(0, p.memAddrBits))
-  val regWrReq = Reg(init=false.B)
-  val regWrAddr = Reg(init=UInt(0, p.memAddrBits))
-  val regWrData = Reg(init=UInt(0, p.csrDataBits))
+  val regModeWrite = RegInit(false.B)
+  val regRdReq = RegInit(false.B)
+  val regRdAddr = RegInit(0.U(p.memAddrBits.W))
+  val regWrReq = RegInit(false.B)
+  val regWrAddr = RegInit(0.U(p.memAddrBits))
+  val regWrData = RegInit(0.U(p.csrDataBits.W))
   // AXI typically uses byte addressing, whereas regFile indices are
   // element indices -- so the AXI addr needs to be divided by #bytes
   // in one element to get the regFile ind
   // Note that this permits reading/writing only the entire width of one
   // register
-  val addrDiv = UInt(p.csrDataBits/8)
+  val addrDiv = (p.csrDataBits/8).U
 
   when(!regModeWrite) {
     regFile.extIF.cmd.valid := regRdReq

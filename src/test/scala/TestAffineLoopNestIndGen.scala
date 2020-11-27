@@ -1,4 +1,5 @@
-import Chisel._
+import chisel3._
+import chisel3.util._
 import org.scalatest.junit.JUnitSuite
 import org.junit.Test
 import fpgatidbits.streams._

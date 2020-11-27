@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // combinational fork for one stream -> two streams
 // fork functions can be customized
@@ -8,11 +9,11 @@ import Chisel._
 class StreamFork[Ti <: Data, ToA <: Data, ToB <: Data]
   (genIn: Ti, genA: ToA, genB: ToB, forkA: Ti => ToA, forkB: Ti => ToB)
   extends Module {
-  val io = new Bundle {
-    val in = Decoupled(genIn).flip
+  val io = IO(new Bundle {
+    val in = Flipped(Decoupled(genIn))
     val outA = Decoupled(genA)
     val outB = Decoupled(genB)
-  }
+  })
 
   io.in.ready := io.outA.ready & io.outB.ready
 

@@ -1,22 +1,23 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module {
 
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val start = Input(Bool())
     val finished = Output(Bool())
-    val reduced = UInt(OUTPUT, width = w )
-    val byteCount = UInt(INPUT, width = 32)
-    val streamIn = Decoupled(UInt(width = w)).flip
-  }
+    val reduced = Output(UInt(w.W))
+    val byteCount = Input(UInt(32.W))
+    val streamIn = Flipped(Decoupled(UInt(w.W)))
+  })
   val bytesPerElem = w/8
 
-  val sIdle :: sRunning :: sFinished :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sIdle))
-  val regReduced = Reg(init = UInt(initVal, width = w))
-  val regBytesLeft = Reg(init = UInt(0, 32))
+  val sIdle :: sRunning :: sFinished :: Nil = Enum(3)
+  val regState = RegInit((sIdle))
+  val regReduced = RegInit(initVal.U(w.W))
+  val regBytesLeft = RegInit(0.U(32.W))
 
   io.finished := false.B
   io.reduced := regReduced
@@ -24,7 +25,7 @@ class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module
 
   switch(regState) {
       is(sIdle) {
-        regReduced := UInt(initVal)
+        regReduced := initVal.U
         regBytesLeft := io.byteCount
 
         when (io.start) { regState := sRunning }
@@ -36,7 +37,7 @@ class StreamReducer(w: Int, initVal: Int, fxn: (UInt,UInt)=>UInt) extends Module
           io.streamIn.ready := true.B
           when (io.streamIn.valid) {
             regReduced := fxn(regReduced, io.streamIn.bits)
-            regBytesLeft := regBytesLeft - UInt(bytesPerElem)
+            regBytesLeft := regBytesLeft - (bytesPerElem).U
           }
         }
       }

@@ -1,6 +1,7 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // wrapper for a "generic" SDAccel platform
 
@@ -23,5 +24,5 @@ class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator
     "platform-genericsdaccel.cpp", "xclhalwrapper.hpp"
   )
   suggestName("GenericSDAccelWrapper")
-  setModuleName("GenericSDAccelWrapper")
+  override def desiredName = "GenericSDAccelWrapper"
 }

@@ -5,10 +5,10 @@ import chisel3.util._
 import fpgatidbits.axi._
 
 class AXIMemReqAdp(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val genericReqIn = Flipped(Decoupled(new GenericMemoryRequest(p)))
     val axiReqOut = Decoupled(new AXIAddress(p.addrWidth, p.idWidth))
-  }
+  })
 
   io.genericReqIn.ready := io.axiReqOut.ready
   io.axiReqOut.valid := io.genericReqIn.valid
@@ -30,10 +30,10 @@ class AXIMemReqAdp(p: MemReqParams) extends Module {
 }
 
 class AXIReadRspAdp(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val axiReadRspIn = Flipped(Decoupled(new AXIReadData(p.dataWidth, p.idWidth)))
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
-  }
+  })
   io.genericRspOut.valid := io.axiReadRspIn.valid
   io.axiReadRspIn.ready := io.genericRspOut.ready
 
@@ -48,10 +48,10 @@ class AXIReadRspAdp(p: MemReqParams) extends Module {
 }
 
 class AXIWriteRspAdp(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO( new Bundle {
     val axiWriteRspIn = Flipped(Decoupled(new AXIWriteResponse(p.idWidth)))
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
-  }
+  })
   io.genericRspOut.valid := io.axiWriteRspIn.valid
   io.axiWriteRspIn.ready := io.genericRspOut.ready
 
@@ -66,10 +66,10 @@ class AXIWriteRspAdp(p: MemReqParams) extends Module {
 }
 
 class AXIReqToGenReqAdp(axiAddrW: Int, axiIDW: Int, p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val axiReqIn = Flipped(Decoupled(new AXIAddress(axiAddrW, axiIDW)))
     val genericReqOut = Decoupled(new GenericMemoryRequest(p))
-  }
+  })
 
   io.genericReqOut.valid := io.axiReqIn.valid
   io.axiReqIn.ready := io.genericReqOut.ready
@@ -83,10 +83,10 @@ class AXIReqToGenReqAdp(axiAddrW: Int, axiIDW: Int, p: MemReqParams) extends Mod
 }
 
 class GenRspToAXIReadRspAdp(axiDataW: Int, axiIDW: Int, p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val genericRspIn = Flipped(Decoupled(new GenericMemoryResponse(p)))
     val axiRspOut = Decoupled(new AXIReadData(axiDataW, axiIDW))
-  }
+  })
   io.axiRspOut.valid := io.genericRspIn.valid
   io.genericRspIn.ready := io.axiRspOut.ready
 
@@ -100,10 +100,10 @@ class GenRspToAXIReadRspAdp(axiDataW: Int, axiIDW: Int, p: MemReqParams) extends
 }
 
 class GenRspToAXIWriteRspAdp(axiIDW: Int, p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val genericRspIn = Flipped(Decoupled(new GenericMemoryResponse(p)))
     val axiRspOut = Decoupled(new AXIWriteResponse(axiIDW))
-  }
+  })
   io.axiRspOut.valid := io.genericRspIn.valid
   io.genericRspIn.ready := io.axiRspOut.ready
 
@@ -115,10 +115,10 @@ class GenRspToAXIWriteRspAdp(axiIDW: Int, p: MemReqParams) extends Module {
 }
 
 class AXIWrDatToGenWrDatAdp(axiDataW: Int, p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val axiIn = Flipped(Decoupled(new AXIWriteData(axiDataW)))
     val genericOut = Decoupled(UInt(p.dataWidth.W))
-  }
+  })
   if(axiDataW != p.dataWidth)
     throw new Exception("AXI<>generic adapters do not support datawidth conversion")
   io.genericOut.valid := io.axiIn.valid
@@ -130,7 +130,7 @@ class AXIWrDatToGenWrDatAdp(axiDataW: Int, p: MemReqParams) extends Module {
 class AXIWriteBurstReqAdapter(
   addrWidthBits: Int, dataWidthBits: Int, idBits: Int
 ) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // write address channel in
     val in_writeAddr   = Flipped(Decoupled(new AXIAddress(addrWidthBits, idBits)))
     // write data channel in
@@ -139,7 +139,7 @@ class AXIWriteBurstReqAdapter(
     val out_writeAddr   = Decoupled(new AXIAddress(addrWidthBits, idBits))
     // write data channel out
     val out_writeData   = Decoupled(new AXIWriteData(dataWidthBits))
-  }
+  })
   // connect the write address and data output directly to input
   io.in_writeAddr <> io.out_writeAddr
   io.in_writeData <> io.out_writeData

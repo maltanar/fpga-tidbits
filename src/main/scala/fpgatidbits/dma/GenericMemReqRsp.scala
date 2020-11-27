@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm._
 import fpgatidbits.streams.PrintableBundle
 
@@ -37,7 +38,7 @@ class GenericMemoryRequest(p: MemReqParams) extends PrintableBundle {
   val printfStr = "id %d addr %d numBytes %d \n"
   val printfElems = {() => Seq(channelID, addr, numBytes)}
 
-  override def clone = {
+  override def cloneType = {
     new GenericMemoryRequest(p).asInstanceOf[this.type]
   }
 
@@ -86,7 +87,7 @@ class GenericMemoryResponse(p: MemReqParams) extends PrintableBundle {
   val printfStr = "id %d readData %x isLast %d \n"
   val printfElems = {() => Seq(channelID, readData, isLast)}
 
-  override def clone = {
+  override def cloneType = {
     new GenericMemoryResponse(p).asInstanceOf[this.type]
   }
 
@@ -107,7 +108,7 @@ object GenericMemoryResponse {
   }
 }
 
-class GenericMemoryMasterPort(p: MemReqParams) extends Bundle {
+class GenericMemoryMasterPort(private val p: MemReqParams) extends Bundle {
   // req - rsp interface for memory reads
   val memRdReq = Decoupled(new GenericMemoryRequest(p))
   val memRdRsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
@@ -117,7 +118,7 @@ class GenericMemoryMasterPort(p: MemReqParams) extends Bundle {
   val memWrRsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
 }
 
-class GenericMemorySlavePort(p: MemReqParams) extends Bundle {
+class GenericMemorySlavePort(private val p: MemReqParams) extends Bundle {
   // req - rsp interface for memory reads
   val memRdReq = Flipped(Decoupled(new GenericMemoryRequest(p)))
   val memRdRsp = Decoupled(new GenericMemoryResponse(p))
@@ -129,28 +130,28 @@ class GenericMemorySlavePort(p: MemReqParams) extends Bundle {
 
 // variant of the generic memory port where read/write requests
 // are multiplexed onto the same channel
-class SimplexMemoryMasterPort(p: MemReqParams) extends Bundle {
+class SimplexMemoryMasterPort(private val p: MemReqParams) extends Bundle {
   val req = Decoupled(new GenericMemoryRequest(p))
   val wrdat = Decoupled(UInt(p.dataWidth.W))
   val rsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
 }
 
-class SimplexMemorySlavePort(p: MemReqParams) extends SimplexMemoryMasterPort(p) {
-  val req = Flipped(Decoupled(new GenericMemoryRequest(p)))
-  val wrdat = Flipped(Decoupled(UInt(p.dataWidth.W)))
-  val rsp = Decoupled(new GenericMemoryResponse(p))
+class SimplexMemorySlavePort(private val p: MemReqParams) extends SimplexMemoryMasterPort(p) {
+  override val req = Flipped(Decoupled(new GenericMemoryRequest(p)))
+  override val wrdat = Flipped(Decoupled(UInt(p.dataWidth.W)))
+  override val rsp = Decoupled(new GenericMemoryResponse(p))
 }
 
 // derive a read-write deinterleaver for handling the responses
-class QueuedRdWrDeinterleaver(p: MemReqParams) extends QueuedDeinterleaver(2, p, 4,
+class QueuedRdWrDeinterleaver(private val p: MemReqParams) extends QueuedDeinterleaver(2, p, 4,
  routeFxn = {x: GenericMemoryResponse => Mux(x.isWrite, 1.U, 0.U)})
 
 // adapter for duplex <> simplex
-class SimplexAdapter(p: MemReqParams) extends Module {
-  val io = new Bundle {
+class SimplexAdapter(private val p: MemReqParams) extends Module {
+  val io = IO(new Bundle {
     val duplex = new GenericMemorySlavePort(p)
     val simplex = new SimplexMemoryMasterPort(p)
-  }
+  })
 
   val rdReqQ = FPGAQueue(io.duplex.memRdReq, 2)
   val wrReqQ = FPGAQueue(io.duplex.memWrReq, 2)

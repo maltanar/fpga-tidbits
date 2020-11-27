@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.streams._
 
 // write contiguous streams of data to main memory
@@ -20,25 +21,25 @@ class StreamWriterIF(w: Int, p: MemReqParams) extends Bundle {
   val active = Output(Bool())
   val finished = Output(Bool())
   val error = Output(Bool())
-  val baseAddr = UInt(INPUT, p.addrWidth)
-  val byteCount = UInt(INPUT, 32)
+  val baseAddr = Input(UInt(p.addrWidth.W))
+  val byteCount = Input(UInt(32.W))
   // stream data input
-  val in = Decoupled(UInt(width = w)).flip
+  val in = Flipped(Decoupled(UInt(w.W)))
   // interface towards memory port
   val req = Decoupled(new GenericMemoryRequest(p))
-  val wdat = Decoupled(UInt(width = p.dataWidth))
-  val rsp = Decoupled(new GenericMemoryResponse(p)).flip
+  val wdat = Decoupled(UInt(p.dataWidth.W))
+  val rsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
 }
 
 class StreamWriter(val p: StreamWriterParams) extends Module {
-  val io = new StreamWriterIF(p.streamWidth, p.mem)
-  val StreamElem = UInt(width = p.streamWidth)
+  val io = IO(new StreamWriterIF(p.streamWidth, p.mem))
+  val StreamElem = UInt(p.streamWidth.W)
 
   // always ready to receive write responses
   io.rsp.ready := true.B
   // count write responses to determine finished
-  val regNumPendingReqs = Reg(init = UInt(0, 32))
-  val regRequestedBytes = Reg(init = UInt(0, 32))
+  val regNumPendingReqs = RegInit(0.U(32.W))
+  val regRequestedBytes = RegInit(0.U(32.W))
   when(!io.start) {
     regNumPendingReqs := 0.U
     regRequestedBytes := 0.U
@@ -70,8 +71,8 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   // add a resizer between input data and write data
   if(p.streamWidth == p.mem.dataWidth) {io.in <> io.wdat}
   else if(p.streamWidth > p.mem.dataWidth) {
-    StreamDownsizer(io.in, p.mem.dataWidth) <> io.wdat
+    StreamDownsizer(io.in, p.mem.dataWidth, io.wdat) <> io.wdat
   } else {
-    StreamUpsizer(io.in, p.mem.dataWidth) <> io.wdat
+    StreamUpsizer(io.in, p.mem.dataWidth, io.wdat) <> io.wdat
   }
 }

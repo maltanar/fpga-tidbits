@@ -1,16 +1,17 @@
 package fpgatidbits.dma
 
-//import Chisel._
+//import chisel3._
+import chisel3.util._
 import chisel3._
 import chisel3.util._
 
 class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // individual request pipes
     val reqIn = VecInit(Seq.fill(numPipes) {Flipped(Decoupled(new GenericMemoryRequest(p)))})
     // interleaved request pipe
     val reqOut = Decoupled(new GenericMemoryRequest(p))
-  }
+  })
   // TODO for now, we just use a round-robin arbiter
   // TODO report statistics from the interleaved mix?
   val arb = Module(new RRArbiter(gen=new GenericMemoryRequest(p), n=numPipes))
@@ -23,11 +24,11 @@ class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
 class TestReqInterleaverWrapper() extends Module {
   val p = new MemReqParams(48, 64, 4, 1)
   val burstBeats = 8
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val reqOut = Decoupled(new GenericMemoryRequest(p))
     val allFinished = Output(Bool())
     val allActive = Output(Bool())
-  }
+  })
   val N = 4
   val bytesPerPipe = 1024
   val reqPipes = VecInit.tabulate(N) {i => Module(new ReadReqGen(p, i, burstBeats)).io}

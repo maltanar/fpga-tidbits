@@ -1,5 +1,6 @@
 package fpgatidbits.dma
-import Chisel._
+import chisel3._
+import chisel3.util._
 //import chisel3.iotesters._
 
 // control interface for (simple) request generators
@@ -24,13 +25,13 @@ class ReqGenStatus() extends Bundle {
 // TODO do we want to support sub-word accesses?
 class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
   val reqGenParams = p
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // control/status interface
     val ctrl = new ReqGenCtrl(p.addrWidth)
     val stat = new ReqGenStatus()
     // requests
     val reqs = Decoupled(new GenericMemoryRequest(p))
-  }
+  })
   // shorthands for convenience
   val bytesPerBeat = (p.dataWidth/8)
   val bytesPerBurst = maxBeats * bytesPerBeat
@@ -100,7 +101,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
 // the width of each element in the array is assumed to be equal to the
 // memory data width
 class IndsToMemReq(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // base address of the array start
     val base = Input(UInt(p.addrWidth.W))
     val isWrite = Input(Bool())
@@ -109,7 +110,7 @@ class IndsToMemReq(p: MemReqParams) extends Module {
     val inds = Flipped(Decoupled(UInt(p.dataWidth.W)))
     // memory requests out
     val reqs = Decoupled(GenericMemoryRequest(p))
-  }
+  })
   io.reqs.valid := io.inds.valid
   io.inds.ready := io.reqs.ready
 
@@ -145,11 +146,11 @@ object WriteArray {
 class TestReadReqGenWrapper() extends Module {
   val p = new MemReqParams(48, 64, 4, 1)
 
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val ctrl = new ReqGenCtrl(p.addrWidth)
     val stat = new ReqGenStatus()
     val reqQOut = Decoupled(new GenericMemoryRequest(p))
-  }
+  })
 
   val dut = Module(new ReadReqGen(p, 0, 8))
   val reqQ = Module(new Queue(new GenericMemoryRequest(p), 4096))
