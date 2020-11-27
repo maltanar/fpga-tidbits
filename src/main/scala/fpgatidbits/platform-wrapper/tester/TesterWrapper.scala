@@ -145,7 +145,7 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
     wrDatQ.enq <> accmp.memWrDat
 
     // queue on write response port (to avoid combinational loops)
-    val wrRspQ = Module(new Queue(GenericMemoryResponse(mrp), 16)).io
+    val wrRspQ = Module(new Queue(new GenericMemoryResponse(mrp), 16)).io
     wrRspQ.deq <> accmp.memWrRsp
 
     val accWrReq = addLatency(10, accmp.memWrReq)

@@ -17,7 +17,7 @@ class StreamReaderParams(
   val streamName: String = "stream"
 )
 
-class StreamReaderIF(w: Int, p: MemReqParams) extends Bundle {
+class StreamReaderIF(private val w: Int, private val p: MemReqParams) extends Bundle {
   val start = Input(Bool())
   val active = Output(Bool())
   val finished = Output(Bool())
