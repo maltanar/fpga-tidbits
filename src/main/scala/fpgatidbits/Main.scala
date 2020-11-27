@@ -2,6 +2,7 @@ package fpgatidbits
 
 import chisel3._
 import chisel3.util._
+import chisel3.iotesters._
 import fpgatidbits.Testbenches._
 //import fpgatidbits.ocm._
 //import fpgatidbits.streams._
@@ -203,6 +204,8 @@ object MainObj {
     val platformInst = platformMap(platformName)
     val chiselArgs = Array("--backend", "v")
 
+    val targetDir = s"driver-$accelName"
+
     //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
     chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
   }
@@ -210,18 +213,20 @@ object MainObj {
   def makeEmulator(args: Array[String]) = {
     val accelName = args(0)
 
-    val targetDir = s"emu-$accelName"
+    val targetDir = s"test-emu-${accelName}"
     println(s"Creating emulator in $targetDir")
     val accInst = accelMap(accelName)
     val platformInst = platformMap("Tester")
-    //val chiselArgs = Array("--backend","c","--targetDir", targetDir)
-    val chiselArgs = Array("")
+    val chiselArgs = Array("--help")
+    //val chiselArgs = Array("")
 //    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    chisel3.Driver.execute(Array[String](), () => platformInst(accInst))
+    iotesters.Driver.execute(chiselArgs, () => platformInst(accInst)) {
+      c => platformInst(accInst)
+    }
 
     // build driver
-    //chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst).generateRegDriver(s"$targetDir/")))
-    platformInst(accInst).generateRegDriver(s"$targetDir/")
+    //chisel3.Driver.execute(Array[String](), platformInst(accInst).generateRegDriver(s"$targetDir/"))
+    //platformInst(accInst).generateRegDriver(s"$targetDir/")
 
     // copy emulator driver and SW support files
     //val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"

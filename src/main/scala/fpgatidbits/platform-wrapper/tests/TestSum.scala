@@ -25,12 +25,20 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     maxBeats = 1, chanID = 0, disableThrottle = true
   )
 
+
   val reader = Module(new StreamReader(rdP)).io
   val red = Module(new StreamReducer(32, 0, {_+_})).io
 
   reader.start := io.start
   reader.baseAddr := io.baseAddr
   reader.byteCount := io.byteCount
+
+
+  // Added by erlingrj because chisel3 complains they are not initialized
+  //  when inspecting verilog output of chisel2 synthesis they are commented out of the
+  //  module interface of StreamReader, how?
+  reader.doInit := false.B
+  reader.initCount := 0.U
 
   red.start := io.start
   red.byteCount := io.byteCount

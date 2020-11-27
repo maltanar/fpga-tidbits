@@ -3,6 +3,7 @@ package fpgatidbits.PlatformWrapper
 
 import chisel3._
 import chisel3.util._
+import chisel3.iotesters._
 
 import fpgatidbits.axi._
 import fpgatidbits.dma._
@@ -18,6 +19,7 @@ import java.io.FileOutputStream
 // the accelerator.
 
 object TesterWrapperParams extends PlatformWrapperParams {
+  val driverTargetDir = "test"
   val platformName = "Tester"
   val memAddrBits = 48
   val memDataBits = 64
@@ -33,8 +35,8 @@ object TesterWrapperParams extends PlatformWrapperParams {
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
 extends PlatformWrapper(TesterWrapperParams, instFxn) {
   //override def desiredName  = "TesterWrapper"
-  //suggestName("TesterWrapper")
-
+  suggestName("TesterWrapper")
+  override def driverTargetDir = s"test-emu-"
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-tester.cpp", "testerdriver.hpp"
   )
@@ -183,9 +185,8 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
   }
 }
 
-/*
 
-class GenericAccelTester(c: TesterWrapper) extends Tester(c) {
+class GenericAccelTester(c: TesterWrapper) extends PeekPokeTester(c) {
   // TODO add functions for initializing memory
   val memUnitBytes = c.memUnitBytes.litValue()
   val regFile = c.io.regFileIF
@@ -306,7 +307,7 @@ class GenericAccelTester(c: TesterWrapper) extends Tester(c) {
   step(10)
   // TODO launch the default test, as defined by the accelerator
 }
-*/
+
 class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
 extends TesterWrapper(instFxn) {
   override val platformDriverFiles = baseDriverFiles ++ Array[String](

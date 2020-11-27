@@ -51,8 +51,7 @@ trait PlatformWrapperParams {
 // - do reads/writes to the regfile from the platform memory-mapped interface
 abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
-val instFxn: PlatformWrapperParams => GenericAccelerator)
-extends Module {
+val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
   type RegFileMap = LinkedHashMap[String, Array[Int]]
 
   // a list of files that will be needed for compiling drivers for platform
@@ -60,6 +59,8 @@ extends Module {
     "platform.h", "wrapperregdriver.h"
   )
   def platformDriverFiles: Array[String]  // additional files
+
+  def driverTargetDir = "Unspecified-driver-target-dir" // erlingrj: quick fix
 
   // instantiate the accelerator
   //val regWrapperReset = Reg(init = false.B, clock = Driver.implicitClock)
@@ -116,9 +117,11 @@ extends Module {
   allocReg += 1
 
   for(element <- ownIO) {
-    println(s"IO element: ${element} I/O=${DataMirror.directionOf(element)}")
+
     val name = element.name
-    val bits = element.asUInt()
+    val bits = element
+    println(s"IO element: ${element} I/O=${DataMirror.directionOf(element)}")
+    println(s"bits=${bits.getClass}")
     if(name != "signature") {
       println(s"IO element: ${element.name} is not signature")
       val w = bits.getWidth
@@ -134,13 +137,14 @@ extends Module {
           bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := false.B
+            regFile.regIn(allocReg + i).bits := 0.U
           }
         } else if(DataMirror.directionOf(element) == ActualDirection.Output)  {
           println(s"IO element: ${element.name} is output")
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := true.B
             val ubound = math.min(i*wCSR+wCSR-1, w-1)
-            regFile.regIn(allocReg + i).bits := bits(ubound, i*wCSR)
+            regFile.regIn(allocReg + i).bits := bits.asTypeOf(UInt())(ubound, i*wCSR)
           }
         } else { throw new Exception("Wire in IO: "+name) }
 
@@ -152,9 +156,13 @@ extends Module {
         // connect the I/O signal to the register file appropriately
         if(DataMirror.directionOf(element) == ActualDirection.Input)  {
           println(s"IO element: ${element.name} is input")
+          regFile.regIn(allocReg).bits := 0.U //Tie off input. Added by erlingrj to avoid "reference not fully initialize"
+          regFile.regIn(allocReg).valid := false.B
+
           // handle Bool input cases,"multi-bit signal to Bool" error
           if(bits.getWidth == 1) {
             bits := regFile.regOut(allocReg)(0)
+
           } else { bits := regFile.regOut(allocReg) }
           // disable internal write for this register
           regFile.regIn(allocReg).valid := false.B
@@ -298,9 +306,20 @@ protected:
     """
 
     import java.io._
-    val writer = new PrintWriter(new File(targetDir+"/"+driverName+".hpp" ))
+    // Create file
+    val filename = targetDir+driverName+"/"+driverName+".hpp"
+    println(filename)
+    val file = new File(filename)
+    if (!file.exists()) {
+      file.getParentFile.mkdirs
+      file.createNewFile()
+    }
+    val writer = new PrintWriter(file)
     writer.write(driverStr)
     writer.close()
     println("=======> Driver written to "+driverName+".hpp")
   }
+
+  //erlingrj: We cant call generateDriver form outside of Chisel context try to just create driver from inside the Verilog build
+  generateRegDriver(driverTargetDir)
 }
