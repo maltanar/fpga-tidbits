@@ -39,6 +39,8 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox(Map( "depth" -> de
 
   // TODO add a proper simulation model -- for now we just instantiate a
   // regular Chisel Queue as mock SRL queue "behavioral model"
+
+  /*
   val mockQ = Module(new Queue(UInt(), depthElems)).io
   io.count := mockQ.count
   mockQ.enq.valid := io.iValid
@@ -48,7 +50,9 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox(Map( "depth" -> de
   // ready signals connected to backpressure and vice versa
   io.iBackPressure := !mockQ.enq.ready
   mockQ.deq.ready := !io.oBackPressure
+*/
 }
+
 
 class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val io = IO(new QueueIO(gen, entries))
