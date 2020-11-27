@@ -13,7 +13,7 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox(Map( "depth" -> de
       val iBackPressure = Output(Bool()).suggestName("i_b")
       val oValid = Output(Bool()).suggestName("o_v")
       val oData = Output(UInt(widthBits.W)).suggestName("o_d")
-      val oBackPressure = Output(Bool()).suggestName("o_b")
+      val oBackPressure = Input(Bool()).suggestName("o_b")
       val count = Output(UInt(log2Ceil(depthElems+1).W)).suggestName("count")
       val clock = Input(Clock())
       val reset = Input(Reset())

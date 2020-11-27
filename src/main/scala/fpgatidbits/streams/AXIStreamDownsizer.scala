@@ -72,7 +72,7 @@ object StreamDownsizer {
     ds.in.TVALID := in.valid
     in.ready := ds.in.TREADY
 
-    val decoupled_out = Decoupled(UInt(outW.W))
+    val decoupled_out = Wire(Decoupled(UInt(outW.W)))
     ds.out.TREADY := decoupled_out.ready
     decoupled_out.bits := ds.out.TDATA
     decoupled_out.valid := ds.out.TVALID
@@ -104,8 +104,9 @@ object StreamDownsizer {
 class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends MultiIOModule {
   val numShiftSteps = inWidth/outWidth
 
+
   val in = IO(Flipped(new AXIStreamIF(UInt(inWidth.W)))).suggestName("wide")
-  val out = IO(new AXIStreamIF(UInt(inWidth.W))).suggestName("narrow")
+  val out = IO(new AXIStreamIF(UInt(outWidth.W))).suggestName("narrow")
 
 
   // the shift register

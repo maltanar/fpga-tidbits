@@ -31,7 +31,7 @@ class AXIStreamSlaveIF[T <: Data](gen: T) extends DecoupledIO(gen) {
 
 
 class AXIStreamIF[T <: Data](private val gen: T) extends Bundle {
-  val TREADY = Output(Bool())
-  val TVALID = Input(Bool())
-  val TDATA = Input(gen)
+  val TREADY = Input(Bool())
+  val TVALID = Output(Bool())
+  val TDATA = Output(gen)
 }

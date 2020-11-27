@@ -74,14 +74,14 @@ extends Module {
   suggestName(fullName)
   // separate out the mem port signals, won't map the to the regfile
   //val ownFilter = {x: (String, Bits) => !(x._1.startsWith("memPort"))}
-  val ownFilter = {x : (Element) => !(x.instanceName.startsWith("io_memPort"))}
+  val ownFilter = {x : (Element) => !(x.instanceName.startsWith("io.memPort"))}
   import scala.collection.immutable.ListMap
   //val ownIO2 = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
   def flatten(data: Data): Seq[Element] = data match {
     case elt: Element => Seq(elt)
     case agg: Aggregate => agg.getElements.flatMap(flatten)
   }
-  val ownIO = flatten(accel.io)
+  val ownIO = flatten(accel.io).filter(ownFilter)
 
 
   // each I/O is assigned to at least one register index, possibly more if wide
@@ -104,33 +104,39 @@ extends Module {
   }
 
   println("Generating register file mappings...")
+  println(ownIO)
   // traverse the accel I/Os and connect to the register file
   var regFileMap = new RegFileMap
   var allocReg = 0
   // hand-place the signature register at 0
   regFileMap("signature") = Array(allocReg)
   regFile.regIn(allocReg).valid := true.B
-  regFile.regIn(allocReg).bits := ownIO.filter(p => p.instanceName.startsWith("io_signature"))(0)
+  regFile.regIn(allocReg).bits := ownIO.filter(p => p.name.startsWith("signature"))(0)
   println("Signal signature mapped to single reg " + allocReg.toString)
   allocReg += 1
 
   for(element <- ownIO) {
-    val name = element.instanceName.substring(3)
+    println(s"IO element: ${element} I/O=${DataMirror.directionOf(element)}")
+    val name = element.name
     val bits = element.asUInt()
     if(name != "signature") {
+      println(s"IO element: ${element.name} is not signature")
       val w = bits.getWidth
       if(w > wCSR) {
+        println(s"IO element: ${element.name} is wider than wCSR")
         // signal is wide, maps to several registers
         val numRegsToAlloc = roundMultiple(w, wCSR) / wCSR
         regFileMap(name) = (allocReg until allocReg + numRegsToAlloc).toArray
         // connect the I/O signal to the register file appropriately
-        if(DataMirror.directionOf(bits) == Input) {
+        if(DataMirror.directionOf(element) == ActualDirection.Input) {
+          println(s"IO element: ${element.name} is input")
           // concatanate all assigned registers, connect to input
           bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := false.B
           }
-        } else if(DataMirror.directionOf(bits) == Output)  {
+        } else if(DataMirror.directionOf(element) == ActualDirection.Output)  {
+          println(s"IO element: ${element.name} is output")
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := true.B
             val ubound = math.min(i*wCSR+wCSR-1, w-1)
@@ -144,7 +150,8 @@ extends Module {
         // signal is narrow enough, maps to a single register
         regFileMap(name) = Array(allocReg)
         // connect the I/O signal to the register file appropriately
-        if(DataMirror.directionOf(bits) == Input)  {
+        if(DataMirror.directionOf(element) == ActualDirection.Input)  {
+          println(s"IO element: ${element.name} is input")
           // handle Bool input cases,"multi-bit signal to Bool" error
           if(bits.getWidth == 1) {
             bits := regFile.regOut(allocReg)(0)
@@ -152,7 +159,8 @@ extends Module {
           // disable internal write for this register
           regFile.regIn(allocReg).valid := false.B
 
-        } else if(DataMirror.directionOf(bits) == Input)  {
+        } else if(DataMirror.directionOf(element) == ActualDirection.Output )  {
+          println(s"IO element: ${element.name} is output")
           // TODO don't always write (change detect?)
           regFile.regIn(allocReg).valid := true.B
           regFile.regIn(allocReg).bits := bits
@@ -221,9 +229,9 @@ extends Module {
     for(element <- ownIO) {
       val name = element.instanceName.substring(3)
       val bits = element.asUInt()
-      if(DataMirror.directionOf(bits) == Input) {
+      if(DataMirror.directionOf(bits) == ActualDirection.Input) {
         readWriteFxns += makeRegWriteFxn(name) + "\n"
-      } else if(DataMirror.directionOf(bits) == Output) {
+      } else if(DataMirror.directionOf(bits) == ActualDirection.Output) {
         readWriteFxns += makeRegReadFxn(name) + "\n"
       }
     }
@@ -233,7 +241,7 @@ extends Module {
       return s""" {"$regName", {$inds}} """
     }
     //val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
-    val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == Output).map(_.instanceName.substring(3))
+    val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == ActualDirection.Output).map(_.instanceName.substring(3))
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
 
     var hlsBlackBoxTemplateDefines = ""
