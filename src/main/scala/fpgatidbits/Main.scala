@@ -214,11 +214,12 @@ object MainObj {
     val platformName = args(1)
     val accInst = accelMap(accelName)
     val platformInst = platformMap(platformName)
-    val chiselArgs = Array("--backend", "v")
-
     val targetDir = s"driver-$accelName"
+    val chiselArgs = Array("")
 
-    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst, targetDir)))
+
+
+    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst, targetDir))
   }
 
   def makeVerilator(args: Array[String]) = {
