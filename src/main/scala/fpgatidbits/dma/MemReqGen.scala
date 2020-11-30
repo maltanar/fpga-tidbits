@@ -1,7 +1,7 @@
 package fpgatidbits.dma
 import chisel3._
 import chisel3.util._
-//import chisel3.iotesters._
+import chisel3.iotesters._
 
 // control interface for (simple) request generators
 class ReqGenCtrl(addrWidth: Int) extends Bundle {
@@ -160,7 +160,6 @@ class TestReadReqGenWrapper() extends Module {
   io.stat <> dut.io.stat
 }
 
-/*
 
 class TestReadReqGen(c: TestReadReqGenWrapper) extends PeekPokeTester(c) {
   // TODO update test case to try non-burst-aligned size as well
@@ -248,7 +247,7 @@ class TestReadReqGen(c: TestReadReqGenWrapper) extends PeekPokeTester(c) {
   expect(c.io.stat.active, 0)
   expect(c.reqQ.io.count, 0)
 }
-*/
+
 class WriteReqGen(p: MemReqParams, chanID: Int, maxBeats: Int = 1) extends ReadReqGen(p, chanID, maxBeats) {
   // force single beat per burst for now
   // TODO support write bursts -- needs support in interleaver

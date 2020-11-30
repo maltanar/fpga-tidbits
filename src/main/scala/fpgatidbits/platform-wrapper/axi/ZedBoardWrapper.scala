@@ -16,19 +16,24 @@ object ZedBoardParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 32
   val burstBeats = 8  // TODO why cap bursts at 8? AXI can do more
   val coherentMem = false // TODO add CC version
+  var regDriverTargetDir: String = "Zedboard"
 }
 
 
-class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
   extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zedboard.cpp", "zedboardregdriver.hpp", "axiregdriver.hpp"
   )
+
+  this.p.regDriverTargetDir = targetDir
 }
 
-class ZedBoardLinuxWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class ZedBoardLinuxWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
 extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zedboard-linux.cpp", "linuxphysregdriver.hpp", "axiregdriver.hpp"
   )
+
+  this.p.regDriverTargetDir = targetDir
 }

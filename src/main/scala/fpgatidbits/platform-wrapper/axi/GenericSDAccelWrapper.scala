@@ -16,13 +16,16 @@ object GenericSDAccelParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 128
   val burstBeats = 8
   val coherentMem = false
+  var regDriverTargetDir: String = "GenericSDAccel"
 }
 
-class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, val targetDir: String)
   extends AXIPlatformWrapper(GenericSDAccelParams, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-genericsdaccel.cpp", "xclhalwrapper.hpp"
   )
   suggestName("GenericSDAccelWrapper")
   override def desiredName = "GenericSDAccelWrapper"
+
+  this.p.regDriverTargetDir = targetDir
 }

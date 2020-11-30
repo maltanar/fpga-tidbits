@@ -31,6 +31,8 @@ trait PlatformWrapperParams {
   def coherentMem: Boolean
   val csrDataBits: Int = 32 // TODO let platforms configure own CSR width
 
+  var regDriverTargetDir: String
+
   def toMemReqParams(): MemReqParams = {
     new MemReqParams(memAddrBits, memDataBits, memIDBits, memMetaBits, sameIDInOrder)
   }
@@ -59,8 +61,6 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
     "platform.h", "wrapperregdriver.h"
   )
   def platformDriverFiles: Array[String]  // additional files
-
-  def driverTargetDir = "Unspecified-driver-target-dir" // erlingrj: quick fix
 
   // instantiate the accelerator
   //val regWrapperReset = Reg(init = false.B, clock = Driver.implicitClock)
@@ -211,7 +211,7 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
     } else if(regs.size == 2) {
       // two-register write
       // TODO this uses a hardcoded assumption about wCSR=32
-      if(wCSR != 32) throw new Exception("Violating assumption on wCSR=32")
+      if(wCSR != 32) throw new Exception("Violating assuouple ofmption on wCSR=32")
       fxnStr += "  void set_" + regName + "(AccelDblReg value)"
       fxnStr += " { writeReg("+regs(0).toString+", (AccelReg)(value >> 32)); "
       fxnStr += "writeReg("+regs(1).toString+", (AccelReg)(value & 0xffffffff)); }"
@@ -307,7 +307,7 @@ protected:
 
     import java.io._
     // Create file
-    val filename = targetDir+driverName+"/"+driverName+".hpp"
+    val filename = targetDir+"/"+driverName+".hpp"
     println(filename)
     val file = new File(filename)
     if (!file.exists()) {
@@ -320,6 +320,5 @@ protected:
     println("=======> Driver written to "+driverName+".hpp")
   }
 
-  //erlingrj: We cant call generateDriver form outside of Chisel context try to just create driver from inside the Verilog build
-  generateRegDriver(driverTargetDir)
+  generateRegDriver(p.regDriverTargetDir)
 }

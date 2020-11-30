@@ -2,6 +2,7 @@ package fpgatidbits.ocm
 
 import chisel3._
 import chisel3.util._
+import chisel3.iotesters._
 
 // simple model for a dual-port OCM with asymmetric r/w widths
 // not intended for synthesis, only for simulation
@@ -52,8 +53,8 @@ class AsymDualPortRAM(p: OCMParameters) extends Module {
 
 // TODO this test will only work on 8w/32r OCM and tests very little
 
-/*
-class AsymDualPortRAMTester(c: AsymDualPortRAM) extends Tester(c) {
+
+class AsymDualPortRAMTester(c: AsymDualPortRAM) extends PeekPokeTester(c) {
   val p = c.ocmParams
   val p0 = c.io.ports(0)
 
@@ -71,4 +72,3 @@ class AsymDualPortRAMTester(c: AsymDualPortRAM) extends Tester(c) {
   step(p.readLatency)
   expect(p0.rsp.readData, 0xdeadbeef)
 }
-*/

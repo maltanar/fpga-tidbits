@@ -13,6 +13,8 @@ import fpgatidbits.PlatformWrapper._
 //import fpgatidbits.hlstools._
 import java.io.{File,FileInputStream,FileOutputStream}
 import sys.process._
+import java.nio.file.Paths
+
 
 // erlingrj: Seems as if you need this testbench to instantiate the dut
 // so we can emit verilator c++ code that simulates the dut
@@ -21,12 +23,12 @@ class TesterEmitVerilator[T <: MultiIOModule](dut: T) extends iotesters.PeekPoke
 
 object TidbitsMakeUtils {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
-  type PlatformInstFxn = AccelInstFxn => PlatformWrapper
+  type PlatformInstFxn = (AccelInstFxn, String) => PlatformWrapper
   type PlatformMap = Map[String, PlatformInstFxn]
 
   val platformMap: PlatformMap = Map(
-    "ZedBoard" -> {f => new ZedBoardWrapper(f)},
-    "PYNQZ1" -> {f => new PYNQZ1Wrapper(f)},
+    "ZedBoard" -> {( f, targetDir ) => new ZedBoardWrapper(f, targetDir)},
+    "PYNQZ1" -> {( f, targetDir )  => new PYNQZ1Wrapper(f, targetDir)},
  //   "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
   //  "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
    // "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
@@ -34,8 +36,8 @@ object TidbitsMakeUtils {
     //"GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
     //"ZC706" -> {f => new ZC706Wrapper(f)},
     //"WX690T" -> {f => new WolverinePlatformWrapper(f)},
-    "VerilatedTester" -> {f => new VerilatedTesterWrapper(f)},
-    "Tester" -> {f => new TesterWrapper(f)}
+    "VerilatedTester" -> {( f, targetDir )  => new VerilatedTesterWrapper(f, targetDir)},
+    "Tester" -> {( f, targetDir )  => new TesterWrapper(f, targetDir)}
   )
 
   // handy to have a few commonly available Xilinx FPGA boards here
@@ -61,6 +63,7 @@ object TidbitsMakeUtils {
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
+  /*
   def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq(), chiselOpts: Seq[String] = Seq()) = {
     val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
     val platformInst = platformMap("Tester")
@@ -68,7 +71,7 @@ object TidbitsMakeUtils {
     val chiselArgs = Array("--backend","c","--targetDir", fullDir) ++ chiselOpts
 
     //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst, )))
 
     val p = platformInst(accInst)
     // build reg driver
@@ -89,7 +92,7 @@ object TidbitsMakeUtils {
     println(gcret)
     println(s"Hardware emulator library built as $fullDir/driver.a")
   }
-
+*/
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
     val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
     val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
@@ -107,9 +110,9 @@ object TidbitsMakeUtils {
   }
 
   def makeVerilator(accInst: AccelInstFxn, destDir: String) = {
-    val tidbitsDir = getClass.getResource("/").getPath
+    val tidbitsDir = Paths.get(".").toAbsolutePath
 
-    val platformInst = {f => new VerilatedTesterWrapper(f)}
+    val platformInst = {f => new VerilatedTesterWrapper(f, tidbitsDir + "/verilator/")}
     val chiselArgs = Array("--backend","v","--targetDir", s"$destDir")
     // generate verilog for the accelerator
     //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
@@ -125,7 +128,7 @@ object TidbitsMakeUtils {
     fileCopyBulk(s"$tidbitsDir/cpp/platform-wrapper-regdriver/", destDir,
       driverFiles)
     // build driver
-    platformInst(accInst).generateRegDriver(destDir)
+    //platformInst(accInst).generateRegDriver(destDir)
   }
 
   /*
@@ -215,73 +218,33 @@ object MainObj {
 
     val targetDir = s"driver-$accelName"
 
-    //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
-  }
-
-  def makeEmulator(args: Array[String]) = {
-    val accelName = args(0)
-
-    val targetDir = s"test-emu-${accelName}"
-
-    // First, clean target directory
-    directoryDelete(targetDir)
-
-    println(s"Creating emulator in $targetDir")
-    val accInst = accelMap(accelName)
-    val platformInst = platformMap("Tester")
-    // TODO: Remove hardcoded path
-    val chiselArgs = Array("--target-dir", targetDir, "--backend-name", "verilator", "--more-vcs-c-flags" ,"'-v /home/erling/dev/chisel/fpga-tidbits/src/main/resources/verilog/Q_srl -Mdir /home/erling/dev/chisel/fpga-tidbits/test-emu-TestSum/'")
-
-    iotesters.Driver.execute(chiselArgs, () => platformInst(accInst)) {
-      c => new TesterEmitVerilator(c)
-    }
-
-    // copy emulator driver and SW support files
-    // TODO: Remove hardcoded path
-    //val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"
-    val regDrvRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/"
-    println(s"regDrvRoot=$regDrvRoot")
-
-    val files = Array("wrapperregdriver.h", "platform-tester.cpp",
-      "platform.h", "testerdriver.hpp")
-
-    for(f <- files) {
-      val isfile = new File(regDrvRoot + f).exists
-      println(s"$f is $isfile")
-    }
-    for(f <- files) { fileCopy(regDrvRoot + f, s"$targetDir/" + f) }
-    //val testRoot = getClass.getResource("/cpp/platform-wrapper-tests").getPath + "/"
-
-    val testRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-tests/"
-
-    fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
-
+    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst, targetDir)))
   }
 
   def makeVerilator(args: Array[String]) = {
     val accelName = args(0)
+    val targetDir = Paths.get(".").toAbsolutePath + "verilator/"
+
 
     val accInst = accelMap(accelName)
-    val platformInst = {f => new VerilatedTesterWrapper(f)}
-    val chiselArgs = Array("--backend","v","--targetDir", "verilator")
-    // generate verilog for the accelerator
-   // chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+    val platformInst = {f => new VerilatedTesterWrapper(f, targetDir)}
+    val chiselArgs = Array("--target-dir", "verilator")
+
+    // generate verilog for the accelerator and create the regfile driver
+    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
 
     val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
     val scriptFiles = Seq("verilator-build.sh")
     val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
       "platform.h", "verilatedtesterdriver.hpp")
 
-    val resRoot = getClass.getResource("/").getPath
+    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     // copy blackbox verilog, scripts, driver and SW support files
     fileCopyBulk(s"$resRoot/verilog/", "verilator/", verilogBlackBoxFiles)
     fileCopyBulk(s"$resRoot/script/", "verilator/", scriptFiles)
     fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", "verilator/",
       driverFiles)
-    // build driver
-    platformInst(accInst).generateRegDriver("verilator/")
+
     // copy test application
     val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
     fileCopy(testRoot + accelName + ".cpp", "verilator/main.cpp")
@@ -292,14 +255,14 @@ object MainObj {
     val platformName = args(1)
     val accInst = accelMap(accelName)
     val platformInst = platformMap(platformName)
-
-    platformInst(accInst).generateRegDriver(".")
+    // TODO: Is make driver necessary when we always create the regdriver?
+    //platformInst(accInst).generateRegDriver(".")
   }
 
   def showHelp() = {
     println("Usage: run <op> <accel> <platform>")
     println("where:")
-    println("<op> = (v)erilog (d)river (e)mulator ve(r)ilator")
+    println("<op> = (v)erilog (d)river ve(r)ilator")
     println("<accel> = " + accelMap.keys.reduce({_ + " " +_}))
     println("<platform> = " + platformMap.keys.reduce({_ + " " +_}))
   }
@@ -316,9 +279,9 @@ object MainObj {
     if (op == "verilog" || op == "v") {
       makeVerilog(rst)
     } else if (op == "driver" || op == "d") {
-      makeDriver(rst)
-    } else if (op == "emulator" || op == "e") {
-      makeEmulator(rst)
+      //makeDriver(rst)
+      println("driver not implemented yet for chisel3")
+      return
     } else if (op == "verilator" || op == "r") {
       makeVerilator(rst)
     }else {

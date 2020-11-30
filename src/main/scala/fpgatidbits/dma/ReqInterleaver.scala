@@ -1,7 +1,6 @@
 package fpgatidbits.dma
 
-//import chisel3._
-import chisel3.util._
+import chisel3.iotesters._
 import chisel3._
 import chisel3.util._
 
@@ -48,7 +47,7 @@ class TestReqInterleaverWrapper() extends Module {
   io.allActive := reqPipes.forall( x => x.stat.active )
 }
 
-/*
+
 class TestReqInterleaver(c: TestReqInterleaverWrapper) extends PeekPokeTester(c) {
   poke(c.io.reqOut.ready, 0)
   step(1)
@@ -83,4 +82,3 @@ class TestReqInterleaver(c: TestReqInterleaverWrapper) extends PeekPokeTester(c)
     expect(reqsFromChannel(i) == expReqsPerPipe, "Channel has correct #reqs")
   }
 }
-*/

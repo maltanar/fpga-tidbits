@@ -19,6 +19,7 @@ import java.io.FileOutputStream
 // the accelerator.
 
 object TesterWrapperParams extends PlatformWrapperParams {
+
   val driverTargetDir = "test"
   val platformName = "Tester"
   val memAddrBits = 48
@@ -30,13 +31,16 @@ object TesterWrapperParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 16
   val burstBeats = 8
   val coherentMem = false
+  var regDriverTargetDir: String = "Tester"
 }
 
-class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
 extends PlatformWrapper(TesterWrapperParams, instFxn) {
-  //override def desiredName  = "TesterWrapper"
-  suggestName("TesterWrapper")
-  override def driverTargetDir = s"test-emu-"
+  override def desiredName  = "TesterWrapper"
+  //suggestName("TesterWrapper")
+
+  this.p.regDriverTargetDir = targetDir
+
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-tester.cpp", "testerdriver.hpp"
   )
@@ -308,8 +312,8 @@ class GenericAccelTester(c: TesterWrapper) extends PeekPokeTester(c) {
   // TODO launch the default test, as defined by the accelerator
 }
 
-class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
-extends TesterWrapper(instFxn) {
+class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
+extends TesterWrapper(instFxn, targetDir) {
   override val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-verilatedtester.cpp", "verilatedtesterdriver.hpp"
   )
