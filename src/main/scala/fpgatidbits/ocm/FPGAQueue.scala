@@ -71,12 +71,12 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
   io.count := srlQ.count
   srlQ.i_v := io.enq.valid
-  srlQ.i_d := io.enq.bits
+  srlQ.i_d := io.enq.bits.asUInt
   srlQ.clock := clock
   srlQ.reset := reset
 
   io.deq.valid := srlQ.o_v
-  io.deq.bits := srlQ.o_d
+  io.deq.bits := srlQ.o_d.asTypeOf(io.deq.bits)
   // Q_srl uses backpressure, while Chisel queues use "ready"
   // invert signals while connecting
   srlQ.o_b := !io.deq.ready

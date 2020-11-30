@@ -152,8 +152,8 @@ class AXIWriteBurstReqAdapter(
   io.out_writeData.bits.last := false.B
 
   val sWaitReq :: sWaitData :: Nil = Enum(2)
-  val regState = sWaitReq
-  val regBeatsLeft = 0.U(8.W)
+  val regState = RegInit(sWaitReq)
+  val regBeatsLeft = RegInit(0.U(8.W))
 
   switch(regState) {
     is(sWaitReq) {

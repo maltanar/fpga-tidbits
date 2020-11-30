@@ -10,19 +10,15 @@ import fpgatidbits.ocm._
 // wrapper for AXI platforms
 
 abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
-  instFxn: PlatformWrapperParams => GenericAccelerator)
+                                  instFxn: PlatformWrapperParams => GenericAccelerator)
   extends PlatformWrapper(p, instFxn) {
 
-  val io = IO(new Bundle {
-    // AXI slave interface for control-status registers
-    val csr = new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits)
-    // AXI master interfaces for reading and writing memory
-    val mem = Vec(p.numMemPorts, new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits))
-  })
+  val csr = IO(new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits))
+  val mem = VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
 
-  // rename signals to support Vivado interface inference
-  io.csr.suggestName("csr")
-  for(i <- 0 until p.numMemPorts) {io.mem(i).suggestName(s"mem$i")}
+
+
+
 
   // memory port adapters and connections
   // TODO use accel numMemPorts and plug unused
@@ -32,10 +28,10 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     // read requests
     val readReqAdp = Module(new AXIMemReqAdp(mrp)).io
     readReqAdp.genericReqIn <> accel.io.memPort(i).memRdReq
-    readReqAdp.axiReqOut <> io.mem(i).readAddr
+    readReqAdp.axiReqOut <> mem(i).readAddr
     // read responses
     val readRspAdp = Module(new AXIReadRspAdp(mrp)).io
-    readRspAdp.axiReadRspIn <> io.mem(i).readData
+    readRspAdp.axiReadRspIn <> mem(i).readData
     readRspAdp.genericRspOut <> accel.io.memPort(i).memRdRsp
     // write requests
     val writeReqAdp = Module(new AXIMemReqAdp(mrp)).io
@@ -52,13 +48,13 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     writeBurstAdp.in_writeData.bits.last := false.B
     writeBurstAdp.in_writeData.valid := accel.io.memPort(i).memWrDat.valid
     accel.io.memPort(i).memWrDat.ready := writeBurstAdp.in_writeData.ready
-    writeBurstAdp.out_writeAddr <> io.mem(i).writeAddr
+    writeBurstAdp.out_writeAddr <> mem(i).writeAddr
     // add a small write data queue to ensure we can provide both req ready and
     // data ready at the same time (otherwise this is up to the AXI slave)
-    FPGAQueue(writeBurstAdp.out_writeData, 2) <> io.mem(i).writeData
+    FPGAQueue(writeBurstAdp.out_writeData, 2) <> mem(i).writeData
     // write responses
     val writeRspAdp = Module(new AXIWriteRspAdp(mrp)).io
-    writeRspAdp.axiWriteRspIn <> io.mem(i).writeResp
+    writeRspAdp.axiWriteRspIn <> mem(i).writeResp
     writeRspAdp.genericRspOut <> accel.io.memPort(i).memWrRsp
   }
 
@@ -66,21 +62,21 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   // exposes; plug the unused ones
   for(i <- accel.numMemPorts until p.numMemPorts) {
     println("Plugging unused memory port " + i.toString)
-    io.mem(i).driveDefaults()
+    mem(i).driveDefaults()
   }
 
   // AXI regfile read/write logic
   // slow and clumsy, but ctrl/status is not supposed to be performance-
   // critical anyway
 
-  io.csr.writeAddr.ready := false.B
-  io.csr.writeData.ready := false.B
-  io.csr.writeResp.valid := false.B
-  io.csr.writeResp.bits := 0.U
-  io.csr.readAddr.ready := false.B
-  io.csr.readData.valid := false.B
-  io.csr.readData.bits.data := regFile.extIF.readData.bits
-  io.csr.readData.bits.resp := 0.U
+  csr.writeAddr.ready := false.B
+  csr.writeData.ready := false.B
+  csr.writeResp.valid := false.B
+  csr.writeResp.bits := 0.U
+  csr.readAddr.ready := false.B
+  csr.readData.valid := false.B
+  csr.readData.bits.data := regFile.extIF.readData.bits
+  csr.readData.bits.resp := 0.U
 
   regFile.extIF.cmd.valid := false.B
   regFile.extIF.cmd.bits.driveDefaults()
@@ -113,55 +109,55 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   }
 
   switch(regState) {
-      is(sRead) {
-        io.csr.readAddr.ready := true.B
+    is(sRead) {
+      csr.readAddr.ready := true.B
 
-        when(io.csr.readAddr.valid) {
-          regRdReq := true.B
-          regRdAddr := io.csr.readAddr.bits.addr
-          regModeWrite := false.B
-          regState := sReadRsp
-        }.otherwise {
-          regState := sWrite
-        }
+      when(csr.readAddr.valid) {
+        regRdReq := true.B
+        regRdAddr := csr.readAddr.bits.addr
+        regModeWrite := false.B
+        regState := sReadRsp
+      }.otherwise {
+        regState := sWrite
       }
+    }
 
-      is(sReadRsp) {
-        io.csr.readData.valid := regFile.extIF.readData.valid
-        when (io.csr.readData.ready & regFile.extIF.readData.valid) {
-          regState := sWrite
-          regRdReq := false.B
-        }
+    is(sReadRsp) {
+      csr.readData.valid := regFile.extIF.readData.valid
+      when (csr.readData.ready & regFile.extIF.readData.valid) {
+        regState := sWrite
+        regRdReq := false.B
       }
+    }
 
-      is(sWrite) {
-        io.csr.writeAddr.ready := true.B
+    is(sWrite) {
+      csr.writeAddr.ready := true.B
 
-        when(io.csr.writeAddr.valid) {
-          regModeWrite := true.B
-          regWrReq := false.B // need to wait until data is here
-          regWrAddr := io.csr.writeAddr.bits.addr
-          regState := sWriteD
-        } .otherwise {
-          regState := sRead
-        }
+      when(csr.writeAddr.valid) {
+        regModeWrite := true.B
+        regWrReq := false.B // need to wait until data is here
+        regWrAddr := csr.writeAddr.bits.addr
+        regState := sWriteD
+      } .otherwise {
+        regState := sRead
       }
+    }
 
-      is(sWriteD) {
-        io.csr.writeData.ready := true.B
-        when(io.csr.writeData.valid) {
-          regWrData := io.csr.writeData.bits.data
-          regWrReq := true.B // now we can set the request
-          regState := sWriteRsp
-        }
+    is(sWriteD) {
+      csr.writeData.ready := true.B
+      when(csr.writeData.valid) {
+        regWrData := csr.writeData.bits.data
+        regWrReq := true.B // now we can set the request
+        regState := sWriteRsp
       }
+    }
 
-      is(sWriteRsp) {
-        io.csr.writeResp.valid := true.B
-        when(io.csr.writeResp.ready) {
-          regWrReq := false.B
-          regState := sRead
-        }
+    is(sWriteRsp) {
+      csr.writeResp.valid := true.B
+      when(csr.writeResp.ready) {
+        regWrReq := false.B
+        regState := sRead
       }
+    }
   }
 }
