@@ -28,11 +28,11 @@ def javacOptionsVersion(scalaVersion: String): Seq[String] = {
 
 name := "fpga-tidbits"
 
-version := "3.3.0"
+version := "3.4.0"
 
-scalaVersion := "2.11.6"
-
-//crossScalaVersions := Seq("2.12.10", "2.11.12")
+//scalaVersion := "2.11.6"
+scalaVersion := "2.12.10"
+crossScalaVersions := Seq("2.12.10", "2.11.12")
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
@@ -40,7 +40,7 @@ resolvers ++= Seq(
 )
 
 addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-
+//addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.4.0" cross CrossVersion.full)
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 val defaultVersions = Seq(
   "chisel-iotesters" -> "1.4.1+",

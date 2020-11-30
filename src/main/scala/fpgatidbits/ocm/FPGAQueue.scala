@@ -8,6 +8,17 @@ import chisel3.util._
 class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox(Map( "depth" -> depthElems, "width" -> widthBits))
 {
     val io = IO(new Bundle {
+      val i_v = Input(Bool())
+      val i_d = Input(UInt(widthBits.W))
+      val i_b = Output(Bool())
+      val o_v = Output(Bool())
+      val o_d = Output(UInt(widthBits.W))
+      val o_b = Input(Bool())
+      val count = Output(UInt(log2Ceil(depthElems+1).W))
+      val clock = Input(Clock())
+      val reset = Input(Reset())
+
+      /*
       val iValid = Input(Bool()).suggestName("i_v")
       val iData = Input(UInt(widthBits.W)).suggestName("i_d")
       val iBackPressure = Output(Bool()).suggestName("i_b")
@@ -17,7 +28,7 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox(Map( "depth" -> de
       val count = Output(UInt(log2Ceil(depthElems+1).W)).suggestName("count")
       val clock = Input(Clock())
       val reset = Input(Reset())
-      /*
+
       iValid.suggestName("i_v")
       iData.suggestName("i_d")
       iBackPressure.suggestName("i_b")
@@ -59,17 +70,17 @@ class SRLQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val srlQ = Module(new Q_srl(entries, gen.getWidth)).io
 
   io.count := srlQ.count
-  srlQ.iValid := io.enq.valid
-  srlQ.iData := io.enq.bits
+  srlQ.i_v := io.enq.valid
+  srlQ.i_d := io.enq.bits
   srlQ.clock := clock
   srlQ.reset := reset
 
-  io.deq.valid := srlQ.oValid
-  io.deq.bits := srlQ.oData
+  io.deq.valid := srlQ.o_v
+  io.deq.bits := srlQ.o_d
   // Q_srl uses backpressure, while Chisel queues use "ready"
   // invert signals while connecting
-  srlQ.oBackPressure := !io.deq.ready
-  io.enq.ready := !srlQ.iBackPressure
+  srlQ.o_b := !io.deq.ready
+  io.enq.ready := !srlQ.i_b
 }
 
 

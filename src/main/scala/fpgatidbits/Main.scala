@@ -14,6 +14,11 @@ import fpgatidbits.PlatformWrapper._
 import java.io.{File,FileInputStream,FileOutputStream}
 import sys.process._
 
+// erlingrj: Seems as if you need this testbench to instantiate the dut
+// so we can emit verilator c++ code that simulates the dut
+class TesterEmitVerilator[T <: MultiIOModule](dut: T) extends iotesters.PeekPokeTester(dut) {}
+
+
 object TidbitsMakeUtils {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
   type PlatformInstFxn = AccelInstFxn => PlatformWrapper
@@ -197,6 +202,10 @@ object MainObj {
       fileCopy(fromDir + f, toDir + f)
   }
 
+  def directoryDelete(dir: String): Unit = {
+    s"rm -rf ${dir}".!!
+  }
+
   def makeVerilog(args: Array[String]) = {
     val accelName = args(0)
     val platformName = args(1)
@@ -214,21 +223,22 @@ object MainObj {
     val accelName = args(0)
 
     val targetDir = s"test-emu-${accelName}"
+
+    // First, clean target directory
+    directoryDelete(targetDir)
+
     println(s"Creating emulator in $targetDir")
     val accInst = accelMap(accelName)
     val platformInst = platformMap("Tester")
-    val chiselArgs = Array("--help")
-    //val chiselArgs = Array("")
-//    chiselMain(chiselArgs, () => Module(platformInst(accInst)))
+    // TODO: Remove hardcoded path
+    val chiselArgs = Array("--target-dir", targetDir, "--backend-name", "verilator", "--more-vcs-c-flags" ,"'-v /home/erling/dev/chisel/fpga-tidbits/src/main/resources/verilog/Q_srl -Mdir /home/erling/dev/chisel/fpga-tidbits/test-emu-TestSum/'")
+
     iotesters.Driver.execute(chiselArgs, () => platformInst(accInst)) {
-      c => platformInst(accInst)
+      c => new TesterEmitVerilator(c)
     }
 
-    // build driver
-    //chisel3.Driver.execute(Array[String](), platformInst(accInst).generateRegDriver(s"$targetDir/"))
-    //platformInst(accInst).generateRegDriver(s"$targetDir/")
-
     // copy emulator driver and SW support files
+    // TODO: Remove hardcoded path
     //val regDrvRoot = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath + "/"
     val regDrvRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/"
     println(s"regDrvRoot=$regDrvRoot")
@@ -246,6 +256,7 @@ object MainObj {
     val testRoot = "/home/erling/dev/chisel/fpga-tidbits/src/main/resources/cpp/platform-wrapper-tests/"
 
     fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
+
   }
 
   def makeVerilator(args: Array[String]) = {
