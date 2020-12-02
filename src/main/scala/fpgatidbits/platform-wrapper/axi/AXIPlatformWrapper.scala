@@ -14,8 +14,16 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   extends PlatformWrapper(p, instFxn) {
 
   val csr = IO(new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits))
-  val mem = VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
+  val mem = Wire(Vec(p.numMemPorts, new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)))
+  //val mem = VecInit(Seq.tabulate(p.numMemPorts) {idx => WireInit(new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits))})
 
+  // add the actual external interfaces with the correct naming
+  val extMemIf = VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
+
+  // Make the connections between the external and internal AXI interface
+  for ((extIf, intIf) <- extMemIf zip mem ) {
+    extIf.connect(intIf)
+  }
 
 
 

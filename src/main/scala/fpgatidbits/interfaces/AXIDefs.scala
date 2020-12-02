@@ -3,6 +3,164 @@ package fpgatidbits.axi
 import chisel3._
 import chisel3.util._
 
+
+// Part 0: The definitions of the actual external AXI interface exposed to the rest of the system
+//  currently we have the Xilinx system in mind and do naming based on that.
+//  The AXIExternalIF is instantiated in the Top level of our accelerator and provides the external interface
+//  It is done in this way so that we can adhere to the naming standards expected by Vivado. It will recognize
+//  this as an AXI memory mapped master/slave and we can click and connect it to other IP
+//  We also provide functions for connecting our internal representation (introduced in Part 1) to this
+
+class AXIExternalIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) extends Bundle {
+
+    // Read address channel
+    val ARADDR = Output(UInt(addrWidthBits.W))
+    val ARSIZE = Output(UInt(3.W))
+    val ARLEN = Output(UInt(8.W))
+    val ARBURST = Output(UInt(2.W))
+    val ARID = Output(UInt(idBits.W))
+    val ARLOCK = Output(Bool())
+    val ARCACHE = Output(UInt(4.W))
+    val ARPROT = Output(UInt(3.W))
+    val ARQOS = Output(UInt(4.W))
+    val ARREADY = Input(Bool())
+    val ARVALID = Output(Bool())
+
+    // Write address channel
+    val AWADDR = Output(UInt(addrWidthBits.W))
+    val AWSIZE = Output(UInt(3.W))
+    val AWLEN = Output(UInt(8.W))
+    val AWBURST = Output(UInt(2.W))
+    val AWID = Output(UInt(idBits.W))
+    val AWLOCK = Output(Bool())
+    val AWCACHE = Output(UInt(4.W))
+    val AWPROT = Output(UInt(3.W))
+    val AWQOS = Output(UInt(4.W))
+    val AWREADY = Input(Bool())
+    val AWVALID = Output(Bool())
+
+    // Write data channel
+    val WDATA = Output(UInt(dataWidthBits.W))
+    val WSTRB = Output(UInt((dataWidthBits / 8).W))
+    val WLAST = Output(Bool())
+    val WVALID = Output(Bool())
+    val WREADY = Input(Bool())
+
+    // Write response channel
+    val BRESP = Input(UInt(2.W))
+    val BID = Input(UInt(idBits.W))
+    val BVALID = Input(Bool())
+    val BREADY = Output(Bool())
+
+    // Read response channel
+    val RID = Input(UInt(idBits.W))
+    val RDATA = Input(UInt(dataWidthBits.W))
+    val RRESP = Input(UInt(2.W))
+    val RLAST = Input(Bool())
+    val RVALID = Input(Bool())
+    val RREADY = Output(Bool())
+
+    //
+  def connect(in: AXIMasterIF): Unit  = {
+    // Write address
+    AWADDR := in.writeAddr.bits.addr
+    AWPROT := in.writeAddr.bits.prot
+    AWSIZE := in.writeAddr.bits.size
+    AWLEN := in.writeAddr.bits.len
+    AWBURST := in.writeAddr.bits.burst
+    AWLOCK := in.writeAddr.bits.lock
+    AWCACHE := in.writeAddr.bits.cache
+    AWQOS := in.writeAddr.bits.qos
+    AWID := in.writeAddr.bits.id
+    AWVALID := in.writeAddr.valid
+    in.writeAddr.ready := AWREADY
+    //read address
+    ARADDR:=in.readAddr.bits.addr
+    ARPROT :=in.readAddr.bits.prot
+    ARSIZE :=in.readAddr.bits.size
+    ARLEN :=in.readAddr.bits.len
+    ARBURST :=in.readAddr.bits.burst
+    ARLOCK :=in.readAddr.bits.lock
+    ARCACHE :=in.readAddr.bits.cache
+    ARQOS :=in.readAddr.bits.qos
+    ARID :=in.readAddr.bits.id
+    ARVALID := in.readAddr.valid
+    in.readAddr.ready := ARREADY
+    // write data
+    WDATA := in.writeData.bits.data
+    WSTRB := in.writeData.bits.strb
+    WLAST := in.writeData.bits.last
+    WVALID := in.writeData.valid
+    in.writeData.ready := WREADY
+
+    // write resp
+    in.writeResp.bits.resp := BRESP;
+    in.writeResp.bits.id := BID
+    in.writeResp.valid := BVALID
+    BREADY := in.writeResp.ready
+
+    // read resp
+    RREADY := in.readData.ready
+    in.readData.valid := RVALID
+    in.readData.bits.data := RDATA
+    in.readData.bits.resp := RRESP
+    in.readData.bits.last := RLAST
+    in.readData.bits.id := RID
+  }
+
+  override def cloneType = { new AXIExternalIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
+}
+
+
+class AXIExternalReadOnlyIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) extends Bundle {
+
+  // Read address channel
+  val ARADDR = Output(UInt(addrWidthBits.W))
+  val ARSIZE = Output(UInt(3.W))
+  val ARLEN = Output(UInt(8.W))
+  val ARBURST = Output(UInt(2.W))
+  val ARID = Output(UInt(idBits.W))
+  val ARLOCK = Output(Bool())
+  val ARCACHE = Output(UInt(4.W))
+  val ARPROT = Output(UInt(3.W))
+  val ARQOS = Output(UInt(4.W))
+  val ARREADY = Input(Bool())
+  val ARVALID = Output(Bool())
+
+  // Read response channel
+  val RID = Input(UInt(idBits.W))
+  val RDATA = Input(UInt(dataWidthBits.W))
+  val RRESP = Input(UInt(2.W))
+  val RLAST = Input(Bool())
+  val RVALID = Input(Bool())
+  val RREADY = Output(Bool())
+
+  //
+  def connect(in: AXIMasterReadOnlyIF): Unit  = {
+    //read address
+    ARADDR:=in.readAddr.bits.addr
+    ARPROT :=in.readAddr.bits.prot
+    ARSIZE :=in.readAddr.bits.size
+    ARLEN :=in.readAddr.bits.len
+    ARBURST :=in.readAddr.bits.burst
+    ARLOCK :=in.readAddr.bits.lock
+    ARCACHE :=in.readAddr.bits.cache
+    ARQOS :=in.readAddr.bits.qos
+    ARID :=in.readAddr.bits.id
+    ARVALID := in.readAddr.valid
+    in.readAddr.ready := ARREADY
+
+    // read resp
+    RREADY := in.readData.ready
+    in.readData.valid := RVALID
+    in.readData.bits.data := RDATA
+    in.readData.bits.resp := RRESP
+    in.readData.bits.last := RLAST
+    in.readData.bits.id := RID
+  }
+  override def cloneType = { new AXIExternalReadOnlyIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
+}
+
 // Part I: Definitions for the actual data carried over AXI channels
 // in part II we will provide definitions for the actual AXI interfaces
 // by wrapping the part I types in Decoupled (ready/valid) bundles
@@ -103,52 +261,6 @@ class AXIMasterIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) extends B
     readAddr.bits.cache := 0.U
     readAddr.bits.qos := 0.U
     readAddr.bits.id := 0.U
-  }
-
-  // rename signals to be compatible with those in the Xilinx template
-  def renameSignals(ifName: String) {
-    // write address channel
-    writeAddr.bits.addr.suggestName(ifName + "_AWADDR")
-    writeAddr.bits.prot.suggestName(ifName + "_AWPROT")
-    writeAddr.bits.size.suggestName(ifName + "_AWSIZE")
-    writeAddr.bits.len.suggestName(ifName + "_AWLEN")
-    writeAddr.bits.burst.suggestName(ifName + "_AWBURST")
-    writeAddr.bits.lock.suggestName(ifName + "_AWLOCK")
-    writeAddr.bits.cache.suggestName(ifName + "_AWCACHE")
-    writeAddr.bits.qos.suggestName(ifName + "_AWQOS")
-    writeAddr.bits.id.suggestName(ifName + "_AWID")
-    writeAddr.valid.suggestName(ifName + "_AWVALID")
-    writeAddr.ready.suggestName(ifName + "_AWREADY")
-    // write data channel
-    writeData.bits.data.suggestName(ifName + "_WDATA")
-    writeData.bits.strb.suggestName(ifName + "_WSTRB")
-    writeData.bits.last.suggestName(ifName + "_WLAST")
-    writeData.valid.suggestName(ifName + "_WVALID")
-    writeData.ready.suggestName(ifName + "_WREADY")
-    // write response channel
-    writeResp.bits.resp.suggestName(ifName + "_BRESP")
-    writeResp.bits.id.suggestName(ifName + "_BID")
-    writeResp.valid.suggestName(ifName + "_BVALID")
-    writeResp.ready.suggestName(ifName + "_BREADY")
-    // read address channel
-    readAddr.bits.addr.suggestName(ifName + "_ARADDR")
-    readAddr.bits.prot.suggestName(ifName + "_ARPROT")
-    readAddr.bits.size.suggestName(ifName + "_ARSIZE")
-    readAddr.bits.len.suggestName(ifName + "_ARLEN")
-    readAddr.bits.burst.suggestName(ifName + "_ARBURST")
-    readAddr.bits.lock.suggestName(ifName + "_ARLOCK")
-    readAddr.bits.cache.suggestName(ifName + "_ARCACHE")
-    readAddr.bits.qos.suggestName(ifName + "_ARQOS")
-    readAddr.bits.id.suggestName(ifName + "_ARID")
-    readAddr.valid.suggestName(ifName + "_ARVALID")
-    readAddr.ready.suggestName(ifName + "_ARREADY")
-    // read data channel
-    readData.bits.id.suggestName(ifName + "_RID")
-    readData.bits.data.suggestName(ifName + "_RDATA")
-    readData.bits.resp.suggestName(ifName + "_RRESP")
-    readData.bits.last.suggestName(ifName + "_RLAST")
-    readData.valid.suggestName(ifName + "_RVALID")
-    readData.ready.suggestName(ifName + "_RREADY")
   }
 
   override def cloneType = { new AXIMasterIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
