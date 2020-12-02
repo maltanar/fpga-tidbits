@@ -2,7 +2,8 @@ package fpgatidbits.PlatformWrapper
 
 import chisel3._
 import chisel3.util._
-
+import java.nio.file.Paths
+import fpgatidbits.TidbitsMakeUtils._
 // platform wrapper for the ZedBoard
 
 object ZedBoardParams extends PlatformWrapperParams {
@@ -16,7 +17,6 @@ object ZedBoardParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 32
   val burstBeats = 8  // TODO why cap bursts at 8? AXI can do more
   val coherentMem = false // TODO add CC version
-  var regDriverTargetDir: String = "Zedboard"
 }
 
 
@@ -25,8 +25,14 @@ class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targ
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zedboard.cpp", "zedboardregdriver.hpp", "axiregdriver.hpp"
   )
+  // Generate the RegFile driver
+  generateRegDriver(targetDir)
 
-  this.p.regDriverTargetDir = targetDir
+  // Copy over the other needed files
+  val resRoot = Paths.get("./src/main/resources")
+  fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  println(s"=======> Driver files copied to ${targetDir}")
+
 }
 
 class ZedBoardLinuxWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
@@ -35,5 +41,11 @@ extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
     "platform-zedboard-linux.cpp", "linuxphysregdriver.hpp", "axiregdriver.hpp"
   )
 
-  this.p.regDriverTargetDir = targetDir
+  // Generate the RegFile driver
+  generateRegDriver(targetDir)
+
+  // Copy over the other needed files
+  val resRoot = Paths.get("./src/main/resources")
+  fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  println(s"=======> Driver files copied to ${targetDir}")
 }

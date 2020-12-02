@@ -214,17 +214,22 @@ object MainObj {
     val platformName = args(1)
     val accInst = accelMap(accelName)
     val platformInst = platformMap(platformName)
-    val targetDir = s"driver-$accelName"
+    val targetDir = Paths.get(".").toString.dropRight(1) + s"$platformName-$accelName-driver/"
+    println(targetDir)
     val chiselArgs = Array("")
 
-
-
     chisel3.Driver.execute(chiselArgs, () => platformInst(accInst, targetDir))
+
+    // Copy test application
+    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
+    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
+    fileCopy(testRoot + accelName  + ".cpp", s"${targetDir}/main.cpp")
+
   }
 
   def makeVerilator(args: Array[String]) = {
     val accelName = args(0)
-    val targetDir = Paths.get(".").toAbsolutePath + "verilator/"
+    val targetDir = Paths.get(".").toString.dropRight(1) + "verilator/"
 
 
     val accInst = accelMap(accelName)
@@ -234,21 +239,11 @@ object MainObj {
     // generate verilog for the accelerator and create the regfile driver
     chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
 
-    val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
-    val scriptFiles = Seq("verilator-build.sh")
-    val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
-      "platform.h", "verilatedtesterdriver.hpp")
-
-    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
-    // copy blackbox verilog, scripts, driver and SW support files
-    fileCopyBulk(s"$resRoot/verilog/", "verilator/", verilogBlackBoxFiles)
-    fileCopyBulk(s"$resRoot/script/", "verilator/", scriptFiles)
-    fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", "verilator/",
-      driverFiles)
-
     // copy test application
+    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
-    fileCopy(testRoot + accelName + ".cpp", "verilator/main.cpp")
+    fileCopy(testRoot + accelName  + ".cpp", "verilator/main.cpp")
+
   }
 
   def makeDriver(args: Array[String]) = {

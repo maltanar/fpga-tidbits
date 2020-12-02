@@ -1,7 +1,10 @@
 package fpgatidbits.PlatformWrapper
 
+import java.nio.file.Paths
+
 import chisel3._
 import chisel3.util._
+import fpgatidbits.TidbitsMakeUtils.fileCopyBulk
 
 // wrapper for a "generic" SDAccel platform
 
@@ -16,7 +19,6 @@ object GenericSDAccelParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 128
   val burstBeats = 8
   val coherentMem = false
-  var regDriverTargetDir: String = "GenericSDAccel"
 }
 
 class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, val targetDir: String)
@@ -27,5 +29,11 @@ class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator
   suggestName("GenericSDAccelWrapper")
   override def desiredName = "GenericSDAccelWrapper"
 
-  this.p.regDriverTargetDir = targetDir
+  // Generate the RegFile driver
+  generateRegDriver(targetDir)
+
+  // Copy over the other needed files
+  val resRoot = Paths.get("./src/main/resources")
+  fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  println(s"=======> Driver files copied to ${targetDir}")
 }

@@ -4,13 +4,15 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import chisel3.iotesters._
-
 import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
 import java.nio.file.{Files, Paths}
 import java.nio.ByteBuffer
 import java.io.FileOutputStream
+
+import fpgatidbits.MainObj.{fileCopy, fileCopyBulk}
+import fpgatidbits.TidbitsMakeUtils._
 
 // testing infrastructure for GenericAccelerator
 // providing something like a virtual platform that can be used for testing the
@@ -31,15 +33,11 @@ object TesterWrapperParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 16
   val burstBeats = 8
   val coherentMem = false
-  var regDriverTargetDir: String = "Tester"
 }
 
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
 extends PlatformWrapper(TesterWrapperParams, instFxn) {
   override def desiredName  = "TesterWrapper"
-  //suggestName("TesterWrapper")
-
-  this.p.regDriverTargetDir = targetDir
 
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-tester.cpp", "testerdriver.hpp"
@@ -317,4 +315,26 @@ extends TesterWrapper(instFxn, targetDir) {
   override val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-verilatedtester.cpp", "verilatedtesterdriver.hpp"
   )
+
+  // Generate the RegFile driver
+  generateRegDriver(targetDir)
+
+
+
+  // Copy over the other needed files
+  val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
+  val scriptFiles = Seq("verilator-build.sh")
+  val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
+    "platform.h", "verilatedtesterdriver.hpp")
+
+  val resRoot = Paths.get("./src/main/resources").toAbsolutePath
+  // copy blackbox verilog, scripts, driver and SW support files
+  fileCopyBulk(s"$resRoot/verilog/", "verilator/", verilogBlackBoxFiles)
+  fileCopyBulk(s"$resRoot/script/", "verilator/", scriptFiles)
+  fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", "verilator/",
+    driverFiles)
+
+
+
+
 }

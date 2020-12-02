@@ -1,2336 +1,2079 @@
-module ReadReqGen(input clk, input reset,
-    input  io_ctrl_start,
-    input  io_ctrl_throttle,
-    input [31:0] io_ctrl_baseAddr,
-    input [31:0] io_ctrl_byteCount,
-    output io_stat_finished,
-    output io_stat_active,
-    output io_stat_error,
-    input  io_reqs_ready,
-    output io_reqs_valid,
-    output[5:0] io_reqs_bits_channelID,
-    output io_reqs_bits_isWrite,
-    output[31:0] io_reqs_bits_addr,
-    output[7:0] io_reqs_bits_numBytes,
-    output io_reqs_bits_metaData
+module ReadReqGen(
+  input         clock,
+  input         reset,
+  input         io_ctrl_start,
+  input  [31:0] io_ctrl_baseAddr,
+  input  [31:0] io_ctrl_byteCount,
+  input         io_reqs_ready,
+  output        io_reqs_valid,
+  output [31:0] io_reqs_bits_addr
 );
-
-  wire T0;
-  wire T1;
-  wire T2;
-  reg [1:0] regState;
-  wire[1:0] T37;
-  wire[1:0] T3;
-  wire[1:0] T4;
-  wire[1:0] T5;
-  wire[1:0] T6;
-  wire isUnaligned;
-  wire unalignedAddr;
-  wire[2:0] T7;
-  wire unalignedSize;
-  wire[2:0] T8;
-  wire T9;
-  wire T10;
-  wire T11;
-  wire T12;
-  reg [31:0] regBytesLeft;
-  wire[31:0] T38;
-  wire[31:0] T13;
-  wire[31:0] T14;
-  wire[31:0] T15;
-  wire T16;
-  wire T17;
-  wire T18;
-  wire T19;
-  wire T20;
-  wire T21;
-  wire T22;
-  wire T23;
-  wire T24;
-  wire T25;
-  wire T26;
-  wire[215:0] T27;
-  wire T28;
-  wire T29;
-  wire[31:0] T30;
-  wire[31:0] T31;
-  reg [31:0] regAddr;
-  wire[31:0] T39;
-  wire[31:0] T32;
-  wire[31:0] T33;
-  wire[31:0] T34;
-  wire[503:0] T35;
-  wire T36;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regState = {1{$random}};
-    regBytesLeft = {1{$random}};
-    regAddr = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+  reg [31:0] _RAND_2;
+`endif // RANDOMIZE_REG_INIT
+  reg [1:0] regState; // @[MemReqGen.scala 40:25]
+  reg [31:0] regAddr; // @[MemReqGen.scala 41:24]
+  reg [31:0] regBytesLeft; // @[MemReqGen.scala 42:29]
+  wire  unalignedAddr = io_ctrl_baseAddr[2:0] != 3'h0; // @[MemReqGen.scala 59:63]
+  wire  unalignedSize = io_ctrl_byteCount[2:0] != 3'h0; // @[MemReqGen.scala 62:64]
+  wire  isUnaligned = unalignedSize | unalignedAddr; // @[MemReqGen.scala 63:35]
+  wire  _T_3 = 2'h0 == regState; // @[Conditional.scala 37:30]
+  wire  _T_5 = 2'h1 == regState; // @[Conditional.scala 37:30]
+  wire  _T_6 = regBytesLeft == 32'h0; // @[MemReqGen.scala 73:28]
+  wire [31:0] _T_9 = regAddr + 32'h8; // @[MemReqGen.scala 79:32]
+  wire [31:0] _T_11 = regBytesLeft - 32'h8; // @[MemReqGen.scala 80:42]
+  wire  _GEN_7 = _T_6 ? 1'h0 : 1'h1; // @[MemReqGen.scala 73:37]
+  wire  _T_12 = 2'h2 == regState; // @[Conditional.scala 37:30]
+  wire  _T_13 = ~io_ctrl_start; // @[MemReqGen.scala 87:15]
+  wire  _T_14 = 2'h3 == regState; // @[Conditional.scala 37:30]
+  wire  _T_16 = ~reset; // @[MemReqGen.scala 93:15]
+  wire  _GEN_16 = _T_5 & _GEN_7; // @[Conditional.scala 39:67]
+  wire  _GEN_27 = ~_T_3; // @[MemReqGen.scala 93:15]
+  wire  _GEN_28 = ~_T_5; // @[MemReqGen.scala 93:15]
+  wire  _GEN_29 = _GEN_27 & _GEN_28; // @[MemReqGen.scala 93:15]
+  wire  _GEN_30 = ~_T_12; // @[MemReqGen.scala 93:15]
+  wire  _GEN_31 = _GEN_29 & _GEN_30; // @[MemReqGen.scala 93:15]
+  wire  _GEN_32 = _GEN_31 & _T_14; // @[MemReqGen.scala 93:15]
+  assign io_reqs_valid = _T_3 ? 1'h0 : _GEN_16; // @[MemReqGen.scala 47:17 MemReqGen.scala 76:25]
+  assign io_reqs_bits_addr = regAddr; // @[MemReqGen.scala 50:21]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign T0 = T2 & T1;
-  assign T1 = reset ^ 1'h1;
-  assign T2 = 2'h3 == regState;
-  assign T37 = reset ? 2'h0 : T3;
-  assign T3 = T22 ? 2'h0 : T4;
-  assign T4 = T11 ? 2'h2 : T5;
-  assign T5 = T9 ? T6 : regState;
-  assign T6 = isUnaligned ? 2'h3 : 2'h1;
-  assign isUnaligned = unalignedSize | unalignedAddr;
-  assign unalignedAddr = T7 != 3'h0;
-  assign T7 = io_ctrl_baseAddr[2:0];
-  assign unalignedSize = T8 != 3'h0;
-  assign T8 = io_ctrl_byteCount[2:0];
-  assign T9 = T10 & io_ctrl_start;
-  assign T10 = 2'h0 == regState;
-  assign T11 = T21 & T12;
-  assign T12 = regBytesLeft == 32'h0;
-  assign T38 = reset ? 32'h0 : T13;
-  assign T13 = T16 ? T15 : T14;
-  assign T14 = T10 ? io_ctrl_byteCount : regBytesLeft;
-  assign T15 = regBytesLeft - 32'h8;
-  assign T16 = T17 & io_reqs_ready;
-  assign T17 = T21 & T18;
-  assign T18 = T20 & T19;
-  assign T19 = io_ctrl_throttle ^ 1'h1;
-  assign T20 = T12 ^ 1'h1;
-  assign T21 = 2'h1 == regState;
-  assign T22 = T24 & T23;
-  assign T23 = io_ctrl_start ^ 1'h1;
-  assign T24 = 2'h2 == regState;
-  assign T25 = unalignedSize;
-  assign T26 = unalignedAddr;
-  assign T28 = T2 & T29;
-  assign T29 = reset ^ 1'h1;
-  assign T30 = io_ctrl_byteCount;
-  assign T31 = regAddr;
-  assign T39 = reset ? 32'h0 : T32;
-  assign T32 = T16 ? T34 : T33;
-  assign T33 = T10 ? io_ctrl_baseAddr : regAddr;
-  assign T34 = regAddr + 32'h8;
-  assign io_reqs_bits_metaData = 1'h0;
-  assign io_reqs_bits_numBytes = 8'h8;
-  assign io_reqs_bits_addr = regAddr;
-  assign io_reqs_bits_isWrite = 1'h0;
-  assign io_reqs_bits_channelID = 6'h0;
-  assign io_reqs_valid = T17;
-  assign io_stat_error = T2;
-  assign io_stat_active = T36;
-  assign T36 = regState != 2'h0;
-  assign io_stat_finished = T24;
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regState = _RAND_0[1:0];
+  _RAND_1 = {1{`RANDOM}};
+  regAddr = _RAND_1[31:0];
+  _RAND_2 = {1{`RANDOM}};
+  regBytesLeft = _RAND_2[31:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       regState <= 2'h0;
-    end else if(T22) begin
-      regState <= 2'h0;
-    end else if(T11) begin
-      regState <= 2'h2;
-    end else if(T9) begin
-      regState <= T6;
+    end else if (_T_3) begin
+      if (io_ctrl_start) begin
+        if (isUnaligned) begin
+          regState <= 2'h3;
+        end else begin
+          regState <= 2'h1;
+        end
+      end
+    end else if (_T_5) begin
+      if (_T_6) begin
+        regState <= 2'h2;
+      end
+    end else if (_T_12) begin
+      if (_T_13) begin
+        regState <= 2'h0;
+      end
     end
-    if(reset) begin
-      regBytesLeft <= 32'h0;
-    end else if(T16) begin
-      regBytesLeft <= T15;
-    end else if(T10) begin
-      regBytesLeft <= io_ctrl_byteCount;
-    end
-    if(reset) begin
+    if (reset) begin
       regAddr <= 32'h0;
-    end else if(T16) begin
-      regAddr <= T34;
-    end else if(T10) begin
+    end else if (_T_3) begin
       regAddr <= io_ctrl_baseAddr;
+    end else if (_T_5) begin
+      if (!(_T_6)) begin
+        if (io_reqs_ready) begin
+          regAddr <= _T_9;
+        end
+      end
     end
-`ifndef SYNTHESIS
-// synthesis translate_off
-`ifdef PRINTF_COND
-    if (`PRINTF_COND)
-`endif
-      if (T28)
-        $fwrite(32'h80000002, "Error in MemReqGen! regAddr = %h byteCount = %d \n", T31, T30);
-// synthesis translate_on
-`endif
-`ifndef SYNTHESIS
-// synthesis translate_off
-`ifdef PRINTF_COND
-    if (`PRINTF_COND)
-`endif
-      if (T0)
-        $fwrite(32'h80000002, "Unaligned addr? %d size? %d \n", T26, T25);
-// synthesis translate_on
-`endif
+    if (reset) begin
+      regBytesLeft <= 32'h0;
+    end else if (_T_3) begin
+      regBytesLeft <= io_ctrl_byteCount;
+    end else if (_T_5) begin
+      if (!(_T_6)) begin
+        if (io_reqs_ready) begin
+          regBytesLeft <= _T_11;
+        end
+      end
+    end
+    `ifndef SYNTHESIS
+    `ifdef PRINTF_COND
+      if (`PRINTF_COND) begin
+    `endif
+        if (_GEN_32 & _T_16) begin
+          $fwrite(32'h80000002,"Error in MemReqGen! regAddr = %x byteCount = %d \n",regAddr,io_ctrl_byteCount); // @[MemReqGen.scala 93:15]
+        end
+    `ifdef PRINTF_COND
+      end
+    `endif
+    `endif // SYNTHESIS
+    `ifndef SYNTHESIS
+    `ifdef PRINTF_COND
+      if (`PRINTF_COND) begin
+    `endif
+        if (_GEN_32 & _T_16) begin
+          $fwrite(32'h80000002,"Unaligned addr? %d size? %d \n",unalignedAddr,unalignedSize); // @[MemReqGen.scala 94:15]
+        end
+    `ifdef PRINTF_COND
+      end
+    `endif
+    `endif // SYNTHESIS
   end
 endmodule
-
-module SRLQueue_1(input clk, input reset,
-    output io_enq_ready,
-    input  io_enq_valid,
-    input [31:0] io_enq_bits,
-    input  io_deq_ready,
-    output io_deq_valid,
-    output[31:0] io_deq_bits,
-    output[3:0] io_count
+module SRLQueue(
+  input         clock,
+  input         reset,
+  output        io_enq_ready,
+  input         io_enq_valid,
+  input  [31:0] io_enq_bits,
+  input         io_deq_ready,
+  output        io_deq_valid,
+  output [31:0] io_deq_bits
 );
-
-  wire T0;
-  wire T1;
-  wire Q_srl_i_b;
-  wire Q_srl_o_v;
-  wire[31:0] Q_srl_o_d;
-  wire[3:0] Q_srl_count;
-
-
-  assign T0 = io_deq_ready ^ 1'h1;
-  assign io_count = Q_srl_count;
-  assign io_deq_bits = Q_srl_o_d;
-  assign io_deq_valid = Q_srl_o_v;
-  assign io_enq_ready = T1;
-  assign T1 = Q_srl_i_b ^ 1'h1;
-  Q_srl # (
-    .depth(8),
-    .width(32)
-  ) Q_srl(.clock(clk), .reset(reset),
-       .i_v( io_enq_valid ),
-       .i_d( io_enq_bits ),
-       .i_b( Q_srl_i_b ),
-       .o_v( Q_srl_o_v ),
-       .o_d( Q_srl_o_d ),
-       .o_b( T0 ),
-       .count( Q_srl_count )
+  wire  Q_srl_i_v; // @[FPGAQueue.scala 70:20]
+  wire [31:0] Q_srl_i_d; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_i_b; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_o_v; // @[FPGAQueue.scala 70:20]
+  wire [31:0] Q_srl_o_d; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_o_b; // @[FPGAQueue.scala 70:20]
+  wire [3:0] Q_srl_count; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_clock; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_reset; // @[FPGAQueue.scala 70:20]
+  Q_srl #(.depth(8), .width(32)) Q_srl ( // @[FPGAQueue.scala 70:20]
+    .i_v(Q_srl_i_v),
+    .i_d(Q_srl_i_d),
+    .i_b(Q_srl_i_b),
+    .o_v(Q_srl_o_v),
+    .o_d(Q_srl_o_d),
+    .o_b(Q_srl_o_b),
+    .count(Q_srl_count),
+    .clock(Q_srl_clock),
+    .reset(Q_srl_reset)
   );
+  assign io_enq_ready = ~Q_srl_i_b; // @[FPGAQueue.scala 83:16]
+  assign io_deq_valid = Q_srl_o_v; // @[FPGAQueue.scala 78:16]
+  assign io_deq_bits = Q_srl_o_d; // @[FPGAQueue.scala 79:15]
+  assign Q_srl_i_v = io_enq_valid; // @[FPGAQueue.scala 73:12]
+  assign Q_srl_i_d = io_enq_bits; // @[FPGAQueue.scala 74:12]
+  assign Q_srl_o_b = ~io_deq_ready; // @[FPGAQueue.scala 82:12]
+  assign Q_srl_clock = clock; // @[FPGAQueue.scala 75:14]
+  assign Q_srl_reset = reset; // @[FPGAQueue.scala 76:14]
 endmodule
-
-module FPGAQueue_1(input clk, input reset,
-    output io_enq_ready,
-    input  io_enq_valid,
-    input [31:0] io_enq_bits,
-    input  io_deq_ready,
-    output io_deq_valid,
-    output[31:0] io_deq_bits,
-    output[3:0] io_count
+module FPGAQueue(
+  input         clock,
+  input         reset,
+  output        io_enq_ready,
+  input         io_enq_valid,
+  input  [31:0] io_enq_bits,
+  input         io_deq_ready,
+  output        io_deq_valid,
+  output [31:0] io_deq_bits
 );
-
-  wire SRLQueue_io_enq_ready;
-  wire SRLQueue_io_deq_valid;
-  wire[31:0] SRLQueue_io_deq_bits;
-  wire[3:0] SRLQueue_io_count;
-
-
-  assign io_count = SRLQueue_io_count;
-  assign io_deq_bits = SRLQueue_io_deq_bits;
-  assign io_deq_valid = SRLQueue_io_deq_valid;
-  assign io_enq_ready = SRLQueue_io_enq_ready;
-  SRLQueue_1 SRLQueue(.clk(clk), .reset(reset),
-       .io_enq_ready( SRLQueue_io_enq_ready ),
-       .io_enq_valid( io_enq_valid ),
-       .io_enq_bits( io_enq_bits ),
-       .io_deq_ready( io_deq_ready ),
-       .io_deq_valid( SRLQueue_io_deq_valid ),
-       .io_deq_bits( SRLQueue_io_deq_bits ),
-       .io_count( SRLQueue_io_count )
+  wire  SRLQueue_clock; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_reset; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_enq_ready; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_enq_valid; // @[FPGAQueue.scala 168:26]
+  wire [31:0] SRLQueue_io_enq_bits; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_deq_ready; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_deq_valid; // @[FPGAQueue.scala 168:26]
+  wire [31:0] SRLQueue_io_deq_bits; // @[FPGAQueue.scala 168:26]
+  SRLQueue SRLQueue ( // @[FPGAQueue.scala 168:26]
+    .clock(SRLQueue_clock),
+    .reset(SRLQueue_reset),
+    .io_enq_ready(SRLQueue_io_enq_ready),
+    .io_enq_valid(SRLQueue_io_enq_valid),
+    .io_enq_bits(SRLQueue_io_enq_bits),
+    .io_deq_ready(SRLQueue_io_deq_ready),
+    .io_deq_valid(SRLQueue_io_deq_valid),
+    .io_deq_bits(SRLQueue_io_deq_bits)
   );
+  assign io_enq_ready = SRLQueue_io_enq_ready; // @[FPGAQueue.scala 169:14]
+  assign io_deq_valid = SRLQueue_io_deq_valid; // @[FPGAQueue.scala 169:14]
+  assign io_deq_bits = SRLQueue_io_deq_bits; // @[FPGAQueue.scala 169:14]
+  assign SRLQueue_clock = clock;
+  assign SRLQueue_reset = reset;
+  assign SRLQueue_io_enq_valid = io_enq_valid; // @[FPGAQueue.scala 169:14]
+  assign SRLQueue_io_enq_bits = io_enq_bits; // @[FPGAQueue.scala 169:14]
+  assign SRLQueue_io_deq_ready = io_deq_ready; // @[FPGAQueue.scala 169:14]
 endmodule
-
 module StreamFilter(
-    output io_in_ready,
-    input  io_in_valid,
-    input [5:0] io_in_bits_channelID,
-    input [63:0] io_in_bits_readData,
-    input  io_in_bits_isWrite,
-    input  io_in_bits_isLast,
-    input  io_in_bits_metaData,
-    input  io_out_ready,
-    output io_out_valid,
-    output[63:0] io_out_bits
+  output        io_in_ready,
+  input         io_in_valid,
+  input  [63:0] io_in_bits_readData,
+  input         io_out_ready,
+  output        io_out_valid,
+  output [63:0] io_out_bits
 );
-
-
-
-  assign io_out_bits = io_in_bits_readData;
-  assign io_out_valid = io_in_valid;
-  assign io_in_ready = io_out_ready;
+  assign io_in_ready = io_out_ready; // @[StreamFilter.scala 14:17]
+  assign io_out_valid = io_in_valid; // @[StreamFilter.scala 12:18]
+  assign io_out_bits = io_in_bits_readData; // @[StreamFilter.scala 13:17]
 endmodule
-
-module ParallelInSerialOut(input clk, input reset,
-    input [63:0] io_parIn,
-    input  io_parWrEn,
-    input [31:0] io_serIn,
-    output[31:0] io_serOut,
-    input  io_shiftEn
+module ParallelInSerialOut(
+  input         clock,
+  input         reset,
+  input  [63:0] io_parIn,
+  input         io_parWrEn,
+  output [31:0] io_serOut,
+  input         io_shiftEn
 );
-
-  reg [31:0] stages_0;
-  wire[31:0] T8;
-  wire[31:0] T0;
-  wire[31:0] T1;
-  wire[31:0] T2;
-  reg [31:0] stages_1;
-  wire[31:0] T9;
-  wire[31:0] T3;
-  wire[31:0] T4;
-  wire[31:0] T5;
-  wire T6;
-  wire T7;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    stages_0 = {1{$random}};
-    stages_1 = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+`endif // RANDOMIZE_REG_INIT
+  reg [31:0] stages_0; // @[AXIStreamDownsizer.scala 18:23]
+  reg [31:0] stages_1; // @[AXIStreamDownsizer.scala 18:23]
+  assign io_serOut = stages_0; // @[AXIStreamDownsizer.scala 35:13]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign io_serOut = stages_0;
-  assign T8 = reset ? 32'h0 : T0;
-  assign T0 = T6 ? stages_1 : T1;
-  assign T1 = io_parWrEn ? T2 : stages_0;
-  assign T2 = io_parIn[31:0];
-  assign T9 = reset ? 32'h0 : T3;
-  assign T3 = T6 ? io_serIn : T4;
-  assign T4 = io_parWrEn ? T5 : stages_1;
-  assign T5 = io_parIn[63:32];
-  assign T6 = T7 & io_shiftEn;
-  assign T7 = io_parWrEn ^ 1'h1;
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  stages_0 = _RAND_0[31:0];
+  _RAND_1 = {1{`RANDOM}};
+  stages_1 = _RAND_1[31:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       stages_0 <= 32'h0;
-    end else if(T6) begin
+    end else if (io_parWrEn) begin
+      stages_0 <= io_parIn[31:0];
+    end else if (io_shiftEn) begin
       stages_0 <= stages_1;
-    end else if(io_parWrEn) begin
-      stages_0 <= T2;
     end
-    if(reset) begin
+    if (reset) begin
       stages_1 <= 32'h0;
-    end else if(T6) begin
-      stages_1 <= io_serIn;
-    end else if(io_parWrEn) begin
-      stages_1 <= T5;
+    end else if (io_parWrEn) begin
+      stages_1 <= io_parIn[63:32];
+    end else if (io_shiftEn) begin
+      stages_1 <= 32'h0;
     end
   end
 endmodule
-
-module AXIStreamDownsizer(input clk, input reset,
-    output wide_TREADY,
-    input  wide_TVALID,
-    input [63:0] wide_TDATA,
-    input  narrow_TREADY,
-    output narrow_TVALID,
-    output[31:0] narrow_TDATA
+module AXIStreamDownsizer(
+  input         clock,
+  input         reset,
+  output        wide_TREADY,
+  input         wide_TVALID,
+  input  [63:0] wide_TDATA,
+  input         narrow_TREADY,
+  output        narrow_TVALID,
+  output [31:0] narrow_TDATA
 );
-
-  wire T0;
-  wire T1;
-  reg [1:0] regState;
-  wire[1:0] T22;
-  wire[1:0] T2;
-  wire[1:0] T3;
-  wire[1:0] T4;
-  wire[1:0] T5;
-  wire T6;
-  wire T7;
-  wire T8;
-  wire T9;
-  reg  regShiftCount;
-  wire T23;
-  wire T10;
-  wire T11;
-  wire T12;
-  wire T13;
-  wire T14;
-  wire T15;
-  wire T16;
-  wire T17;
-  wire T18;
-  wire T19;
-  wire T20;
-  wire T21;
-  wire[31:0] shiftReg_io_serOut;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regState = {1{$random}};
-    regShiftCount = {1{$random}};
-  end
-// synthesis translate_on
-`endif
-
-  assign T0 = T1 & narrow_TREADY;
-  assign T1 = 2'h1 == regState;
-  assign T22 = reset ? 2'h0 : T2;
-  assign T2 = T17 ? 2'h0 : T3;
-  assign T3 = T14 ? 2'h1 : T4;
-  assign T4 = T8 ? 2'h2 : T5;
-  assign T5 = T6 ? 2'h1 : regState;
-  assign T6 = T7 & wide_TVALID;
-  assign T7 = 2'h0 == regState;
-  assign T8 = T0 & T9;
-  assign T9 = regShiftCount == 1'h0;
-  assign T23 = reset ? 1'h0 : T10;
-  assign T10 = T14 ? 1'h0 : T11;
-  assign T11 = T0 ? T13 : T12;
-  assign T12 = T7 ? 1'h0 : regShiftCount;
-  assign T13 = regShiftCount + 1'h1;
-  assign T14 = T15 & wide_TVALID;
-  assign T15 = T16 & narrow_TREADY;
-  assign T16 = 2'h2 == regState;
-  assign T17 = T15 & T18;
-  assign T18 = wide_TVALID ^ 1'h1;
-  assign T19 = T14 ? 1'h1 : T7;
-  assign narrow_TDATA = shiftReg_io_serOut;
-  assign narrow_TVALID = T20;
-  assign T20 = T16 ? 1'h1 : T1;
-  assign wide_TREADY = T21;
-  assign T21 = T14 ? 1'h1 : T7;
-  ParallelInSerialOut shiftReg(.clk(clk), .reset(reset),
-       .io_parIn( wide_TDATA ),
-       .io_parWrEn( T19 ),
-       .io_serIn( 32'h0 ),
-       .io_serOut( shiftReg_io_serOut ),
-       .io_shiftEn( T0 )
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+`endif // RANDOMIZE_REG_INIT
+  wire  shiftReg_clock; // @[AXIStreamDownsizer.scala 113:24]
+  wire  shiftReg_reset; // @[AXIStreamDownsizer.scala 113:24]
+  wire [63:0] shiftReg_io_parIn; // @[AXIStreamDownsizer.scala 113:24]
+  wire  shiftReg_io_parWrEn; // @[AXIStreamDownsizer.scala 113:24]
+  wire [31:0] shiftReg_io_serOut; // @[AXIStreamDownsizer.scala 113:24]
+  wire  shiftReg_io_shiftEn; // @[AXIStreamDownsizer.scala 113:24]
+  reg [1:0] regState; // @[AXIStreamDownsizer.scala 122:25]
+  reg  regShiftCount; // @[AXIStreamDownsizer.scala 123:30]
+  wire  _T = 2'h0 == regState; // @[Conditional.scala 37:30]
+  wire  _T_1 = 2'h1 == regState; // @[Conditional.scala 37:30]
+  wire  _T_3 = regShiftCount + 1'h1; // @[AXIStreamDownsizer.scala 148:40]
+  wire [1:0] _GEN_25 = {{1'd0}, regShiftCount}; // @[AXIStreamDownsizer.scala 154:29]
+  wire  _T_6 = _GEN_25 == 2'h0; // @[AXIStreamDownsizer.scala 154:29]
+  wire  _T_7 = 2'h2 == regState; // @[Conditional.scala 37:30]
+  wire  _GEN_8 = narrow_TREADY & wide_TVALID; // @[AXIStreamDownsizer.scala 162:25]
+  wire  _GEN_12 = _T_7 & _GEN_8; // @[Conditional.scala 39:67]
+  wire  _GEN_15 = _T_1 | _T_7; // @[Conditional.scala 39:67]
+  wire  _GEN_17 = _T_1 & narrow_TREADY; // @[Conditional.scala 39:67]
+  wire  _GEN_19 = _T_1 ? 1'h0 : _GEN_12; // @[Conditional.scala 39:67]
+  ParallelInSerialOut shiftReg ( // @[AXIStreamDownsizer.scala 113:24]
+    .clock(shiftReg_clock),
+    .reset(shiftReg_reset),
+    .io_parIn(shiftReg_io_parIn),
+    .io_parWrEn(shiftReg_io_parWrEn),
+    .io_serOut(shiftReg_io_serOut),
+    .io_shiftEn(shiftReg_io_shiftEn)
   );
-
-  always @(posedge clk) begin
-    if(reset) begin
+  assign wide_TREADY = _T | _GEN_19; // @[AXIStreamDownsizer.scala 126:13 AXIStreamDownsizer.scala 135:17 AXIStreamDownsizer.scala 167:21]
+  assign narrow_TVALID = _T ? 1'h0 : _GEN_15; // @[AXIStreamDownsizer.scala 127:14 AXIStreamDownsizer.scala 144:18 AXIStreamDownsizer.scala 160:18]
+  assign narrow_TDATA = shiftReg_io_serOut; // @[AXIStreamDownsizer.scala 116:13]
+  assign shiftReg_clock = clock;
+  assign shiftReg_reset = reset;
+  assign shiftReg_io_parIn = wide_TDATA; // @[AXIStreamDownsizer.scala 114:21]
+  assign shiftReg_io_parWrEn = _T | _GEN_19; // @[AXIStreamDownsizer.scala 117:23 AXIStreamDownsizer.scala 133:27 AXIStreamDownsizer.scala 166:31]
+  assign shiftReg_io_shiftEn = _T ? 1'h0 : _GEN_17; // @[AXIStreamDownsizer.scala 118:23 AXIStreamDownsizer.scala 150:29]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regState = _RAND_0[1:0];
+  _RAND_1 = {1{`RANDOM}};
+  regShiftCount = _RAND_1[0:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       regState <= 2'h0;
-    end else if(T17) begin
-      regState <= 2'h0;
-    end else if(T14) begin
-      regState <= 2'h1;
-    end else if(T8) begin
-      regState <= 2'h2;
-    end else if(T6) begin
-      regState <= 2'h1;
+    end else if (_T) begin
+      if (wide_TVALID) begin
+        regState <= 2'h1;
+      end
+    end else if (_T_1) begin
+      if (narrow_TREADY) begin
+        if (_T_6) begin
+          regState <= 2'h2;
+        end
+      end
+    end else if (_T_7) begin
+      if (narrow_TREADY) begin
+        if (wide_TVALID) begin
+          regState <= 2'h1;
+        end else begin
+          regState <= 2'h0;
+        end
+      end
     end
-    if(reset) begin
+    if (reset) begin
       regShiftCount <= 1'h0;
-    end else if(T14) begin
+    end else if (_T) begin
       regShiftCount <= 1'h0;
-    end else if(T0) begin
-      regShiftCount <= T13;
-    end else if(T7) begin
-      regShiftCount <= 1'h0;
+    end else if (_T_1) begin
+      if (narrow_TREADY) begin
+        regShiftCount <= _T_3;
+      end
+    end else if (_T_7) begin
+      if (narrow_TREADY) begin
+        if (wide_TVALID) begin
+          regShiftCount <= 1'h0;
+        end
+      end
     end
   end
 endmodule
-
-module StreamLimiter(input clk, input reset,
-    input  io_start,
-    output io_done,
-    input [31:0] io_byteCount,
-    output io_streamIn_ready,
-    input  io_streamIn_valid,
-    input [31:0] io_streamIn_bits,
-    input  io_streamOut_ready,
-    output io_streamOut_valid,
-    output[31:0] io_streamOut_bits
+module StreamLimiter(
+  input         clock,
+  input         reset,
+  input         io_start,
+  input  [31:0] io_byteCount,
+  output        io_streamIn_ready,
+  input         io_streamIn_valid,
+  input  [31:0] io_streamIn_bits,
+  input         io_streamOut_ready,
+  output        io_streamOut_valid,
+  output [31:0] io_streamOut_bits
 );
-
-  wire T0;
-  wire T1;
-  reg [1:0] regState;
-  wire[1:0] T18;
-  wire[1:0] T2;
-  wire[1:0] T3;
-  wire[1:0] T4;
-  wire T5;
-  wire T6;
-  wire T7;
-  wire T8;
-  reg [31:0] regBytesLeft;
-  wire[31:0] T19;
-  wire[31:0] T9;
-  wire[31:0] T10;
-  wire[31:0] T11;
-  wire T12;
-  wire T13;
-  wire T14;
-  wire T15;
-  wire T16;
-  wire T17;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regState = {1{$random}};
-    regBytesLeft = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+`endif // RANDOMIZE_REG_INIT
+  reg [1:0] regState; // @[StreamLimiter.scala 38:25]
+  reg [31:0] regBytesLeft; // @[StreamLimiter.scala 40:29]
+  wire  _T = 2'h0 == regState; // @[Conditional.scala 37:30]
+  wire  _T_1 = 2'h1 == regState; // @[Conditional.scala 37:30]
+  wire  _T_2 = io_streamIn_valid & io_streamOut_ready; // @[StreamLimiter.scala 50:33]
+  wire [31:0] _T_4 = regBytesLeft - 32'h4; // @[StreamLimiter.scala 51:40]
+  wire  _T_5 = regBytesLeft == 32'h4; // @[StreamLimiter.scala 52:30]
+  wire  _T_6 = 2'h2 == regState; // @[Conditional.scala 37:30]
+  wire  _T_7 = ~io_start; // @[StreamLimiter.scala 63:14]
+  wire  _GEN_5 = _T_6 ? 1'h0 : io_streamIn_valid; // @[Conditional.scala 39:67]
+  wire  _GEN_6 = _T_6 | io_streamOut_ready; // @[Conditional.scala 39:67]
+  wire  _GEN_11 = _T_1 ? io_streamIn_valid : _GEN_5; // @[Conditional.scala 39:67]
+  wire  _GEN_12 = _T_1 ? io_streamOut_ready : _GEN_6; // @[Conditional.scala 39:67]
+  assign io_streamIn_ready = _T ? io_streamOut_ready : _GEN_12; // @[StreamLimiter.scala 35:21 StreamLimiter.scala 60:27]
+  assign io_streamOut_valid = _T ? io_streamIn_valid : _GEN_11; // @[StreamLimiter.scala 34:22 StreamLimiter.scala 58:28]
+  assign io_streamOut_bits = io_streamIn_bits; // @[StreamLimiter.scala 33:21]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign io_streamOut_bits = io_streamIn_bits;
-  assign io_streamOut_valid = T0;
-  assign T0 = T1 ? 1'h0 : io_streamIn_valid;
-  assign T1 = 2'h2 == regState;
-  assign T18 = reset ? 2'h0 : T2;
-  assign T2 = T15 ? 2'h0 : T3;
-  assign T3 = T7 ? 2'h2 : T4;
-  assign T4 = T5 ? 2'h1 : regState;
-  assign T5 = T6 & io_start;
-  assign T6 = 2'h0 == regState;
-  assign T7 = T12 & T8;
-  assign T8 = regBytesLeft == 32'h4;
-  assign T19 = reset ? 32'h0 : T9;
-  assign T9 = T12 ? T11 : T10;
-  assign T10 = T6 ? io_byteCount : regBytesLeft;
-  assign T11 = regBytesLeft - 32'h4;
-  assign T12 = T14 & T13;
-  assign T13 = io_streamIn_valid & io_streamOut_ready;
-  assign T14 = 2'h1 == regState;
-  assign T15 = T1 & T16;
-  assign T16 = io_start ^ 1'h1;
-  assign io_streamIn_ready = T17;
-  assign T17 = T1 ? 1'h1 : io_streamOut_ready;
-  assign io_done = T1;
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regState = _RAND_0[1:0];
+  _RAND_1 = {1{`RANDOM}};
+  regBytesLeft = _RAND_1[31:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       regState <= 2'h0;
-    end else if(T15) begin
-      regState <= 2'h0;
-    end else if(T7) begin
-      regState <= 2'h2;
-    end else if(T5) begin
-      regState <= 2'h1;
+    end else if (_T) begin
+      if (io_start) begin
+        regState <= 2'h1;
+      end
+    end else if (_T_1) begin
+      if (_T_2) begin
+        if (_T_5) begin
+          regState <= 2'h2;
+        end
+      end
+    end else if (_T_6) begin
+      if (_T_7) begin
+        regState <= 2'h0;
+      end
     end
-    if(reset) begin
+    if (reset) begin
       regBytesLeft <= 32'h0;
-    end else if(T12) begin
-      regBytesLeft <= T11;
-    end else if(T6) begin
+    end else if (_T) begin
       regBytesLeft <= io_byteCount;
+    end else if (_T_1) begin
+      if (_T_2) begin
+        regBytesLeft <= _T_4;
+      end
     end
   end
 endmodule
-
-module StreamReader(input clk, input reset,
-    input  io_start,
-    output io_active,
-    output io_finished,
-    output io_error,
-    input [31:0] io_baseAddr,
-    input [31:0] io_byteCount,
-    input  io_out_ready,
-    output io_out_valid,
-    output[31:0] io_out_bits,
-    input  io_req_ready,
-    output io_req_valid,
-    output[5:0] io_req_bits_channelID,
-    output io_req_bits_isWrite,
-    output[31:0] io_req_bits_addr,
-    output[7:0] io_req_bits_numBytes,
-    output io_req_bits_metaData,
-    output io_rsp_ready,
-    input  io_rsp_valid,
-    input [5:0] io_rsp_bits_channelID,
-    input [63:0] io_rsp_bits_readData,
-    input  io_rsp_bits_isWrite,
-    input  io_rsp_bits_isLast,
-    input  io_rsp_bits_metaData
-    //input  io_doInit
-    //input [7:0] io_initCount
+module StreamReader(
+  input         clock,
+  input         reset,
+  input         io_start,
+  input  [31:0] io_baseAddr,
+  input  [31:0] io_byteCount,
+  input         io_out_ready,
+  output        io_out_valid,
+  output [31:0] io_out_bits,
+  input         io_req_ready,
+  output        io_req_valid,
+  output [31:0] io_req_bits_addr,
+  output        io_rsp_ready,
+  input         io_rsp_valid,
+  input  [63:0] io_rsp_bits_readData
 );
-
-  wire[31:0] T0;
-  wire[31:0] T1;
-  wire[28:0] T2;
-  wire[28:0] T3;
-  wire T4;
-  wire[2:0] T5;
-  wire allResponsesDone;
-  reg [31:0] regDoneBytes;
-  wire[31:0] T15;
-  wire[31:0] T6;
-  wire[31:0] T7;
-  wire T8;
-  wire[31:0] T9;
-  wire T10;
-  wire T11;
-  wire T12;
-  wire T13;
-  wire T14;
-  wire ReadReqGen_io_stat_error;
-  wire ReadReqGen_io_reqs_valid;
-  wire[5:0] ReadReqGen_io_reqs_bits_channelID;
-  wire ReadReqGen_io_reqs_bits_isWrite;
-  wire[31:0] ReadReqGen_io_reqs_bits_addr;
-  wire[7:0] ReadReqGen_io_reqs_bits_numBytes;
-  wire ReadReqGen_io_reqs_bits_metaData;
-  wire StreamFilter_io_in_ready;
-  wire StreamFilter_io_out_valid;
-  wire[63:0] StreamFilter_io_out_bits;
-  wire StreamLimiter_io_streamIn_ready;
-  wire StreamLimiter_io_streamOut_valid;
-  wire[31:0] StreamLimiter_io_streamOut_bits;
-  wire AXIStreamDownsizer_wide_TREADY;
-  wire AXIStreamDownsizer_narrow_TVALID;
-  wire[31:0] AXIStreamDownsizer_narrow_TDATA;
-  wire FPGAQueue_io_enq_ready;
-  wire FPGAQueue_io_deq_valid;
-  wire[31:0] FPGAQueue_io_deq_bits;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regDoneBytes = {1{$random}};
-  end
-// synthesis translate_on
-`endif
-
-  assign T0 = T4 ? io_byteCount : T1;
-  assign T1 = {T2, 3'h0};
-  assign T2 = T3 + 29'h1;
-  assign T3 = io_byteCount[31:3];
-  assign T4 = T5 == 3'h0;
-  assign T5 = io_byteCount[2:0];
-  assign io_rsp_ready = StreamFilter_io_in_ready;
-  assign io_req_bits_metaData = ReadReqGen_io_reqs_bits_metaData;
-  assign io_req_bits_numBytes = ReadReqGen_io_reqs_bits_numBytes;
-  assign io_req_bits_addr = ReadReqGen_io_reqs_bits_addr;
-  assign io_req_bits_isWrite = ReadReqGen_io_reqs_bits_isWrite;
-  assign io_req_bits_channelID = ReadReqGen_io_reqs_bits_channelID;
-  assign io_req_valid = ReadReqGen_io_reqs_valid;
-  assign io_out_bits = FPGAQueue_io_deq_bits;
-  assign io_out_valid = FPGAQueue_io_deq_valid;
-  assign io_error = ReadReqGen_io_stat_error;
-  assign io_finished = allResponsesDone;
-  assign allResponsesDone = regDoneBytes == io_byteCount;
-  assign T15 = reset ? 32'h0 : T6;
-  assign T6 = T10 ? T9 : T7;
-  assign T7 = T8 ? 32'h0 : regDoneBytes;
-  assign T8 = io_start ^ 1'h1;
-  assign T9 = regDoneBytes + 32'h4;
-  assign T10 = T12 & T11;
-  assign T11 = io_out_valid & io_out_ready;
-  assign T12 = T8 ^ 1'h1;
-  assign io_active = T13;
-  assign T13 = io_start & T14;
-  assign T14 = allResponsesDone ^ 1'h1;
-  ReadReqGen ReadReqGen(.clk(clk), .reset(reset),
-       .io_ctrl_start( io_start ),
-       .io_ctrl_throttle( 1'h0 ),
-       .io_ctrl_baseAddr( io_baseAddr ),
-       .io_ctrl_byteCount( T0 ),
-       //.io_stat_finished(  )
-       //.io_stat_active(  )
-       .io_stat_error( ReadReqGen_io_stat_error ),
-       .io_reqs_ready( io_req_ready ),
-       .io_reqs_valid( ReadReqGen_io_reqs_valid ),
-       .io_reqs_bits_channelID( ReadReqGen_io_reqs_bits_channelID ),
-       .io_reqs_bits_isWrite( ReadReqGen_io_reqs_bits_isWrite ),
-       .io_reqs_bits_addr( ReadReqGen_io_reqs_bits_addr ),
-       .io_reqs_bits_numBytes( ReadReqGen_io_reqs_bits_numBytes ),
-       .io_reqs_bits_metaData( ReadReqGen_io_reqs_bits_metaData )
+  wire  ReadReqGen_clock; // @[StreamReader.scala 56:18]
+  wire  ReadReqGen_reset; // @[StreamReader.scala 56:18]
+  wire  ReadReqGen_io_ctrl_start; // @[StreamReader.scala 56:18]
+  wire [31:0] ReadReqGen_io_ctrl_baseAddr; // @[StreamReader.scala 56:18]
+  wire [31:0] ReadReqGen_io_ctrl_byteCount; // @[StreamReader.scala 56:18]
+  wire  ReadReqGen_io_reqs_ready; // @[StreamReader.scala 56:18]
+  wire  ReadReqGen_io_reqs_valid; // @[StreamReader.scala 56:18]
+  wire [31:0] ReadReqGen_io_reqs_bits_addr; // @[StreamReader.scala 56:18]
+  wire  FPGAQueue_clock; // @[StreamReader.scala 58:20]
+  wire  FPGAQueue_reset; // @[StreamReader.scala 58:20]
+  wire  FPGAQueue_io_enq_ready; // @[StreamReader.scala 58:20]
+  wire  FPGAQueue_io_enq_valid; // @[StreamReader.scala 58:20]
+  wire [31:0] FPGAQueue_io_enq_bits; // @[StreamReader.scala 58:20]
+  wire  FPGAQueue_io_deq_ready; // @[StreamReader.scala 58:20]
+  wire  FPGAQueue_io_deq_valid; // @[StreamReader.scala 58:20]
+  wire [31:0] FPGAQueue_io_deq_bits; // @[StreamReader.scala 58:20]
+  wire  StreamFilter_io_in_ready; // @[StreamFilter.scala 20:22]
+  wire  StreamFilter_io_in_valid; // @[StreamFilter.scala 20:22]
+  wire [63:0] StreamFilter_io_in_bits_readData; // @[StreamFilter.scala 20:22]
+  wire  StreamFilter_io_out_ready; // @[StreamFilter.scala 20:22]
+  wire  StreamFilter_io_out_valid; // @[StreamFilter.scala 20:22]
+  wire [63:0] StreamFilter_io_out_bits; // @[StreamFilter.scala 20:22]
+  wire  AXIStreamDownsizer_clock; // @[AXIStreamDownsizer.scala 70:20]
+  wire  AXIStreamDownsizer_reset; // @[AXIStreamDownsizer.scala 70:20]
+  wire  AXIStreamDownsizer_wide_TREADY; // @[AXIStreamDownsizer.scala 70:20]
+  wire  AXIStreamDownsizer_wide_TVALID; // @[AXIStreamDownsizer.scala 70:20]
+  wire [63:0] AXIStreamDownsizer_wide_TDATA; // @[AXIStreamDownsizer.scala 70:20]
+  wire  AXIStreamDownsizer_narrow_TREADY; // @[AXIStreamDownsizer.scala 70:20]
+  wire  AXIStreamDownsizer_narrow_TVALID; // @[AXIStreamDownsizer.scala 70:20]
+  wire [31:0] AXIStreamDownsizer_narrow_TDATA; // @[AXIStreamDownsizer.scala 70:20]
+  wire  StreamLimiter_clock; // @[StreamLimiter.scala 14:25]
+  wire  StreamLimiter_reset; // @[StreamLimiter.scala 14:25]
+  wire  StreamLimiter_io_start; // @[StreamLimiter.scala 14:25]
+  wire [31:0] StreamLimiter_io_byteCount; // @[StreamLimiter.scala 14:25]
+  wire  StreamLimiter_io_streamIn_ready; // @[StreamLimiter.scala 14:25]
+  wire  StreamLimiter_io_streamIn_valid; // @[StreamLimiter.scala 14:25]
+  wire [31:0] StreamLimiter_io_streamIn_bits; // @[StreamLimiter.scala 14:25]
+  wire  StreamLimiter_io_streamOut_ready; // @[StreamLimiter.scala 14:25]
+  wire  StreamLimiter_io_streamOut_valid; // @[StreamLimiter.scala 14:25]
+  wire [31:0] StreamLimiter_io_streamOut_bits; // @[StreamLimiter.scala 14:25]
+  wire  _T_2 = io_byteCount[2:0] == 3'h0; // @[StreamReader.scala 46:28]
+  wire [28:0] _T_4 = io_byteCount[31:3] + 29'h1; // @[StreamReader.scala 47:39]
+  wire [31:0] _T_5 = {_T_4,3'h0}; // @[Cat.scala 29:58]
+  ReadReqGen ReadReqGen ( // @[StreamReader.scala 56:18]
+    .clock(ReadReqGen_clock),
+    .reset(ReadReqGen_reset),
+    .io_ctrl_start(ReadReqGen_io_ctrl_start),
+    .io_ctrl_baseAddr(ReadReqGen_io_ctrl_baseAddr),
+    .io_ctrl_byteCount(ReadReqGen_io_ctrl_byteCount),
+    .io_reqs_ready(ReadReqGen_io_reqs_ready),
+    .io_reqs_valid(ReadReqGen_io_reqs_valid),
+    .io_reqs_bits_addr(ReadReqGen_io_reqs_bits_addr)
   );
-  FPGAQueue_1 FPGAQueue(.clk(clk), .reset(reset),
-       .io_enq_ready( FPGAQueue_io_enq_ready ),
-       .io_enq_valid( StreamLimiter_io_streamOut_valid ),
-       .io_enq_bits( StreamLimiter_io_streamOut_bits ),
-       .io_deq_ready( io_out_ready ),
-       .io_deq_valid( FPGAQueue_io_deq_valid ),
-       .io_deq_bits( FPGAQueue_io_deq_bits )
-       //.io_count(  )
+  FPGAQueue FPGAQueue ( // @[StreamReader.scala 58:20]
+    .clock(FPGAQueue_clock),
+    .reset(FPGAQueue_reset),
+    .io_enq_ready(FPGAQueue_io_enq_ready),
+    .io_enq_valid(FPGAQueue_io_enq_valid),
+    .io_enq_bits(FPGAQueue_io_enq_bits),
+    .io_deq_ready(FPGAQueue_io_deq_ready),
+    .io_deq_valid(FPGAQueue_io_deq_valid),
+    .io_deq_bits(FPGAQueue_io_deq_bits)
   );
-  StreamFilter StreamFilter(
-       .io_in_ready( StreamFilter_io_in_ready ),
-       .io_in_valid( io_rsp_valid ),
-       .io_in_bits_channelID( io_rsp_bits_channelID ),
-       .io_in_bits_readData( io_rsp_bits_readData ),
-       .io_in_bits_isWrite( io_rsp_bits_isWrite ),
-       .io_in_bits_isLast( io_rsp_bits_isLast ),
-       .io_in_bits_metaData( io_rsp_bits_metaData ),
-       .io_out_ready( AXIStreamDownsizer_wide_TREADY ),
-       .io_out_valid( StreamFilter_io_out_valid ),
-       .io_out_bits( StreamFilter_io_out_bits )
+  StreamFilter StreamFilter ( // @[StreamFilter.scala 20:22]
+    .io_in_ready(StreamFilter_io_in_ready),
+    .io_in_valid(StreamFilter_io_in_valid),
+    .io_in_bits_readData(StreamFilter_io_in_bits_readData),
+    .io_out_ready(StreamFilter_io_out_ready),
+    .io_out_valid(StreamFilter_io_out_valid),
+    .io_out_bits(StreamFilter_io_out_bits)
   );
-  AXIStreamDownsizer AXIStreamDownsizer(.clk(clk), .reset(reset),
-       .wide_TREADY( AXIStreamDownsizer_wide_TREADY ),
-       .wide_TVALID( StreamFilter_io_out_valid ),
-       .wide_TDATA( StreamFilter_io_out_bits ),
-       .narrow_TREADY( StreamLimiter_io_streamIn_ready ),
-       .narrow_TVALID( AXIStreamDownsizer_narrow_TVALID ),
-       .narrow_TDATA( AXIStreamDownsizer_narrow_TDATA )
+  AXIStreamDownsizer AXIStreamDownsizer ( // @[AXIStreamDownsizer.scala 70:20]
+    .clock(AXIStreamDownsizer_clock),
+    .reset(AXIStreamDownsizer_reset),
+    .wide_TREADY(AXIStreamDownsizer_wide_TREADY),
+    .wide_TVALID(AXIStreamDownsizer_wide_TVALID),
+    .wide_TDATA(AXIStreamDownsizer_wide_TDATA),
+    .narrow_TREADY(AXIStreamDownsizer_narrow_TREADY),
+    .narrow_TVALID(AXIStreamDownsizer_narrow_TVALID),
+    .narrow_TDATA(AXIStreamDownsizer_narrow_TDATA)
   );
-  StreamLimiter StreamLimiter(.clk(clk), .reset(reset),
-       .io_start( io_start ),
-       //.io_done(  )
-       .io_byteCount( io_byteCount ),
-       .io_streamIn_ready( StreamLimiter_io_streamIn_ready ),
-       .io_streamIn_valid( AXIStreamDownsizer_narrow_TVALID ),
-       .io_streamIn_bits( AXIStreamDownsizer_narrow_TDATA ),
-       .io_streamOut_ready( FPGAQueue_io_enq_ready ),
-       .io_streamOut_valid( StreamLimiter_io_streamOut_valid ),
-       .io_streamOut_bits( StreamLimiter_io_streamOut_bits )
+  StreamLimiter StreamLimiter ( // @[StreamLimiter.scala 14:25]
+    .clock(StreamLimiter_clock),
+    .reset(StreamLimiter_reset),
+    .io_start(StreamLimiter_io_start),
+    .io_byteCount(StreamLimiter_io_byteCount),
+    .io_streamIn_ready(StreamLimiter_io_streamIn_ready),
+    .io_streamIn_valid(StreamLimiter_io_streamIn_valid),
+    .io_streamIn_bits(StreamLimiter_io_streamIn_bits),
+    .io_streamOut_ready(StreamLimiter_io_streamOut_ready),
+    .io_streamOut_valid(StreamLimiter_io_streamOut_valid),
+    .io_streamOut_bits(StreamLimiter_io_streamOut_bits)
   );
-
-  always @(posedge clk) begin
-    if(reset) begin
-      regDoneBytes <= 32'h0;
-    end else if(T10) begin
-      regDoneBytes <= T9;
-    end else if(T8) begin
-      regDoneBytes <= 32'h0;
-    end
-  end
+  assign io_out_valid = FPGAQueue_io_deq_valid; // @[StreamReader.scala 121:12]
+  assign io_out_bits = FPGAQueue_io_deq_bits; // @[StreamReader.scala 121:12]
+  assign io_req_valid = ReadReqGen_io_reqs_valid; // @[StreamReader.scala 98:13]
+  assign io_req_bits_addr = ReadReqGen_io_reqs_bits_addr; // @[StreamReader.scala 98:13]
+  assign io_rsp_ready = StreamFilter_io_in_ready; // @[StreamFilter.scala 21:13]
+  assign ReadReqGen_clock = clock;
+  assign ReadReqGen_reset = reset;
+  assign ReadReqGen_io_ctrl_start = io_start; // @[StreamReader.scala 62:17]
+  assign ReadReqGen_io_ctrl_baseAddr = io_baseAddr; // @[StreamReader.scala 63:20]
+  assign ReadReqGen_io_ctrl_byteCount = _T_2 ? io_byteCount : _T_5; // @[StreamReader.scala 67:21]
+  assign ReadReqGen_io_reqs_ready = io_req_ready; // @[StreamReader.scala 98:13]
+  assign FPGAQueue_clock = clock;
+  assign FPGAQueue_reset = reset;
+  assign FPGAQueue_io_enq_valid = StreamLimiter_io_streamOut_valid; // @[StreamReader.scala 114:56]
+  assign FPGAQueue_io_enq_bits = StreamLimiter_io_streamOut_bits; // @[StreamReader.scala 114:56]
+  assign FPGAQueue_io_deq_ready = io_out_ready; // @[StreamReader.scala 121:12]
+  assign StreamFilter_io_in_valid = io_rsp_valid; // @[StreamFilter.scala 21:13]
+  assign StreamFilter_io_in_bits_readData = io_rsp_bits_readData; // @[StreamFilter.scala 21:13]
+  assign StreamFilter_io_out_ready = AXIStreamDownsizer_wide_TREADY; // @[AXIStreamDownsizer.scala 73:14]
+  assign AXIStreamDownsizer_clock = clock;
+  assign AXIStreamDownsizer_reset = reset;
+  assign AXIStreamDownsizer_wide_TVALID = StreamFilter_io_out_valid; // @[AXIStreamDownsizer.scala 72:18]
+  assign AXIStreamDownsizer_wide_TDATA = StreamFilter_io_out_bits; // @[AXIStreamDownsizer.scala 71:17]
+  assign AXIStreamDownsizer_narrow_TREADY = StreamLimiter_io_streamIn_ready; // @[AXIStreamDownsizer.scala 76:19]
+  assign StreamLimiter_clock = clock;
+  assign StreamLimiter_reset = reset;
+  assign StreamLimiter_io_start = io_start; // @[StreamLimiter.scala 15:19]
+  assign StreamLimiter_io_byteCount = io_byteCount; // @[StreamLimiter.scala 16:23]
+  assign StreamLimiter_io_streamIn_valid = AXIStreamDownsizer_narrow_TVALID; // @[StreamLimiter.scala 17:22]
+  assign StreamLimiter_io_streamIn_bits = AXIStreamDownsizer_narrow_TDATA; // @[StreamLimiter.scala 17:22]
+  assign StreamLimiter_io_streamOut_ready = FPGAQueue_io_enq_ready; // @[StreamReader.scala 114:56]
 endmodule
-
-module StreamReducer(input clk, input reset,
-    input  io_start,
-    output io_finished,
-    output[31:0] io_reduced,
-    input [31:0] io_byteCount,
-    output io_streamIn_ready,
-    input  io_streamIn_valid,
-    input [31:0] io_streamIn_bits
+module StreamReducer(
+  input         clock,
+  input         reset,
+  input         io_start,
+  output        io_finished,
+  output [31:0] io_reduced,
+  input  [31:0] io_byteCount,
+  output        io_streamIn_ready,
+  input         io_streamIn_valid,
+  input  [31:0] io_streamIn_bits
 );
-
-  wire T0;
-  wire T1;
-  wire T2;
-  reg [31:0] regBytesLeft;
-  wire[31:0] T20;
-  wire[31:0] T3;
-  wire[31:0] T4;
-  wire T5;
-  reg [1:0] regState;
-  wire[1:0] T21;
-  wire[1:0] T6;
-  wire[1:0] T7;
-  wire[1:0] T8;
-  wire T9;
-  wire T10;
-  wire T11;
-  wire T12;
-  wire T13;
-  wire[31:0] T14;
-  wire T15;
-  wire T16;
-  reg [31:0] regReduced;
-  wire[31:0] T22;
-  wire[31:0] T17;
-  wire[31:0] T18;
-  wire[31:0] T19;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regBytesLeft = {1{$random}};
-    regState = {1{$random}};
-    regReduced = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+  reg [31:0] _RAND_2;
+`endif // RANDOMIZE_REG_INIT
+  reg [1:0] regState; // @[StreamReducer.scala 18:25]
+  reg [31:0] regReduced; // @[StreamReducer.scala 19:27]
+  reg [31:0] regBytesLeft; // @[StreamReducer.scala 20:29]
+  wire  _T = 2'h0 == regState; // @[Conditional.scala 37:30]
+  wire  _T_1 = 2'h1 == regState; // @[Conditional.scala 37:30]
+  wire  _T_2 = regBytesLeft == 32'h0; // @[StreamReducer.scala 35:28]
+  wire [31:0] _T_4 = regReduced + io_streamIn_bits; // @[TestSum.scala 30:47]
+  wire [31:0] _T_6 = regBytesLeft - 32'h4; // @[StreamReducer.scala 40:42]
+  wire  _GEN_4 = _T_2 ? 1'h0 : 1'h1; // @[StreamReducer.scala 35:37]
+  wire  _T_7 = 2'h2 == regState; // @[Conditional.scala 37:30]
+  wire  _T_8 = ~io_start; // @[StreamReducer.scala 47:15]
+  wire  _GEN_11 = _T_1 & _GEN_4; // @[Conditional.scala 39:67]
+  wire  _GEN_14 = _T_1 ? 1'h0 : _T_7; // @[Conditional.scala 39:67]
+  assign io_finished = _T ? 1'h0 : _GEN_14; // @[StreamReducer.scala 22:15 StreamReducer.scala 46:21]
+  assign io_reduced = regReduced; // @[StreamReducer.scala 23:14]
+  assign io_streamIn_ready = _T ? 1'h0 : _GEN_11; // @[StreamReducer.scala 24:21 StreamReducer.scala 37:29]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign io_streamIn_ready = T0;
-  assign T0 = T16 & T1;
-  assign T1 = T2 ^ 1'h1;
-  assign T2 = regBytesLeft == 32'h0;
-  assign T20 = reset ? 32'h0 : T3;
-  assign T3 = T15 ? T14 : T4;
-  assign T4 = T5 ? io_byteCount : regBytesLeft;
-  assign T5 = 2'h0 == regState;
-  assign T21 = reset ? 2'h0 : T6;
-  assign T6 = T11 ? 2'h0 : T7;
-  assign T7 = T10 ? 2'h2 : T8;
-  assign T8 = T9 ? 2'h1 : regState;
-  assign T9 = T5 & io_start;
-  assign T10 = T16 & T2;
-  assign T11 = T13 & T12;
-  assign T12 = io_start ^ 1'h1;
-  assign T13 = 2'h2 == regState;
-  assign T14 = regBytesLeft - 32'h4;
-  assign T15 = T0 & io_streamIn_valid;
-  assign T16 = 2'h1 == regState;
-  assign io_reduced = regReduced;
-  assign T22 = reset ? 32'h0 : T17;
-  assign T17 = T15 ? T19 : T18;
-  assign T18 = T5 ? 32'h0 : regReduced;
-  assign T19 = regReduced + io_streamIn_bits;
-  assign io_finished = T13;
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regState = _RAND_0[1:0];
+  _RAND_1 = {1{`RANDOM}};
+  regReduced = _RAND_1[31:0];
+  _RAND_2 = {1{`RANDOM}};
+  regBytesLeft = _RAND_2[31:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
+      regState <= 2'h0;
+    end else if (_T) begin
+      if (io_start) begin
+        regState <= 2'h1;
+      end
+    end else if (_T_1) begin
+      if (_T_2) begin
+        regState <= 2'h2;
+      end
+    end else if (_T_7) begin
+      if (_T_8) begin
+        regState <= 2'h0;
+      end
+    end
+    if (reset) begin
+      regReduced <= 32'h0;
+    end else if (_T) begin
+      regReduced <= 32'h0;
+    end else if (_T_1) begin
+      if (!(_T_2)) begin
+        if (io_streamIn_valid) begin
+          regReduced <= _T_4;
+        end
+      end
+    end
+    if (reset) begin
       regBytesLeft <= 32'h0;
-    end else if(T15) begin
-      regBytesLeft <= T14;
-    end else if(T5) begin
+    end else if (_T) begin
       regBytesLeft <= io_byteCount;
-    end
-    if(reset) begin
-      regState <= 2'h0;
-    end else if(T11) begin
-      regState <= 2'h0;
-    end else if(T10) begin
-      regState <= 2'h2;
-    end else if(T9) begin
-      regState <= 2'h1;
-    end
-    if(reset) begin
-      regReduced <= 32'h0;
-    end else if(T15) begin
-      regReduced <= T19;
-    end else if(T5) begin
-      regReduced <= 32'h0;
+    end else if (_T_1) begin
+      if (!(_T_2)) begin
+        if (io_streamIn_valid) begin
+          regBytesLeft <= _T_6;
+        end
+      end
     end
   end
 endmodule
-
-module TestSum(input clk, input reset,
-    input  io_memPort_0_memRdReq_ready,
-    output io_memPort_0_memRdReq_valid,
-    output[5:0] io_memPort_0_memRdReq_bits_channelID,
-    output io_memPort_0_memRdReq_bits_isWrite,
-    output[31:0] io_memPort_0_memRdReq_bits_addr,
-    output[7:0] io_memPort_0_memRdReq_bits_numBytes,
-    output io_memPort_0_memRdReq_bits_metaData,
-    output io_memPort_0_memRdRsp_ready,
-    input  io_memPort_0_memRdRsp_valid,
-    input [5:0] io_memPort_0_memRdRsp_bits_channelID,
-    input [63:0] io_memPort_0_memRdRsp_bits_readData,
-    input  io_memPort_0_memRdRsp_bits_isWrite,
-    input  io_memPort_0_memRdRsp_bits_isLast,
-    input  io_memPort_0_memRdRsp_bits_metaData,
-    input  io_memPort_0_memWrReq_ready,
-    output io_memPort_0_memWrReq_valid,
-    output[5:0] io_memPort_0_memWrReq_bits_channelID,
-    output io_memPort_0_memWrReq_bits_isWrite,
-    output[31:0] io_memPort_0_memWrReq_bits_addr,
-    output[7:0] io_memPort_0_memWrReq_bits_numBytes,
-    output io_memPort_0_memWrReq_bits_metaData,
-    input  io_memPort_0_memWrDat_ready,
-    output io_memPort_0_memWrDat_valid,
-    output[63:0] io_memPort_0_memWrDat_bits,
-    output io_memPort_0_memWrRsp_ready,
-    input  io_memPort_0_memWrRsp_valid,
-    input [5:0] io_memPort_0_memWrRsp_bits_channelID,
-    input [63:0] io_memPort_0_memWrRsp_bits_readData,
-    input  io_memPort_0_memWrRsp_bits_isWrite,
-    input  io_memPort_0_memWrRsp_bits_isLast,
-    input  io_memPort_0_memWrRsp_bits_metaData,
-    output[31:0] io_signature,
-    input  io_start,
-    output io_finished,
-    input [63:0] io_baseAddr,
-    input [31:0] io_byteCount,
-    output[31:0] io_sum,
-    output[31:0] io_cycleCount
+module TestSum(
+  input         clock,
+  input         reset,
+  input         io_memPort_0_memRdReq_ready,
+  output        io_memPort_0_memRdReq_valid,
+  output [31:0] io_memPort_0_memRdReq_bits_addr,
+  output        io_memPort_0_memRdRsp_ready,
+  input         io_memPort_0_memRdRsp_valid,
+  input  [63:0] io_memPort_0_memRdRsp_bits_readData,
+  input         io_start,
+  output        io_finished,
+  input  [63:0] io_baseAddr,
+  input  [31:0] io_byteCount,
+  output [31:0] io_sum,
+  output [31:0] io_cycleCount
 );
-
-  wire[31:0] T8;
-  reg [31:0] regCycleCount;
-  wire[31:0] T9;
-  wire[31:0] T0;
-  wire[31:0] T1;
-  wire T2;
-  wire[31:0] T3;
-  wire T4;
-  wire T5;
-  wire T6;
-  wire T7;
-  wire StreamReducer_io_finished;
-  wire[31:0] StreamReducer_io_reduced;
-  wire StreamReducer_io_streamIn_ready;
-  wire StreamReader_io_out_valid;
-  wire[31:0] StreamReader_io_out_bits;
-  wire StreamReader_io_req_valid;
-  wire[5:0] StreamReader_io_req_bits_channelID;
-  wire StreamReader_io_req_bits_isWrite;
-  wire[31:0] StreamReader_io_req_bits_addr;
-  wire[7:0] StreamReader_io_req_bits_numBytes;
-  wire StreamReader_io_req_bits_metaData;
-  wire StreamReader_io_rsp_ready;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regCycleCount = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+`endif // RANDOMIZE_REG_INIT
+  wire  StreamReader_clock; // @[TestSum.scala 29:22]
+  wire  StreamReader_reset; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_start; // @[TestSum.scala 29:22]
+  wire [31:0] StreamReader_io_baseAddr; // @[TestSum.scala 29:22]
+  wire [31:0] StreamReader_io_byteCount; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_out_ready; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_out_valid; // @[TestSum.scala 29:22]
+  wire [31:0] StreamReader_io_out_bits; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_req_ready; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_req_valid; // @[TestSum.scala 29:22]
+  wire [31:0] StreamReader_io_req_bits_addr; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_rsp_ready; // @[TestSum.scala 29:22]
+  wire  StreamReader_io_rsp_valid; // @[TestSum.scala 29:22]
+  wire [63:0] StreamReader_io_rsp_bits_readData; // @[TestSum.scala 29:22]
+  wire  StreamReducer_clock; // @[TestSum.scala 30:19]
+  wire  StreamReducer_reset; // @[TestSum.scala 30:19]
+  wire  StreamReducer_io_start; // @[TestSum.scala 30:19]
+  wire  StreamReducer_io_finished; // @[TestSum.scala 30:19]
+  wire [31:0] StreamReducer_io_reduced; // @[TestSum.scala 30:19]
+  wire [31:0] StreamReducer_io_byteCount; // @[TestSum.scala 30:19]
+  wire  StreamReducer_io_streamIn_ready; // @[TestSum.scala 30:19]
+  wire  StreamReducer_io_streamIn_valid; // @[TestSum.scala 30:19]
+  wire [31:0] StreamReducer_io_streamIn_bits; // @[TestSum.scala 30:19]
+  reg [31:0] regCycleCount; // @[TestSum.scala 54:30]
+  wire  _T = ~io_start; // @[TestSum.scala 56:8]
+  wire  _T_1 = ~io_finished; // @[TestSum.scala 57:24]
+  wire  _T_2 = io_start & _T_1; // @[TestSum.scala 57:22]
+  wire [31:0] _T_4 = regCycleCount + 32'h1; // @[TestSum.scala 57:70]
+  StreamReader StreamReader ( // @[TestSum.scala 29:22]
+    .clock(StreamReader_clock),
+    .reset(StreamReader_reset),
+    .io_start(StreamReader_io_start),
+    .io_baseAddr(StreamReader_io_baseAddr),
+    .io_byteCount(StreamReader_io_byteCount),
+    .io_out_ready(StreamReader_io_out_ready),
+    .io_out_valid(StreamReader_io_out_valid),
+    .io_out_bits(StreamReader_io_out_bits),
+    .io_req_ready(StreamReader_io_req_ready),
+    .io_req_valid(StreamReader_io_req_valid),
+    .io_req_bits_addr(StreamReader_io_req_bits_addr),
+    .io_rsp_ready(StreamReader_io_rsp_ready),
+    .io_rsp_valid(StreamReader_io_rsp_valid),
+    .io_rsp_bits_readData(StreamReader_io_rsp_bits_readData)
+  );
+  StreamReducer StreamReducer ( // @[TestSum.scala 30:19]
+    .clock(StreamReducer_clock),
+    .reset(StreamReducer_reset),
+    .io_start(StreamReducer_io_start),
+    .io_finished(StreamReducer_io_finished),
+    .io_reduced(StreamReducer_io_reduced),
+    .io_byteCount(StreamReducer_io_byteCount),
+    .io_streamIn_ready(StreamReducer_io_streamIn_ready),
+    .io_streamIn_valid(StreamReducer_io_streamIn_valid),
+    .io_streamIn_bits(StreamReducer_io_streamIn_bits)
+  );
+  assign io_memPort_0_memRdReq_valid = StreamReader_io_req_valid; // @[TestSum.scala 49:14]
+  assign io_memPort_0_memRdReq_bits_addr = StreamReader_io_req_bits_addr; // @[TestSum.scala 49:14]
+  assign io_memPort_0_memRdRsp_ready = StreamReader_io_rsp_ready; // @[TestSum.scala 50:26]
+  assign io_finished = StreamReducer_io_finished; // @[TestSum.scala 47:15]
+  assign io_sum = StreamReducer_io_reduced; // @[TestSum.scala 46:10]
+  assign io_cycleCount = regCycleCount; // @[TestSum.scala 55:17]
+  assign StreamReader_clock = clock;
+  assign StreamReader_reset = reset;
+  assign StreamReader_io_start = io_start; // @[TestSum.scala 32:16]
+  assign StreamReader_io_baseAddr = io_baseAddr[31:0]; // @[TestSum.scala 33:19]
+  assign StreamReader_io_byteCount = io_byteCount; // @[TestSum.scala 34:20]
+  assign StreamReader_io_out_ready = StreamReducer_io_streamIn_ready; // @[TestSum.scala 52:14]
+  assign StreamReader_io_req_ready = io_memPort_0_memRdReq_ready; // @[TestSum.scala 49:14]
+  assign StreamReader_io_rsp_valid = io_memPort_0_memRdRsp_valid; // @[TestSum.scala 50:26]
+  assign StreamReader_io_rsp_bits_readData = io_memPort_0_memRdRsp_bits_readData; // @[TestSum.scala 50:26]
+  assign StreamReducer_clock = clock;
+  assign StreamReducer_reset = reset;
+  assign StreamReducer_io_start = io_start; // @[TestSum.scala 43:13]
+  assign StreamReducer_io_byteCount = io_byteCount; // @[TestSum.scala 44:17]
+  assign StreamReducer_io_streamIn_valid = StreamReader_io_out_valid; // @[TestSum.scala 52:14]
+  assign StreamReducer_io_streamIn_bits = StreamReader_io_out_bits; // @[TestSum.scala 52:14]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign T8 = io_baseAddr[31:0];
-  assign io_cycleCount = regCycleCount;
-  assign T9 = reset ? 32'h0 : T0;
-  assign T0 = T4 ? T3 : T1;
-  assign T1 = T2 ? 32'h0 : regCycleCount;
-  assign T2 = io_start ^ 1'h1;
-  assign T3 = regCycleCount + 32'h1;
-  assign T4 = T7 & T5;
-  assign T5 = io_start & T6;
-  assign T6 = io_finished ^ 1'h1;
-  assign T7 = T2 ^ 1'h1;
-  assign io_sum = StreamReducer_io_reduced;
-  assign io_finished = StreamReducer_io_finished;
-  assign io_signature = 32'h47512158;
-  assign io_memPort_0_memWrRsp_ready = 1'h0;
-  assign io_memPort_0_memWrDat_bits = 64'h0;
-  assign io_memPort_0_memWrDat_valid = 1'h0;
-  assign io_memPort_0_memWrReq_bits_metaData = 1'h0;
-  assign io_memPort_0_memWrReq_bits_numBytes = 8'h0;
-  assign io_memPort_0_memWrReq_bits_addr = 32'h0;
-  assign io_memPort_0_memWrReq_bits_isWrite = 1'h0;
-  assign io_memPort_0_memWrReq_bits_channelID = 6'h0;
-  assign io_memPort_0_memWrReq_valid = 1'h0;
-  assign io_memPort_0_memRdRsp_ready = StreamReader_io_rsp_ready;
-  assign io_memPort_0_memRdReq_bits_metaData = StreamReader_io_req_bits_metaData;
-  assign io_memPort_0_memRdReq_bits_numBytes = StreamReader_io_req_bits_numBytes;
-  assign io_memPort_0_memRdReq_bits_addr = StreamReader_io_req_bits_addr;
-  assign io_memPort_0_memRdReq_bits_isWrite = StreamReader_io_req_bits_isWrite;
-  assign io_memPort_0_memRdReq_bits_channelID = StreamReader_io_req_bits_channelID;
-  assign io_memPort_0_memRdReq_valid = StreamReader_io_req_valid;
-  StreamReader StreamReader(.clk(clk), .reset(reset),
-       .io_start( io_start ),
-       //.io_active(  )
-       //.io_finished(  )
-       //.io_error(  )
-       .io_baseAddr( T8 ),
-       .io_byteCount( io_byteCount ),
-       .io_out_ready( StreamReducer_io_streamIn_ready ),
-       .io_out_valid( StreamReader_io_out_valid ),
-       .io_out_bits( StreamReader_io_out_bits ),
-       .io_req_ready( io_memPort_0_memRdReq_ready ),
-       .io_req_valid( StreamReader_io_req_valid ),
-       .io_req_bits_channelID( StreamReader_io_req_bits_channelID ),
-       .io_req_bits_isWrite( StreamReader_io_req_bits_isWrite ),
-       .io_req_bits_addr( StreamReader_io_req_bits_addr ),
-       .io_req_bits_numBytes( StreamReader_io_req_bits_numBytes ),
-       .io_req_bits_metaData( StreamReader_io_req_bits_metaData ),
-       .io_rsp_ready( StreamReader_io_rsp_ready ),
-       .io_rsp_valid( io_memPort_0_memRdRsp_valid ),
-       .io_rsp_bits_channelID( io_memPort_0_memRdRsp_bits_channelID ),
-       .io_rsp_bits_readData( io_memPort_0_memRdRsp_bits_readData ),
-       .io_rsp_bits_isWrite( io_memPort_0_memRdRsp_bits_isWrite ),
-       .io_rsp_bits_isLast( io_memPort_0_memRdRsp_bits_isLast ),
-       .io_rsp_bits_metaData( io_memPort_0_memRdRsp_bits_metaData )
-       //.io_doInit(  )
-       //.io_initCount(  )
-  );
-  StreamReducer StreamReducer(.clk(clk), .reset(reset),
-       .io_start( io_start ),
-       .io_finished( StreamReducer_io_finished ),
-       .io_reduced( StreamReducer_io_reduced ),
-       .io_byteCount( io_byteCount ),
-       .io_streamIn_ready( StreamReducer_io_streamIn_ready ),
-       .io_streamIn_valid( StreamReader_io_out_valid ),
-       .io_streamIn_bits( StreamReader_io_out_bits )
-  );
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regCycleCount = _RAND_0[31:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       regCycleCount <= 32'h0;
-    end else if(T4) begin
-      regCycleCount <= T3;
-    end else if(T2) begin
+    end else if (_T) begin
       regCycleCount <= 32'h0;
+    end else if (_T_2) begin
+      regCycleCount <= _T_4;
     end
   end
 endmodule
-
-module RegFile(input clk, input reset,
-    input  io_extIF_cmd_valid,
-    input [2:0] io_extIF_cmd_bits_regID,
-    input  io_extIF_cmd_bits_read,
-    input  io_extIF_cmd_bits_write,
-    input [31:0] io_extIF_cmd_bits_writeData,
-    output io_extIF_readData_valid,
-    output[31:0] io_extIF_readData_bits,
-    output[2:0] io_extIF_regCount,
-    output[31:0] io_regOut_7,
-    output[31:0] io_regOut_6,
-    output[31:0] io_regOut_5,
-    output[31:0] io_regOut_4,
-    output[31:0] io_regOut_3,
-    output[31:0] io_regOut_2,
-    output[31:0] io_regOut_1,
-    output[31:0] io_regOut_0,
-    input  io_regIn_7_valid,
-    input [31:0] io_regIn_7_bits,
-    input  io_regIn_6_valid,
-    input [31:0] io_regIn_6_bits,
-    input  io_regIn_5_valid,
-    input [31:0] io_regIn_5_bits,
-    input  io_regIn_4_valid,
-    input [31:0] io_regIn_4_bits,
-    input  io_regIn_3_valid,
-    input [31:0] io_regIn_3_bits,
-    input  io_regIn_2_valid,
-    input [31:0] io_regIn_2_bits,
-    input  io_regIn_1_valid,
-    input [31:0] io_regIn_1_bits,
-    input  io_regIn_0_valid,
-    input [31:0] io_regIn_0_bits
+module RegFile(
+  input         clock,
+  input         reset,
+  input         io_extIF_cmd_valid,
+  input  [2:0]  io_extIF_cmd_bits_regID,
+  input         io_extIF_cmd_bits_read,
+  input         io_extIF_cmd_bits_write,
+  input  [31:0] io_extIF_cmd_bits_writeData,
+  output        io_extIF_readData_valid,
+  output [31:0] io_extIF_readData_bits,
+  output [31:0] io_regOut_3,
+  output [31:0] io_regOut_4,
+  output [31:0] io_regOut_5,
+  output [31:0] io_regOut_7,
+  input  [31:0] io_regIn_1_bits,
+  input  [31:0] io_regIn_2_bits,
+  input  [31:0] io_regIn_6_bits
 );
-
-  reg [31:0] regFile_0;
-  wire[31:0] T59;
-  wire[31:0] T0;
-  wire[31:0] T1;
-  reg [31:0] regCommand_writeData;
-  wire T2;
-  wire T3;
-  wire[7:0] T4;
-  wire[2:0] T5;
-  reg [2:0] regCommand_regID;
-  wire hasExtWriteCommand;
-  reg  regCommand_write;
-  reg  regDoCmd;
-  wire T60;
-  wire T6;
-  wire T7;
-  reg [31:0] regFile_1;
-  wire[31:0] T61;
-  wire[31:0] T8;
-  wire[31:0] T9;
-  wire T10;
-  wire T11;
-  wire T12;
-  reg [31:0] regFile_2;
-  wire[31:0] T62;
-  wire[31:0] T13;
-  wire[31:0] T14;
-  wire T15;
-  wire T16;
-  wire T17;
-  reg [31:0] regFile_3;
-  wire[31:0] T63;
-  wire[31:0] T18;
-  wire[31:0] T19;
-  wire T20;
-  wire T21;
-  wire T22;
-  reg [31:0] regFile_4;
-  wire[31:0] T64;
-  wire[31:0] T23;
-  wire[31:0] T24;
-  wire T25;
-  wire T26;
-  wire T27;
-  reg [31:0] regFile_5;
-  wire[31:0] T65;
-  wire[31:0] T28;
-  wire[31:0] T29;
-  wire T30;
-  wire T31;
-  wire T32;
-  reg [31:0] regFile_6;
-  wire[31:0] T66;
-  wire[31:0] T33;
-  wire[31:0] T34;
-  wire T35;
-  wire T36;
-  wire T37;
-  reg [31:0] regFile_7;
-  wire[31:0] T67;
-  wire[31:0] T38;
-  wire[31:0] T39;
-  wire T40;
-  wire T41;
-  wire T42;
-  wire[31:0] T43;
-  wire[31:0] T44;
-  wire[31:0] T45;
-  wire[31:0] T46;
-  wire T47;
-  wire[31:0] T48;
-  wire T49;
-  wire T50;
-  wire[31:0] T51;
-  wire[31:0] T52;
-  wire T53;
-  wire[31:0] T54;
-  wire T55;
-  wire T56;
-  wire T57;
-  wire T58;
-  wire[3:0] T68;
-  wire hasExtReadCommand;
-  reg  regCommand_read;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regFile_0 = {1{$random}};
-    regCommand_writeData = {1{$random}};
-    regCommand_regID = {1{$random}};
-    regCommand_write = {1{$random}};
-    regDoCmd = {1{$random}};
-    regFile_1 = {1{$random}};
-    regFile_2 = {1{$random}};
-    regFile_3 = {1{$random}};
-    regFile_4 = {1{$random}};
-    regFile_5 = {1{$random}};
-    regFile_6 = {1{$random}};
-    regFile_7 = {1{$random}};
-    regCommand_read = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+  reg [31:0] _RAND_2;
+  reg [31:0] _RAND_3;
+  reg [31:0] _RAND_4;
+  reg [31:0] _RAND_5;
+  reg [31:0] _RAND_6;
+  reg [31:0] _RAND_7;
+  reg [31:0] _RAND_8;
+  reg [31:0] _RAND_9;
+  reg [31:0] _RAND_10;
+  reg [31:0] _RAND_11;
+  reg [31:0] _RAND_12;
+`endif // RANDOMIZE_REG_INIT
+  reg [31:0] regFile_0; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_1; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_2; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_3; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_4; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_5; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_6; // @[RegFile.scala 51:24]
+  reg [31:0] regFile_7; // @[RegFile.scala 51:24]
+  reg [2:0] regCommand_regID; // @[RegFile.scala 54:27]
+  reg  regCommand_read; // @[RegFile.scala 54:27]
+  reg  regCommand_write; // @[RegFile.scala 54:27]
+  reg [31:0] regCommand_writeData; // @[RegFile.scala 54:27]
+  reg  regDoCmd; // @[RegFile.scala 55:25]
+  wire  hasExtWriteCommand = regDoCmd & regCommand_write; // @[RegFile.scala 59:38]
+  wire [31:0] _GEN_1 = 3'h1 == regCommand_regID ? regFile_1 : regFile_0; // @[RegFile.scala 65:29]
+  wire [31:0] _GEN_2 = 3'h2 == regCommand_regID ? regFile_2 : _GEN_1; // @[RegFile.scala 65:29]
+  wire [31:0] _GEN_3 = 3'h3 == regCommand_regID ? regFile_3 : _GEN_2; // @[RegFile.scala 65:29]
+  wire [31:0] _GEN_4 = 3'h4 == regCommand_regID ? regFile_4 : _GEN_3; // @[RegFile.scala 65:29]
+  wire [31:0] _GEN_5 = 3'h5 == regCommand_regID ? regFile_5 : _GEN_4; // @[RegFile.scala 65:29]
+  wire [31:0] _GEN_6 = 3'h6 == regCommand_regID ? regFile_6 : _GEN_5; // @[RegFile.scala 65:29]
+  assign io_extIF_readData_valid = regDoCmd & regCommand_read; // @[RegFile.scala 62:27]
+  assign io_extIF_readData_bits = 3'h7 == regCommand_regID ? regFile_7 : _GEN_6; // @[RegFile.scala 65:29 RegFile.scala 68:29]
+  assign io_regOut_3 = regFile_3; // @[RegFile.scala 85:18]
+  assign io_regOut_4 = regFile_4; // @[RegFile.scala 85:18]
+  assign io_regOut_5 = regFile_5; // @[RegFile.scala 85:18]
+  assign io_regOut_7 = regFile_7; // @[RegFile.scala 85:18]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign io_regOut_0 = regFile_0;
-  assign T59 = reset ? 32'h0 : T0;
-  assign T0 = T6 ? io_regIn_0_bits : T1;
-  assign T1 = T2 ? regCommand_writeData : regFile_0;
-  assign T2 = hasExtWriteCommand & T3;
-  assign T3 = T4[0];
-  assign T4 = 1'h1 << T5;
-  assign T5 = regCommand_regID;
-  assign hasExtWriteCommand = regDoCmd & regCommand_write;
-  assign T60 = reset ? 1'h0 : io_extIF_cmd_valid;
-  assign T6 = T7 & io_regIn_0_valid;
-  assign T7 = hasExtWriteCommand ^ 1'h1;
-  assign io_regOut_1 = regFile_1;
-  assign T61 = reset ? 32'h0 : T8;
-  assign T8 = T12 ? io_regIn_1_bits : T9;
-  assign T9 = T10 ? regCommand_writeData : regFile_1;
-  assign T10 = hasExtWriteCommand & T11;
-  assign T11 = T4[1];
-  assign T12 = T7 & io_regIn_1_valid;
-  assign io_regOut_2 = regFile_2;
-  assign T62 = reset ? 32'h0 : T13;
-  assign T13 = T17 ? io_regIn_2_bits : T14;
-  assign T14 = T15 ? regCommand_writeData : regFile_2;
-  assign T15 = hasExtWriteCommand & T16;
-  assign T16 = T4[2];
-  assign T17 = T7 & io_regIn_2_valid;
-  assign io_regOut_3 = regFile_3;
-  assign T63 = reset ? 32'h0 : T18;
-  assign T18 = T22 ? io_regIn_3_bits : T19;
-  assign T19 = T20 ? regCommand_writeData : regFile_3;
-  assign T20 = hasExtWriteCommand & T21;
-  assign T21 = T4[3];
-  assign T22 = T7 & io_regIn_3_valid;
-  assign io_regOut_4 = regFile_4;
-  assign T64 = reset ? 32'h0 : T23;
-  assign T23 = T27 ? io_regIn_4_bits : T24;
-  assign T24 = T25 ? regCommand_writeData : regFile_4;
-  assign T25 = hasExtWriteCommand & T26;
-  assign T26 = T4[4];
-  assign T27 = T7 & io_regIn_4_valid;
-  assign io_regOut_5 = regFile_5;
-  assign T65 = reset ? 32'h0 : T28;
-  assign T28 = T32 ? io_regIn_5_bits : T29;
-  assign T29 = T30 ? regCommand_writeData : regFile_5;
-  assign T30 = hasExtWriteCommand & T31;
-  assign T31 = T4[5];
-  assign T32 = T7 & io_regIn_5_valid;
-  assign io_regOut_6 = regFile_6;
-  assign T66 = reset ? 32'h0 : T33;
-  assign T33 = T37 ? io_regIn_6_bits : T34;
-  assign T34 = T35 ? regCommand_writeData : regFile_6;
-  assign T35 = hasExtWriteCommand & T36;
-  assign T36 = T4[6];
-  assign T37 = T7 & io_regIn_6_valid;
-  assign io_regOut_7 = regFile_7;
-  assign T67 = reset ? 32'h0 : T38;
-  assign T38 = T42 ? io_regIn_7_bits : T39;
-  assign T39 = T40 ? regCommand_writeData : regFile_7;
-  assign T40 = hasExtWriteCommand & T41;
-  assign T41 = T4[7];
-  assign T42 = T7 & io_regIn_7_valid;
-  assign io_extIF_regCount = 3'h0;
-  assign io_extIF_readData_bits = T43;
-  assign T43 = T58 ? T44 : 32'h0;
-  assign T44 = T57 ? T51 : T45;
-  assign T45 = T50 ? T48 : T46;
-  assign T46 = T47 ? regFile_1 : regFile_0;
-  assign T47 = T5[0];
-  assign T48 = T49 ? regFile_3 : regFile_2;
-  assign T49 = T5[0];
-  assign T50 = T5[1];
-  assign T51 = T56 ? T54 : T52;
-  assign T52 = T53 ? regFile_5 : regFile_4;
-  assign T53 = T5[0];
-  assign T54 = T55 ? regFile_7 : regFile_6;
-  assign T55 = T5[0];
-  assign T56 = T5[1];
-  assign T57 = T5[2];
-  assign T58 = T68 < 4'h8;
-  assign T68 = {1'h0, regCommand_regID};
-  assign io_extIF_readData_valid = hasExtReadCommand;
-  assign hasExtReadCommand = regDoCmd & regCommand_read;
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regFile_0 = _RAND_0[31:0];
+  _RAND_1 = {1{`RANDOM}};
+  regFile_1 = _RAND_1[31:0];
+  _RAND_2 = {1{`RANDOM}};
+  regFile_2 = _RAND_2[31:0];
+  _RAND_3 = {1{`RANDOM}};
+  regFile_3 = _RAND_3[31:0];
+  _RAND_4 = {1{`RANDOM}};
+  regFile_4 = _RAND_4[31:0];
+  _RAND_5 = {1{`RANDOM}};
+  regFile_5 = _RAND_5[31:0];
+  _RAND_6 = {1{`RANDOM}};
+  regFile_6 = _RAND_6[31:0];
+  _RAND_7 = {1{`RANDOM}};
+  regFile_7 = _RAND_7[31:0];
+  _RAND_8 = {1{`RANDOM}};
+  regCommand_regID = _RAND_8[2:0];
+  _RAND_9 = {1{`RANDOM}};
+  regCommand_read = _RAND_9[0:0];
+  _RAND_10 = {1{`RANDOM}};
+  regCommand_write = _RAND_10[0:0];
+  _RAND_11 = {1{`RANDOM}};
+  regCommand_writeData = _RAND_11[31:0];
+  _RAND_12 = {1{`RANDOM}};
+  regDoCmd = _RAND_12[0:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       regFile_0 <= 32'h0;
-    end else if(T6) begin
-      regFile_0 <= io_regIn_0_bits;
-    end else if(T2) begin
-      regFile_0 <= regCommand_writeData;
+    end else if (hasExtWriteCommand) begin
+      if (3'h0 == regCommand_regID) begin
+        regFile_0 <= regCommand_writeData;
+      end
+    end else begin
+      regFile_0 <= 32'h47512158;
     end
-    regCommand_writeData <= io_extIF_cmd_bits_writeData;
+    if (reset) begin
+      regFile_1 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h1 == regCommand_regID) begin
+        regFile_1 <= regCommand_writeData;
+      end
+    end else begin
+      regFile_1 <= io_regIn_1_bits;
+    end
+    if (reset) begin
+      regFile_2 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h2 == regCommand_regID) begin
+        regFile_2 <= regCommand_writeData;
+      end
+    end else begin
+      regFile_2 <= io_regIn_2_bits;
+    end
+    if (reset) begin
+      regFile_3 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h3 == regCommand_regID) begin
+        regFile_3 <= regCommand_writeData;
+      end
+    end
+    if (reset) begin
+      regFile_4 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h4 == regCommand_regID) begin
+        regFile_4 <= regCommand_writeData;
+      end
+    end
+    if (reset) begin
+      regFile_5 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h5 == regCommand_regID) begin
+        regFile_5 <= regCommand_writeData;
+      end
+    end
+    if (reset) begin
+      regFile_6 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h6 == regCommand_regID) begin
+        regFile_6 <= regCommand_writeData;
+      end
+    end else begin
+      regFile_6 <= io_regIn_6_bits;
+    end
+    if (reset) begin
+      regFile_7 <= 32'h0;
+    end else if (hasExtWriteCommand) begin
+      if (3'h7 == regCommand_regID) begin
+        regFile_7 <= regCommand_writeData;
+      end
+    end
     regCommand_regID <= io_extIF_cmd_bits_regID;
+    regCommand_read <= io_extIF_cmd_bits_read;
     regCommand_write <= io_extIF_cmd_bits_write;
-    if(reset) begin
+    regCommand_writeData <= io_extIF_cmd_bits_writeData;
+    if (reset) begin
       regDoCmd <= 1'h0;
     end else begin
       regDoCmd <= io_extIF_cmd_valid;
     end
-    if(reset) begin
-      regFile_1 <= 32'h0;
-    end else if(T12) begin
-      regFile_1 <= io_regIn_1_bits;
-    end else if(T10) begin
-      regFile_1 <= regCommand_writeData;
-    end
-    if(reset) begin
-      regFile_2 <= 32'h0;
-    end else if(T17) begin
-      regFile_2 <= io_regIn_2_bits;
-    end else if(T15) begin
-      regFile_2 <= regCommand_writeData;
-    end
-    if(reset) begin
-      regFile_3 <= 32'h0;
-    end else if(T22) begin
-      regFile_3 <= io_regIn_3_bits;
-    end else if(T20) begin
-      regFile_3 <= regCommand_writeData;
-    end
-    if(reset) begin
-      regFile_4 <= 32'h0;
-    end else if(T27) begin
-      regFile_4 <= io_regIn_4_bits;
-    end else if(T25) begin
-      regFile_4 <= regCommand_writeData;
-    end
-    if(reset) begin
-      regFile_5 <= 32'h0;
-    end else if(T32) begin
-      regFile_5 <= io_regIn_5_bits;
-    end else if(T30) begin
-      regFile_5 <= regCommand_writeData;
-    end
-    if(reset) begin
-      regFile_6 <= 32'h0;
-    end else if(T37) begin
-      regFile_6 <= io_regIn_6_bits;
-    end else if(T35) begin
-      regFile_6 <= regCommand_writeData;
-    end
-    if(reset) begin
-      regFile_7 <= 32'h0;
-    end else if(T42) begin
-      regFile_7 <= io_regIn_7_bits;
-    end else if(T40) begin
-      regFile_7 <= regCommand_writeData;
-    end
-    regCommand_read <= io_extIF_cmd_bits_read;
   end
 endmodule
-
 module AXIMemReqAdp(
-    output io_genericReqIn_ready,
-    input  io_genericReqIn_valid,
-    input [5:0] io_genericReqIn_bits_channelID,
-    input  io_genericReqIn_bits_isWrite,
-    input [31:0] io_genericReqIn_bits_addr,
-    input [7:0] io_genericReqIn_bits_numBytes,
-    input  io_genericReqIn_bits_metaData,
-    input  io_axiReqOut_ready,
-    output io_axiReqOut_valid,
-    output[31:0] io_axiReqOut_bits_addr,
-    output[2:0] io_axiReqOut_bits_size,
-    output[7:0] io_axiReqOut_bits_len,
-    output[1:0] io_axiReqOut_bits_burst,
-    output[5:0] io_axiReqOut_bits_id,
-    output io_axiReqOut_bits_lock,
-    output[3:0] io_axiReqOut_bits_cache,
-    output[2:0] io_axiReqOut_bits_prot,
-    output[3:0] io_axiReqOut_bits_qos
+  output        io_genericReqIn_ready,
+  input         io_genericReqIn_valid,
+  input  [31:0] io_genericReqIn_bits_addr,
+  input  [7:0]  io_genericReqIn_bits_numBytes,
+  input         io_axiReqOut_ready,
+  output        io_axiReqOut_valid,
+  output [31:0] io_axiReqOut_bits_addr,
+  output [7:0]  io_axiReqOut_bits_len
 );
-
-  wire[7:0] T0;
-  wire[7:0] beats;
-
-
-  assign io_axiReqOut_bits_qos = 4'h0;
-  assign io_axiReqOut_bits_prot = 3'h0;
-  assign io_axiReqOut_bits_cache = 4'h2;
-  assign io_axiReqOut_bits_lock = 1'h0;
-  assign io_axiReqOut_bits_id = io_genericReqIn_bits_channelID;
-  assign io_axiReqOut_bits_burst = 2'h1;
-  assign io_axiReqOut_bits_len = T0;
-  assign T0 = beats - 8'h1;
-  assign beats = io_genericReqIn_bits_numBytes / 4'h8;
-  assign io_axiReqOut_bits_size = 3'h3;
-  assign io_axiReqOut_bits_addr = io_genericReqIn_bits_addr;
-  assign io_axiReqOut_valid = io_genericReqIn_valid;
-  assign io_genericReqIn_ready = io_axiReqOut_ready;
+  wire [7:0] beats = io_genericReqIn_bits_numBytes / 8'h8; // @[AXIMemAdapters.scala 21:31]
+  assign io_genericReqIn_ready = io_axiReqOut_ready; // @[AXIMemAdapters.scala 13:25]
+  assign io_axiReqOut_valid = io_genericReqIn_valid; // @[AXIMemAdapters.scala 14:22]
+  assign io_axiReqOut_bits_addr = io_genericReqIn_bits_addr; // @[AXIMemAdapters.scala 19:15]
+  assign io_axiReqOut_bits_len = beats - 8'h1; // @[AXIMemAdapters.scala 22:14]
 endmodule
-
 module AXIReadRspAdp(
-    output io_axiReadRspIn_ready,
-    input  io_axiReadRspIn_valid,
-    input [63:0] io_axiReadRspIn_bits_data,
-    input [5:0] io_axiReadRspIn_bits_id,
-    input  io_axiReadRspIn_bits_last,
-    input [1:0] io_axiReadRspIn_bits_resp,
-    input  io_genericRspOut_ready,
-    output io_genericRspOut_valid,
-    output[5:0] io_genericRspOut_bits_channelID,
-    output[63:0] io_genericRspOut_bits_readData,
-    output io_genericRspOut_bits_isWrite,
-    output io_genericRspOut_bits_isLast,
-    output io_genericRspOut_bits_metaData
+  output        io_axiReadRspIn_ready,
+  input         io_axiReadRspIn_valid,
+  input  [63:0] io_axiReadRspIn_bits_data,
+  input         io_genericRspOut_ready,
+  output        io_genericRspOut_valid,
+  output [63:0] io_genericRspOut_bits_readData
 );
-
-
-
-  assign io_genericRspOut_bits_metaData = 1'h0;
-  assign io_genericRspOut_bits_isLast = io_axiReadRspIn_bits_last;
-  assign io_genericRspOut_bits_isWrite = 1'h0;
-  assign io_genericRspOut_bits_readData = io_axiReadRspIn_bits_data;
-  assign io_genericRspOut_bits_channelID = io_axiReadRspIn_bits_id;
-  assign io_genericRspOut_valid = io_axiReadRspIn_valid;
-  assign io_axiReadRspIn_ready = io_genericRspOut_ready;
+  assign io_axiReadRspIn_ready = io_genericRspOut_ready; // @[AXIMemAdapters.scala 38:25]
+  assign io_genericRspOut_valid = io_axiReadRspIn_valid; // @[AXIMemAdapters.scala 37:26]
+  assign io_genericRspOut_bits_readData = io_axiReadRspIn_bits_data; // @[AXIMemAdapters.scala 43:19]
 endmodule
-
-module AXIWriteBurstReqAdapter(input clk, input reset,
-    output io_in_writeAddr_ready,
-    input  io_in_writeAddr_valid,
-    input [31:0] io_in_writeAddr_bits_addr,
-    input [2:0] io_in_writeAddr_bits_size,
-    input [7:0] io_in_writeAddr_bits_len,
-    input [1:0] io_in_writeAddr_bits_burst,
-    input [5:0] io_in_writeAddr_bits_id,
-    input  io_in_writeAddr_bits_lock,
-    input [3:0] io_in_writeAddr_bits_cache,
-    input [2:0] io_in_writeAddr_bits_prot,
-    input [3:0] io_in_writeAddr_bits_qos,
-    output io_in_writeData_ready,
-    input  io_in_writeData_valid,
-    input [63:0] io_in_writeData_bits_data,
-    input [7:0] io_in_writeData_bits_strb,
-    input  io_in_writeData_bits_last,
-    input  io_out_writeAddr_ready,
-    output io_out_writeAddr_valid,
-    output[31:0] io_out_writeAddr_bits_addr,
-    output[2:0] io_out_writeAddr_bits_size,
-    output[7:0] io_out_writeAddr_bits_len,
-    output[1:0] io_out_writeAddr_bits_burst,
-    output[5:0] io_out_writeAddr_bits_id,
-    output io_out_writeAddr_bits_lock,
-    output[3:0] io_out_writeAddr_bits_cache,
-    output[2:0] io_out_writeAddr_bits_prot,
-    output[3:0] io_out_writeAddr_bits_qos,
-    input  io_out_writeData_ready,
-    output io_out_writeData_valid,
-    output[63:0] io_out_writeData_bits_data,
-    output[7:0] io_out_writeData_bits_strb,
-    output io_out_writeData_bits_last
+module AXIWriteBurstReqAdapter(
+  input         clock,
+  input         reset,
+  output        io_in_writeAddr_ready,
+  input         io_in_writeAddr_valid,
+  input  [31:0] io_in_writeAddr_bits_addr,
+  input  [7:0]  io_in_writeAddr_bits_len,
+  input         io_out_writeAddr_ready,
+  output        io_out_writeAddr_valid,
+  output [31:0] io_out_writeAddr_bits_addr,
+  output [7:0]  io_out_writeAddr_bits_len,
+  input         io_out_writeData_ready,
+  output        io_out_writeData_valid,
+  output        io_out_writeData_bits_last
 );
-
-  wire T0;
-  wire T1;
-  reg [7:0] regBeatsLeft;
-  wire[7:0] T20;
-  wire[7:0] T2;
-  wire[7:0] T3;
-  wire T4;
-  wire T5;
-  wire T6;
-  reg  regState;
-  wire T21;
-  wire T7;
-  wire T8;
-  wire T9;
-  wire T10;
-  wire T11;
-  wire[7:0] T12;
-  wire T13;
-  wire T14;
-  wire T15;
-  wire T16;
-  wire T17;
-  wire T18;
-  wire T19;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
-  integer initvar;
-  initial begin
-    #0.002;
-    regBeatsLeft = {1{$random}};
-    regState = {1{$random}};
-  end
-// synthesis translate_on
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+`endif // RANDOMIZE_REG_INIT
+  reg  regState; // @[AXIMemAdapters.scala 155:25]
+  reg [7:0] regBeatsLeft; // @[AXIMemAdapters.scala 156:29]
+  wire  _T = ~regState; // @[Conditional.scala 37:30]
+  wire  _T_1 = io_out_writeAddr_ready & io_out_writeAddr_valid; // @[Decoupled.scala 40:37]
+  wire  _GEN_1 = _T_1 | regState; // @[AXIMemAdapters.scala 165:37]
+  wire  _T_3 = regBeatsLeft == 8'h0; // @[AXIMemAdapters.scala 172:38]
+  wire  _T_4 = io_out_writeData_ready & io_out_writeData_valid; // @[Decoupled.scala 40:37]
+  wire [7:0] _T_6 = regBeatsLeft - 8'h1; // @[AXIMemAdapters.scala 180:51]
+  wire  _GEN_8 = regState & _T_3; // @[Conditional.scala 39:67]
+  assign io_in_writeAddr_ready = _T & io_out_writeAddr_ready; // @[AXIMemAdapters.scala 144:19 AXIMemAdapters.scala 148:25 AXIMemAdapters.scala 162:29]
+  assign io_out_writeAddr_valid = _T & io_in_writeAddr_valid; // @[AXIMemAdapters.scala 144:19 AXIMemAdapters.scala 147:26 AXIMemAdapters.scala 161:30]
+  assign io_out_writeAddr_bits_addr = io_in_writeAddr_bits_addr; // @[AXIMemAdapters.scala 144:19]
+  assign io_out_writeAddr_bits_len = io_in_writeAddr_bits_len; // @[AXIMemAdapters.scala 144:19]
+  assign io_out_writeData_valid = 1'h0; // @[AXIMemAdapters.scala 145:19 AXIMemAdapters.scala 149:26 AXIMemAdapters.scala 174:30]
+  assign io_out_writeData_bits_last = _T ? 1'h0 : _GEN_8; // @[AXIMemAdapters.scala 145:19 AXIMemAdapters.scala 152:30 AXIMemAdapters.scala 176:34]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
 `endif
-
-  assign io_out_writeData_bits_last = T0;
-  assign T0 = T15 ? T1 : 1'h0;
-  assign T1 = regBeatsLeft == 8'h0;
-  assign T20 = reset ? 8'h0 : T2;
-  assign T2 = T13 ? T12 : T3;
-  assign T3 = T4 ? io_in_writeAddr_bits_len : regBeatsLeft;
-  assign T4 = T6 & T5;
-  assign T5 = io_out_writeAddr_ready & io_out_writeAddr_valid;
-  assign T6 = 1'h0 == regState;
-  assign T21 = reset ? 1'h0 : T7;
-  assign T7 = T9 ? 1'h0 : T8;
-  assign T8 = T4 ? 1'h1 : regState;
-  assign T9 = T10 & T1;
-  assign T10 = T15 & T11;
-  assign T11 = io_out_writeData_ready & io_out_writeData_valid;
-  assign T12 = regBeatsLeft - 8'h1;
-  assign T13 = T10 & T14;
-  assign T14 = T1 ^ 1'h1;
-  assign T15 = 1'h1 == regState;
-  assign io_out_writeData_bits_strb = io_in_writeData_bits_strb;
-  assign io_out_writeData_bits_data = io_in_writeData_bits_data;
-  assign io_out_writeData_valid = T16;
-  assign T16 = T15 ? io_in_writeData_valid : 1'h0;
-  assign io_out_writeAddr_bits_qos = io_in_writeAddr_bits_qos;
-  assign io_out_writeAddr_bits_prot = io_in_writeAddr_bits_prot;
-  assign io_out_writeAddr_bits_cache = io_in_writeAddr_bits_cache;
-  assign io_out_writeAddr_bits_lock = io_in_writeAddr_bits_lock;
-  assign io_out_writeAddr_bits_id = io_in_writeAddr_bits_id;
-  assign io_out_writeAddr_bits_burst = io_in_writeAddr_bits_burst;
-  assign io_out_writeAddr_bits_len = io_in_writeAddr_bits_len;
-  assign io_out_writeAddr_bits_size = io_in_writeAddr_bits_size;
-  assign io_out_writeAddr_bits_addr = io_in_writeAddr_bits_addr;
-  assign io_out_writeAddr_valid = T17;
-  assign T17 = T6 ? io_in_writeAddr_valid : 1'h0;
-  assign io_in_writeData_ready = T18;
-  assign T18 = T15 ? io_out_writeData_ready : 1'h0;
-  assign io_in_writeAddr_ready = T19;
-  assign T19 = T6 ? io_out_writeAddr_ready : 1'h0;
-
-  always @(posedge clk) begin
-    if(reset) begin
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+  integer initvar;
+`endif
+`ifndef SYNTHESIS
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
+`endif
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regState = _RAND_0[0:0];
+  _RAND_1 = {1{`RANDOM}};
+  regBeatsLeft = _RAND_1[7:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
+      regState <= 1'h0;
+    end else if (_T) begin
+      regState <= _GEN_1;
+    end else if (regState) begin
+      if (_T_4) begin
+        if (_T_3) begin
+          regState <= 1'h0;
+        end
+      end
+    end
+    if (reset) begin
       regBeatsLeft <= 8'h0;
-    end else if(T13) begin
-      regBeatsLeft <= T12;
-    end else if(T4) begin
-      regBeatsLeft <= io_in_writeAddr_bits_len;
-    end
-    if(reset) begin
-      regState <= 1'h0;
-    end else if(T9) begin
-      regState <= 1'h0;
-    end else if(T4) begin
-      regState <= 1'h1;
+    end else if (_T) begin
+      if (_T_1) begin
+        regBeatsLeft <= io_in_writeAddr_bits_len;
+      end
+    end else if (regState) begin
+      if (_T_4) begin
+        if (!(_T_3)) begin
+          regBeatsLeft <= _T_6;
+        end
+      end
     end
   end
 endmodule
-
-module SRLQueue_0(input clk, input reset,
-    output io_enq_ready,
-    input  io_enq_valid,
-    input [63:0] io_enq_bits_data,
-    input [7:0] io_enq_bits_strb,
-    input  io_enq_bits_last,
-    input  io_deq_ready,
-    output io_deq_valid,
-    output[63:0] io_deq_bits_data,
-    output[7:0] io_deq_bits_strb,
-    output io_deq_bits_last,
-    output[1:0] io_count
+module SRLQueue_1(
+  input         clock,
+  input         reset,
+  output        io_enq_ready,
+  input         io_enq_bits_last,
+  input         io_deq_ready,
+  output        io_deq_valid,
+  output [63:0] io_deq_bits_data,
+  output [7:0]  io_deq_bits_strb,
+  output        io_deq_bits_last
 );
-
-  wire T0;
-  wire[72:0] T1;
-  wire[72:0] T2;
-  wire[8:0] T3;
-  wire T4;
-  wire[7:0] T5;
-  wire[63:0] T6;
-  wire T7;
-  wire Q_srl_i_b;
-  wire Q_srl_o_v;
-  wire[72:0] Q_srl_o_d;
-  wire[1:0] Q_srl_count;
-
-
-  assign T0 = io_deq_ready ^ 1'h1;
-  assign T1 = T2;
-  assign T2 = {io_enq_bits_data, T3};
-  assign T3 = {io_enq_bits_strb, io_enq_bits_last};
-  assign io_count = Q_srl_count;
-  assign io_deq_bits_last = T4;
-  assign T4 = Q_srl_o_d[0];
-  assign io_deq_bits_strb = T5;
-  assign T5 = Q_srl_o_d[8:1];
-  assign io_deq_bits_data = T6;
-  assign T6 = Q_srl_o_d[72:9];
-  assign io_deq_valid = Q_srl_o_v;
-  assign io_enq_ready = T7;
-  assign T7 = Q_srl_i_b ^ 1'h1;
-  Q_srl # (
-    .depth(2),
-    .width(73)
-  ) Q_srl(.clock(clk), .reset(reset),
-       .i_v( io_enq_valid ),
-       .i_d( T1 ),
-       .i_b( Q_srl_i_b ),
-       .o_v( Q_srl_o_v ),
-       .o_d( Q_srl_o_d ),
-       .o_b( T0 ),
-       .count( Q_srl_count )
+  wire  Q_srl_i_v; // @[FPGAQueue.scala 70:20]
+  wire [72:0] Q_srl_i_d; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_i_b; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_o_v; // @[FPGAQueue.scala 70:20]
+  wire [72:0] Q_srl_o_d; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_o_b; // @[FPGAQueue.scala 70:20]
+  wire [1:0] Q_srl_count; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_clock; // @[FPGAQueue.scala 70:20]
+  wire  Q_srl_reset; // @[FPGAQueue.scala 70:20]
+  wire [72:0] _T_3 = Q_srl_o_d;
+  Q_srl #(.depth(2), .width(73)) Q_srl ( // @[FPGAQueue.scala 70:20]
+    .i_v(Q_srl_i_v),
+    .i_d(Q_srl_i_d),
+    .i_b(Q_srl_i_b),
+    .o_v(Q_srl_o_v),
+    .o_d(Q_srl_o_d),
+    .o_b(Q_srl_o_b),
+    .count(Q_srl_count),
+    .clock(Q_srl_clock),
+    .reset(Q_srl_reset)
   );
+  assign io_enq_ready = ~Q_srl_i_b; // @[FPGAQueue.scala 83:16]
+  assign io_deq_valid = Q_srl_o_v; // @[FPGAQueue.scala 78:16]
+  assign io_deq_bits_data = _T_3[72:9]; // @[FPGAQueue.scala 79:15]
+  assign io_deq_bits_strb = _T_3[8:1]; // @[FPGAQueue.scala 79:15]
+  assign io_deq_bits_last = _T_3[0]; // @[FPGAQueue.scala 79:15]
+  assign Q_srl_i_v = 1'h0; // @[FPGAQueue.scala 73:12]
+  assign Q_srl_i_d = {72'hff,io_enq_bits_last}; // @[FPGAQueue.scala 74:12]
+  assign Q_srl_o_b = ~io_deq_ready; // @[FPGAQueue.scala 82:12]
+  assign Q_srl_clock = clock; // @[FPGAQueue.scala 75:14]
+  assign Q_srl_reset = reset; // @[FPGAQueue.scala 76:14]
 endmodule
-
-module FPGAQueue_0(input clk, input reset,
-    output io_enq_ready,
-    input  io_enq_valid,
-    input [63:0] io_enq_bits_data,
-    input [7:0] io_enq_bits_strb,
-    input  io_enq_bits_last,
-    input  io_deq_ready,
-    output io_deq_valid,
-    output[63:0] io_deq_bits_data,
-    output[7:0] io_deq_bits_strb,
-    output io_deq_bits_last,
-    output[1:0] io_count
+module FPGAQueue_1(
+  input         clock,
+  input         reset,
+  output        io_enq_ready,
+  input         io_enq_bits_last,
+  input         io_deq_ready,
+  output        io_deq_valid,
+  output [63:0] io_deq_bits_data,
+  output [7:0]  io_deq_bits_strb,
+  output        io_deq_bits_last
 );
-
-  wire SRLQueue_io_enq_ready;
-  wire SRLQueue_io_deq_valid;
-  wire[63:0] SRLQueue_io_deq_bits_data;
-  wire[7:0] SRLQueue_io_deq_bits_strb;
-  wire SRLQueue_io_deq_bits_last;
-  wire[1:0] SRLQueue_io_count;
-
-
-  assign io_count = SRLQueue_io_count;
-  assign io_deq_bits_last = SRLQueue_io_deq_bits_last;
-  assign io_deq_bits_strb = SRLQueue_io_deq_bits_strb;
-  assign io_deq_bits_data = SRLQueue_io_deq_bits_data;
-  assign io_deq_valid = SRLQueue_io_deq_valid;
-  assign io_enq_ready = SRLQueue_io_enq_ready;
-  SRLQueue_0 SRLQueue(.clk(clk), .reset(reset),
-       .io_enq_ready( SRLQueue_io_enq_ready ),
-       .io_enq_valid( io_enq_valid ),
-       .io_enq_bits_data( io_enq_bits_data ),
-       .io_enq_bits_strb( io_enq_bits_strb ),
-       .io_enq_bits_last( io_enq_bits_last ),
-       .io_deq_ready( io_deq_ready ),
-       .io_deq_valid( SRLQueue_io_deq_valid ),
-       .io_deq_bits_data( SRLQueue_io_deq_bits_data ),
-       .io_deq_bits_strb( SRLQueue_io_deq_bits_strb ),
-       .io_deq_bits_last( SRLQueue_io_deq_bits_last ),
-       .io_count( SRLQueue_io_count )
+  wire  SRLQueue_clock; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_reset; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_enq_ready; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_enq_bits_last; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_deq_ready; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_deq_valid; // @[FPGAQueue.scala 168:26]
+  wire [63:0] SRLQueue_io_deq_bits_data; // @[FPGAQueue.scala 168:26]
+  wire [7:0] SRLQueue_io_deq_bits_strb; // @[FPGAQueue.scala 168:26]
+  wire  SRLQueue_io_deq_bits_last; // @[FPGAQueue.scala 168:26]
+  SRLQueue_1 SRLQueue ( // @[FPGAQueue.scala 168:26]
+    .clock(SRLQueue_clock),
+    .reset(SRLQueue_reset),
+    .io_enq_ready(SRLQueue_io_enq_ready),
+    .io_enq_bits_last(SRLQueue_io_enq_bits_last),
+    .io_deq_ready(SRLQueue_io_deq_ready),
+    .io_deq_valid(SRLQueue_io_deq_valid),
+    .io_deq_bits_data(SRLQueue_io_deq_bits_data),
+    .io_deq_bits_strb(SRLQueue_io_deq_bits_strb),
+    .io_deq_bits_last(SRLQueue_io_deq_bits_last)
   );
+  assign io_enq_ready = SRLQueue_io_enq_ready; // @[FPGAQueue.scala 169:14]
+  assign io_deq_valid = SRLQueue_io_deq_valid; // @[FPGAQueue.scala 169:14]
+  assign io_deq_bits_data = SRLQueue_io_deq_bits_data; // @[FPGAQueue.scala 169:14]
+  assign io_deq_bits_strb = SRLQueue_io_deq_bits_strb; // @[FPGAQueue.scala 169:14]
+  assign io_deq_bits_last = SRLQueue_io_deq_bits_last; // @[FPGAQueue.scala 169:14]
+  assign SRLQueue_clock = clock;
+  assign SRLQueue_reset = reset;
+  assign SRLQueue_io_enq_bits_last = io_enq_bits_last; // @[FPGAQueue.scala 169:14]
+  assign SRLQueue_io_deq_ready = io_deq_ready; // @[FPGAQueue.scala 169:14]
 endmodule
-
-module AXIWriteRspAdp(
-    output io_axiWriteRspIn_ready,
-    input  io_axiWriteRspIn_valid,
-    input [5:0] io_axiWriteRspIn_bits_id,
-    input [1:0] io_axiWriteRspIn_bits_resp,
-    input  io_genericRspOut_ready,
-    output io_genericRspOut_valid,
-    output[5:0] io_genericRspOut_bits_channelID,
-    output[63:0] io_genericRspOut_bits_readData,
-    output io_genericRspOut_bits_isWrite,
-    output io_genericRspOut_bits_isLast,
-    output io_genericRspOut_bits_metaData
+module ZedBoardWrapper(
+  input         clock,
+  input         reset,
+  output [31:0] mem0_ARADDR,
+  output [2:0]  mem0_ARSIZE,
+  output [7:0]  mem0_ARLEN,
+  output [1:0]  mem0_ARBURST,
+  output [5:0]  mem0_ARID,
+  output        mem0_ARLOCK,
+  output [3:0]  mem0_ARCACHE,
+  output [2:0]  mem0_ARPROT,
+  output [3:0]  mem0_ARQOS,
+  input         mem0_ARREADY,
+  output        mem0_ARVALID,
+  output [31:0] mem0_AWADDR,
+  output [2:0]  mem0_AWSIZE,
+  output [7:0]  mem0_AWLEN,
+  output [1:0]  mem0_AWBURST,
+  output [5:0]  mem0_AWID,
+  output        mem0_AWLOCK,
+  output [3:0]  mem0_AWCACHE,
+  output [2:0]  mem0_AWPROT,
+  output [3:0]  mem0_AWQOS,
+  input         mem0_AWREADY,
+  output        mem0_AWVALID,
+  output [63:0] mem0_WDATA,
+  output [7:0]  mem0_WSTRB,
+  output        mem0_WLAST,
+  output        mem0_WVALID,
+  input         mem0_WREADY,
+  input  [1:0]  mem0_BRESP,
+  input  [5:0]  mem0_BID,
+  input         mem0_BVALID,
+  output        mem0_BREADY,
+  input  [5:0]  mem0_RID,
+  input  [63:0] mem0_RDATA,
+  input  [1:0]  mem0_RRESP,
+  input         mem0_RLAST,
+  input         mem0_RVALID,
+  output        mem0_RREADY,
+  output [31:0] mem1_ARADDR,
+  output [2:0]  mem1_ARSIZE,
+  output [7:0]  mem1_ARLEN,
+  output [1:0]  mem1_ARBURST,
+  output [5:0]  mem1_ARID,
+  output        mem1_ARLOCK,
+  output [3:0]  mem1_ARCACHE,
+  output [2:0]  mem1_ARPROT,
+  output [3:0]  mem1_ARQOS,
+  input         mem1_ARREADY,
+  output        mem1_ARVALID,
+  output [31:0] mem1_AWADDR,
+  output [2:0]  mem1_AWSIZE,
+  output [7:0]  mem1_AWLEN,
+  output [1:0]  mem1_AWBURST,
+  output [5:0]  mem1_AWID,
+  output        mem1_AWLOCK,
+  output [3:0]  mem1_AWCACHE,
+  output [2:0]  mem1_AWPROT,
+  output [3:0]  mem1_AWQOS,
+  input         mem1_AWREADY,
+  output        mem1_AWVALID,
+  output [63:0] mem1_WDATA,
+  output [7:0]  mem1_WSTRB,
+  output        mem1_WLAST,
+  output        mem1_WVALID,
+  input         mem1_WREADY,
+  input  [1:0]  mem1_BRESP,
+  input  [5:0]  mem1_BID,
+  input         mem1_BVALID,
+  output        mem1_BREADY,
+  input  [5:0]  mem1_RID,
+  input  [63:0] mem1_RDATA,
+  input  [1:0]  mem1_RRESP,
+  input         mem1_RLAST,
+  input         mem1_RVALID,
+  output        mem1_RREADY,
+  output [31:0] mem2_ARADDR,
+  output [2:0]  mem2_ARSIZE,
+  output [7:0]  mem2_ARLEN,
+  output [1:0]  mem2_ARBURST,
+  output [5:0]  mem2_ARID,
+  output        mem2_ARLOCK,
+  output [3:0]  mem2_ARCACHE,
+  output [2:0]  mem2_ARPROT,
+  output [3:0]  mem2_ARQOS,
+  input         mem2_ARREADY,
+  output        mem2_ARVALID,
+  output [31:0] mem2_AWADDR,
+  output [2:0]  mem2_AWSIZE,
+  output [7:0]  mem2_AWLEN,
+  output [1:0]  mem2_AWBURST,
+  output [5:0]  mem2_AWID,
+  output        mem2_AWLOCK,
+  output [3:0]  mem2_AWCACHE,
+  output [2:0]  mem2_AWPROT,
+  output [3:0]  mem2_AWQOS,
+  input         mem2_AWREADY,
+  output        mem2_AWVALID,
+  output [63:0] mem2_WDATA,
+  output [7:0]  mem2_WSTRB,
+  output        mem2_WLAST,
+  output        mem2_WVALID,
+  input         mem2_WREADY,
+  input  [1:0]  mem2_BRESP,
+  input  [5:0]  mem2_BID,
+  input         mem2_BVALID,
+  output        mem2_BREADY,
+  input  [5:0]  mem2_RID,
+  input  [63:0] mem2_RDATA,
+  input  [1:0]  mem2_RRESP,
+  input         mem2_RLAST,
+  input         mem2_RVALID,
+  output        mem2_RREADY,
+  output [31:0] mem3_ARADDR,
+  output [2:0]  mem3_ARSIZE,
+  output [7:0]  mem3_ARLEN,
+  output [1:0]  mem3_ARBURST,
+  output [5:0]  mem3_ARID,
+  output        mem3_ARLOCK,
+  output [3:0]  mem3_ARCACHE,
+  output [2:0]  mem3_ARPROT,
+  output [3:0]  mem3_ARQOS,
+  input         mem3_ARREADY,
+  output        mem3_ARVALID,
+  output [31:0] mem3_AWADDR,
+  output [2:0]  mem3_AWSIZE,
+  output [7:0]  mem3_AWLEN,
+  output [1:0]  mem3_AWBURST,
+  output [5:0]  mem3_AWID,
+  output        mem3_AWLOCK,
+  output [3:0]  mem3_AWCACHE,
+  output [2:0]  mem3_AWPROT,
+  output [3:0]  mem3_AWQOS,
+  input         mem3_AWREADY,
+  output        mem3_AWVALID,
+  output [63:0] mem3_WDATA,
+  output [7:0]  mem3_WSTRB,
+  output        mem3_WLAST,
+  output        mem3_WVALID,
+  input         mem3_WREADY,
+  input  [1:0]  mem3_BRESP,
+  input  [5:0]  mem3_BID,
+  input         mem3_BVALID,
+  output        mem3_BREADY,
+  input  [5:0]  mem3_RID,
+  input  [63:0] mem3_RDATA,
+  input  [1:0]  mem3_RRESP,
+  input         mem3_RLAST,
+  input         mem3_RVALID,
+  output        mem3_RREADY,
+  input  [31:0] csr_ARADDR,
+  input  [2:0]  csr_ARPROT,
+  output        csr_ARREADY,
+  input         csr_ARVALID,
+  input  [31:0] csr_AWADDR,
+  input  [2:0]  csr_AWPROT,
+  output        csr_AWREADY,
+  input         csr_AWVALID,
+  input  [31:0] csr_WDATA,
+  input  [3:0]  csr_WSTRB,
+  input         csr_WVALID,
+  output        csr_WREADY,
+  output [1:0]  csr_BRESP,
+  output        csr_BVALID,
+  input         csr_BREADY,
+  output [31:0] csr_RDATA,
+  output [1:0]  csr_RRESP,
+  output        csr_RVALID,
+  input         csr_RREADY
 );
-
-
-
-  assign io_genericRspOut_bits_metaData = 1'h0;
-  assign io_genericRspOut_bits_isLast = 1'h0;
-  assign io_genericRspOut_bits_isWrite = 1'h1;
-  assign io_genericRspOut_bits_readData = 64'h0;
-  assign io_genericRspOut_bits_channelID = io_axiWriteRspIn_bits_id;
-  assign io_genericRspOut_valid = io_axiWriteRspIn_valid;
-  assign io_axiWriteRspIn_ready = io_genericRspOut_ready;
-endmodule
-
-module ZedBoardWrapper(input clk, input reset,
-    output csr_AWREADY,
-    input  csr_AWVALID,
-    input [31:0] csr_AWADDR,
-    input [2:0] csr_AWPROT,
-    output csr_WREADY,
-    input  csr_WVALID,
-    input [31:0] csr_WDATA,
-    input [3:0] csr_WSTRB,
-    input  csr_BREADY,
-    output csr_BVALID,
-    output[1:0] csr_BRESP,
-    output csr_ARREADY,
-    input  csr_ARVALID,
-    input [31:0] csr_ARADDR,
-    input [2:0] csr_ARPROT,
-    input  csr_RREADY,
-    output csr_RVALID,
-    output[31:0] csr_RDATA,
-    output[1:0] csr_RRESP,
-    input  mem3_AWREADY,
-    output mem3_AWVALID,
-    output[31:0] mem3_AWADDR,
-    output[2:0] mem3_AWSIZE,
-    output[7:0] mem3_AWLEN,
-    output[1:0] mem3_AWBURST,
-    output[5:0] mem3_AWID,
-    output mem3_AWLOCK,
-    output[3:0] mem3_AWCACHE,
-    output[2:0] mem3_AWPROT,
-    output[3:0] mem3_AWQOS,
-    input  mem3_WREADY,
-    output mem3_WVALID,
-    output[63:0] mem3_WDATA,
-    output[7:0] mem3_WSTRB,
-    output mem3_WLAST,
-    output mem3_BREADY,
-    input  mem3_BVALID,
-    input [5:0] mem3_BID,
-    input [1:0] mem3_BRESP,
-    input  mem3_ARREADY,
-    output mem3_ARVALID,
-    output[31:0] mem3_ARADDR,
-    output[2:0] mem3_ARSIZE,
-    output[7:0] mem3_ARLEN,
-    output[1:0] mem3_ARBURST,
-    output[5:0] mem3_ARID,
-    output mem3_ARLOCK,
-    output[3:0] mem3_ARCACHE,
-    output[2:0] mem3_ARPROT,
-    output[3:0] mem3_ARQOS,
-    output mem3_RREADY,
-    input  mem3_RVALID,
-    input [63:0] mem3_RDATA,
-    input [5:0] mem3_RID,
-    input  mem3_RLAST,
-    input [1:0] mem3_RRESP,
-    input  mem2_AWREADY,
-    output mem2_AWVALID,
-    output[31:0] mem2_AWADDR,
-    output[2:0] mem2_AWSIZE,
-    output[7:0] mem2_AWLEN,
-    output[1:0] mem2_AWBURST,
-    output[5:0] mem2_AWID,
-    output mem2_AWLOCK,
-    output[3:0] mem2_AWCACHE,
-    output[2:0] mem2_AWPROT,
-    output[3:0] mem2_AWQOS,
-    input  mem2_WREADY,
-    output mem2_WVALID,
-    output[63:0] mem2_WDATA,
-    output[7:0] mem2_WSTRB,
-    output mem2_WLAST,
-    output mem2_BREADY,
-    input  mem2_BVALID,
-    input [5:0] mem2_BID,
-    input [1:0] mem2_BRESP,
-    input  mem2_ARREADY,
-    output mem2_ARVALID,
-    output[31:0] mem2_ARADDR,
-    output[2:0] mem2_ARSIZE,
-    output[7:0] mem2_ARLEN,
-    output[1:0] mem2_ARBURST,
-    output[5:0] mem2_ARID,
-    output mem2_ARLOCK,
-    output[3:0] mem2_ARCACHE,
-    output[2:0] mem2_ARPROT,
-    output[3:0] mem2_ARQOS,
-    output mem2_RREADY,
-    input  mem2_RVALID,
-    input [63:0] mem2_RDATA,
-    input [5:0] mem2_RID,
-    input  mem2_RLAST,
-    input [1:0] mem2_RRESP,
-    input  mem1_AWREADY,
-    output mem1_AWVALID,
-    output[31:0] mem1_AWADDR,
-    output[2:0] mem1_AWSIZE,
-    output[7:0] mem1_AWLEN,
-    output[1:0] mem1_AWBURST,
-    output[5:0] mem1_AWID,
-    output mem1_AWLOCK,
-    output[3:0] mem1_AWCACHE,
-    output[2:0] mem1_AWPROT,
-    output[3:0] mem1_AWQOS,
-    input  mem1_WREADY,
-    output mem1_WVALID,
-    output[63:0] mem1_WDATA,
-    output[7:0] mem1_WSTRB,
-    output mem1_WLAST,
-    output mem1_BREADY,
-    input  mem1_BVALID,
-    input [5:0] mem1_BID,
-    input [1:0] mem1_BRESP,
-    input  mem1_ARREADY,
-    output mem1_ARVALID,
-    output[31:0] mem1_ARADDR,
-    output[2:0] mem1_ARSIZE,
-    output[7:0] mem1_ARLEN,
-    output[1:0] mem1_ARBURST,
-    output[5:0] mem1_ARID,
-    output mem1_ARLOCK,
-    output[3:0] mem1_ARCACHE,
-    output[2:0] mem1_ARPROT,
-    output[3:0] mem1_ARQOS,
-    output mem1_RREADY,
-    input  mem1_RVALID,
-    input [63:0] mem1_RDATA,
-    input [5:0] mem1_RID,
-    input  mem1_RLAST,
-    input [1:0] mem1_RRESP,
-    input  mem0_AWREADY,
-    output mem0_AWVALID,
-    output[31:0] mem0_AWADDR,
-    output[2:0] mem0_AWSIZE,
-    output[7:0] mem0_AWLEN,
-    output[1:0] mem0_AWBURST,
-    output[5:0] mem0_AWID,
-    output mem0_AWLOCK,
-    output[3:0] mem0_AWCACHE,
-    output[2:0] mem0_AWPROT,
-    output[3:0] mem0_AWQOS,
-    input  mem0_WREADY,
-    output mem0_WVALID,
-    output[63:0] mem0_WDATA,
-    output[7:0] mem0_WSTRB,
-    output mem0_WLAST,
-    output mem0_BREADY,
-    input  mem0_BVALID,
-    input [5:0] mem0_BID,
-    input [1:0] mem0_BRESP,
-    input  mem0_ARREADY,
-    output mem0_ARVALID,
-    output[31:0] mem0_ARADDR,
-    output[2:0] mem0_ARSIZE,
-    output[7:0] mem0_ARLEN,
-    output[1:0] mem0_ARBURST,
-    output[5:0] mem0_ARID,
-    output mem0_ARLOCK,
-    output[3:0] mem0_ARCACHE,
-    output[2:0] mem0_ARPROT,
-    output[3:0] mem0_ARQOS,
-    output mem0_RREADY,
-    input  mem0_RVALID,
-    input [63:0] mem0_RDATA,
-    input [5:0] mem0_RID,
-    input  mem0_RLAST,
-    input [1:0] mem0_RRESP
-);
-
-  wire T44;
-  reg  regWrapperReset;
-  wire T45;
-  wire T46;
-  wire T47;
-  wire T48;
-  wire T49;
-  wire T50;
-  wire[31:0] T51;
-  wire[31:0] T0;
-  reg [31:0] regWrData;
-  wire[31:0] T52;
-  wire[31:0] T1;
-  wire T2;
-  wire T3;
-  reg [2:0] regState;
-  wire[2:0] T53;
-  wire[2:0] T4;
-  wire[2:0] T5;
-  wire[2:0] T6;
-  wire[2:0] T7;
-  wire[2:0] T8;
-  wire[2:0] T9;
-  wire[2:0] T10;
-  wire T11;
-  wire T12;
-  wire T13;
-  wire T14;
-  wire T15;
-  wire T16;
-  wire T17;
-  wire T18;
-  wire T19;
-  wire T20;
-  wire T21;
-  wire T22;
-  wire T23;
-  wire T24;
-  wire T25;
-  reg  regModeWrite;
-  wire T54;
-  wire T26;
-  wire T27;
-  wire[2:0] T55;
-  wire[31:0] T28;
-  wire[31:0] T29;
-  wire[31:0] T30;
-  reg [31:0] regRdAddr;
-  wire[31:0] T56;
-  wire[31:0] T31;
-  wire[31:0] T32;
-  reg [31:0] regWrAddr;
-  wire[31:0] T57;
-  wire[31:0] T33;
-  wire T34;
-  wire T35;
-  reg  regRdReq;
-  wire T58;
-  wire T36;
-  wire T37;
-  reg  regWrReq;
-  wire T59;
-  wire T38;
-  wire T39;
-  wire T40;
-  wire[63:0] T41;
-  wire T42;
-  wire T43;
-  wire RegFile_io_extIF_readData_valid;
-  wire[31:0] RegFile_io_extIF_readData_bits;
-  wire[31:0] RegFile_io_regOut_6;
-  wire[31:0] RegFile_io_regOut_3;
-  wire[31:0] RegFile_io_regOut_2;
-  wire[31:0] RegFile_io_regOut_1;
-  wire AXIMemReqAdp_io_genericReqIn_ready;
-  wire AXIMemReqAdp_io_axiReqOut_valid;
-  wire[31:0] AXIMemReqAdp_io_axiReqOut_bits_addr;
-  wire[2:0] AXIMemReqAdp_io_axiReqOut_bits_size;
-  wire[7:0] AXIMemReqAdp_io_axiReqOut_bits_len;
-  wire[1:0] AXIMemReqAdp_io_axiReqOut_bits_burst;
-  wire[5:0] AXIMemReqAdp_io_axiReqOut_bits_id;
-  wire AXIMemReqAdp_io_axiReqOut_bits_lock;
-  wire[3:0] AXIMemReqAdp_io_axiReqOut_bits_cache;
-  wire[2:0] AXIMemReqAdp_io_axiReqOut_bits_prot;
-  wire[3:0] AXIMemReqAdp_io_axiReqOut_bits_qos;
-  wire AXIReadRspAdp_io_axiReadRspIn_ready;
-  wire AXIReadRspAdp_io_genericRspOut_valid;
-  wire[5:0] AXIReadRspAdp_io_genericRspOut_bits_channelID;
-  wire[63:0] AXIReadRspAdp_io_genericRspOut_bits_readData;
-  wire AXIReadRspAdp_io_genericRspOut_bits_isWrite;
-  wire AXIReadRspAdp_io_genericRspOut_bits_isLast;
-  wire AXIReadRspAdp_io_genericRspOut_bits_metaData;
-  wire AXIMemReqAdp_1_io_genericReqIn_ready;
-  wire AXIMemReqAdp_1_io_axiReqOut_valid;
-  wire[31:0] AXIMemReqAdp_1_io_axiReqOut_bits_addr;
-  wire[2:0] AXIMemReqAdp_1_io_axiReqOut_bits_size;
-  wire[7:0] AXIMemReqAdp_1_io_axiReqOut_bits_len;
-  wire[1:0] AXIMemReqAdp_1_io_axiReqOut_bits_burst;
-  wire[5:0] AXIMemReqAdp_1_io_axiReqOut_bits_id;
-  wire AXIMemReqAdp_1_io_axiReqOut_bits_lock;
-  wire[3:0] AXIMemReqAdp_1_io_axiReqOut_bits_cache;
-  wire[2:0] AXIMemReqAdp_1_io_axiReqOut_bits_prot;
-  wire[3:0] AXIMemReqAdp_1_io_axiReqOut_bits_qos;
-  wire AXIWriteBurstReqAdapter_io_in_writeAddr_ready;
-  wire AXIWriteBurstReqAdapter_io_in_writeData_ready;
-  wire AXIWriteBurstReqAdapter_io_out_writeAddr_valid;
-  wire[31:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_addr;
-  wire[2:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_size;
-  wire[7:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_len;
-  wire[1:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_burst;
-  wire[5:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_id;
-  wire AXIWriteBurstReqAdapter_io_out_writeAddr_bits_lock;
-  wire[3:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_cache;
-  wire[2:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_prot;
-  wire[3:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_qos;
-  wire AXIWriteBurstReqAdapter_io_out_writeData_valid;
-  wire[63:0] AXIWriteBurstReqAdapter_io_out_writeData_bits_data;
-  wire[7:0] AXIWriteBurstReqAdapter_io_out_writeData_bits_strb;
-  wire AXIWriteBurstReqAdapter_io_out_writeData_bits_last;
-  wire AXIWriteRspAdp_io_axiWriteRspIn_ready;
-  wire AXIWriteRspAdp_io_genericRspOut_valid;
-  wire[5:0] AXIWriteRspAdp_io_genericRspOut_bits_channelID;
-  wire[63:0] AXIWriteRspAdp_io_genericRspOut_bits_readData;
-  wire AXIWriteRspAdp_io_genericRspOut_bits_isWrite;
-  wire AXIWriteRspAdp_io_genericRspOut_bits_isLast;
-  wire AXIWriteRspAdp_io_genericRspOut_bits_metaData;
-  wire FPGAQueue_io_enq_ready;
-  wire FPGAQueue_io_deq_valid;
-  wire[63:0] FPGAQueue_io_deq_bits_data;
-  wire[7:0] FPGAQueue_io_deq_bits_strb;
-  wire FPGAQueue_io_deq_bits_last;
-  wire TestSum_io_memPort_0_memRdReq_valid;
-  wire[5:0] TestSum_io_memPort_0_memRdReq_bits_channelID;
-  wire TestSum_io_memPort_0_memRdReq_bits_isWrite;
-  wire[31:0] TestSum_io_memPort_0_memRdReq_bits_addr;
-  wire[7:0] TestSum_io_memPort_0_memRdReq_bits_numBytes;
-  wire TestSum_io_memPort_0_memRdReq_bits_metaData;
-  wire TestSum_io_memPort_0_memRdRsp_ready;
-  wire TestSum_io_memPort_0_memWrReq_valid;
-  wire[5:0] TestSum_io_memPort_0_memWrReq_bits_channelID;
-  wire TestSum_io_memPort_0_memWrReq_bits_isWrite;
-  wire[31:0] TestSum_io_memPort_0_memWrReq_bits_addr;
-  wire[7:0] TestSum_io_memPort_0_memWrReq_bits_numBytes;
-  wire TestSum_io_memPort_0_memWrReq_bits_metaData;
-  wire TestSum_io_memPort_0_memWrDat_valid;
-  wire[63:0] TestSum_io_memPort_0_memWrDat_bits;
-  wire TestSum_io_memPort_0_memWrRsp_ready;
-  wire[31:0] TestSum_io_signature;
-  wire TestSum_io_finished;
-  wire[31:0] TestSum_io_sum;
-  wire[31:0] TestSum_io_cycleCount;
-
-`ifndef SYNTHESIS
-// synthesis translate_off
+`ifdef RANDOMIZE_REG_INIT
+  reg [31:0] _RAND_0;
+  reg [31:0] _RAND_1;
+  reg [31:0] _RAND_2;
+  reg [31:0] _RAND_3;
+  reg [31:0] _RAND_4;
+  reg [31:0] _RAND_5;
+  reg [31:0] _RAND_6;
+  reg [31:0] _RAND_7;
+`endif // RANDOMIZE_REG_INIT
+  wire  TestSum_clock; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_reset; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_io_memPort_0_memRdReq_ready; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_io_memPort_0_memRdReq_valid; // @[PlatformWrapper.scala 66:21]
+  wire [31:0] TestSum_io_memPort_0_memRdReq_bits_addr; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_io_memPort_0_memRdRsp_ready; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_io_memPort_0_memRdRsp_valid; // @[PlatformWrapper.scala 66:21]
+  wire [63:0] TestSum_io_memPort_0_memRdRsp_bits_readData; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_io_start; // @[PlatformWrapper.scala 66:21]
+  wire  TestSum_io_finished; // @[PlatformWrapper.scala 66:21]
+  wire [63:0] TestSum_io_baseAddr; // @[PlatformWrapper.scala 66:21]
+  wire [31:0] TestSum_io_byteCount; // @[PlatformWrapper.scala 66:21]
+  wire [31:0] TestSum_io_sum; // @[PlatformWrapper.scala 66:21]
+  wire [31:0] TestSum_io_cycleCount; // @[PlatformWrapper.scala 66:21]
+  wire  RegFile_clock; // @[PlatformWrapper.scala 97:23]
+  wire  RegFile_reset; // @[PlatformWrapper.scala 97:23]
+  wire  RegFile_io_extIF_cmd_valid; // @[PlatformWrapper.scala 97:23]
+  wire [2:0] RegFile_io_extIF_cmd_bits_regID; // @[PlatformWrapper.scala 97:23]
+  wire  RegFile_io_extIF_cmd_bits_read; // @[PlatformWrapper.scala 97:23]
+  wire  RegFile_io_extIF_cmd_bits_write; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_extIF_cmd_bits_writeData; // @[PlatformWrapper.scala 97:23]
+  wire  RegFile_io_extIF_readData_valid; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_extIF_readData_bits; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regOut_3; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regOut_4; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regOut_5; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regOut_7; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regIn_1_bits; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regIn_2_bits; // @[PlatformWrapper.scala 97:23]
+  wire [31:0] RegFile_io_regIn_6_bits; // @[PlatformWrapper.scala 97:23]
+  wire  AXIMemReqAdp_io_genericReqIn_ready; // @[AXIPlatformWrapper.scala 38:28]
+  wire  AXIMemReqAdp_io_genericReqIn_valid; // @[AXIPlatformWrapper.scala 38:28]
+  wire [31:0] AXIMemReqAdp_io_genericReqIn_bits_addr; // @[AXIPlatformWrapper.scala 38:28]
+  wire [7:0] AXIMemReqAdp_io_genericReqIn_bits_numBytes; // @[AXIPlatformWrapper.scala 38:28]
+  wire  AXIMemReqAdp_io_axiReqOut_ready; // @[AXIPlatformWrapper.scala 38:28]
+  wire  AXIMemReqAdp_io_axiReqOut_valid; // @[AXIPlatformWrapper.scala 38:28]
+  wire [31:0] AXIMemReqAdp_io_axiReqOut_bits_addr; // @[AXIPlatformWrapper.scala 38:28]
+  wire [7:0] AXIMemReqAdp_io_axiReqOut_bits_len; // @[AXIPlatformWrapper.scala 38:28]
+  wire  AXIReadRspAdp_io_axiReadRspIn_ready; // @[AXIPlatformWrapper.scala 42:28]
+  wire  AXIReadRspAdp_io_axiReadRspIn_valid; // @[AXIPlatformWrapper.scala 42:28]
+  wire [63:0] AXIReadRspAdp_io_axiReadRspIn_bits_data; // @[AXIPlatformWrapper.scala 42:28]
+  wire  AXIReadRspAdp_io_genericRspOut_ready; // @[AXIPlatformWrapper.scala 42:28]
+  wire  AXIReadRspAdp_io_genericRspOut_valid; // @[AXIPlatformWrapper.scala 42:28]
+  wire [63:0] AXIReadRspAdp_io_genericRspOut_bits_readData; // @[AXIPlatformWrapper.scala 42:28]
+  wire  AXIMemReqAdp_1_io_genericReqIn_ready; // @[AXIPlatformWrapper.scala 46:29]
+  wire  AXIMemReqAdp_1_io_genericReqIn_valid; // @[AXIPlatformWrapper.scala 46:29]
+  wire [31:0] AXIMemReqAdp_1_io_genericReqIn_bits_addr; // @[AXIPlatformWrapper.scala 46:29]
+  wire [7:0] AXIMemReqAdp_1_io_genericReqIn_bits_numBytes; // @[AXIPlatformWrapper.scala 46:29]
+  wire  AXIMemReqAdp_1_io_axiReqOut_ready; // @[AXIPlatformWrapper.scala 46:29]
+  wire  AXIMemReqAdp_1_io_axiReqOut_valid; // @[AXIPlatformWrapper.scala 46:29]
+  wire [31:0] AXIMemReqAdp_1_io_axiReqOut_bits_addr; // @[AXIPlatformWrapper.scala 46:29]
+  wire [7:0] AXIMemReqAdp_1_io_axiReqOut_bits_len; // @[AXIPlatformWrapper.scala 46:29]
+  wire  AXIWriteBurstReqAdapter_clock; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_reset; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_in_writeAddr_ready; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_in_writeAddr_valid; // @[AXIPlatformWrapper.scala 49:31]
+  wire [31:0] AXIWriteBurstReqAdapter_io_in_writeAddr_bits_addr; // @[AXIPlatformWrapper.scala 49:31]
+  wire [7:0] AXIWriteBurstReqAdapter_io_in_writeAddr_bits_len; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_out_writeAddr_ready; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_out_writeAddr_valid; // @[AXIPlatformWrapper.scala 49:31]
+  wire [31:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_addr; // @[AXIPlatformWrapper.scala 49:31]
+  wire [7:0] AXIWriteBurstReqAdapter_io_out_writeAddr_bits_len; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_out_writeData_ready; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_out_writeData_valid; // @[AXIPlatformWrapper.scala 49:31]
+  wire  AXIWriteBurstReqAdapter_io_out_writeData_bits_last; // @[AXIPlatformWrapper.scala 49:31]
+  wire  FPGAQueue_clock; // @[FPGAQueue.scala 180:19]
+  wire  FPGAQueue_reset; // @[FPGAQueue.scala 180:19]
+  wire  FPGAQueue_io_enq_ready; // @[FPGAQueue.scala 180:19]
+  wire  FPGAQueue_io_enq_bits_last; // @[FPGAQueue.scala 180:19]
+  wire  FPGAQueue_io_deq_ready; // @[FPGAQueue.scala 180:19]
+  wire  FPGAQueue_io_deq_valid; // @[FPGAQueue.scala 180:19]
+  wire [63:0] FPGAQueue_io_deq_bits_data; // @[FPGAQueue.scala 180:19]
+  wire [7:0] FPGAQueue_io_deq_bits_strb; // @[FPGAQueue.scala 180:19]
+  wire  FPGAQueue_io_deq_bits_last; // @[FPGAQueue.scala 180:19]
+  reg  regWrapperReset; // @[PlatformWrapper.scala 65:32]
+  wire  _T_2 = RegFile_io_extIF_cmd_valid & RegFile_io_extIF_cmd_bits_write; // @[PlatformWrapper.scala 101:20]
+  wire  _T_3 = RegFile_io_extIF_cmd_bits_regID == 3'h0; // @[PlatformWrapper.scala 101:58]
+  wire  _T_4 = _T_2 & _T_3; // @[PlatformWrapper.scala 101:39]
+  reg [2:0] regState; // @[AXIPlatformWrapper.scala 94:25]
+  reg  regModeWrite; // @[AXIPlatformWrapper.scala 96:29]
+  reg  regRdReq; // @[AXIPlatformWrapper.scala 97:25]
+  reg [31:0] regRdAddr; // @[AXIPlatformWrapper.scala 98:26]
+  reg  regWrReq; // @[AXIPlatformWrapper.scala 99:25]
+  reg  regWrAddr; // @[AXIPlatformWrapper.scala 100:26]
+  reg [31:0] regWrData; // @[AXIPlatformWrapper.scala 101:26]
+  wire  _T_9 = ~regModeWrite; // @[AXIPlatformWrapper.scala 109:8]
+  wire [31:0] _T_10 = regRdAddr / 32'h4; // @[AXIPlatformWrapper.scala 112:47]
+  wire [2:0] _GEN_59 = {{2'd0}, regWrAddr}; // @[AXIPlatformWrapper.scala 116:47]
+  wire  _T_11 = _GEN_59 / 3'h4; // @[AXIPlatformWrapper.scala 116:47]
+  wire [31:0] _GEN_3 = _T_9 ? _T_10 : {{31'd0}, _T_11}; // @[AXIPlatformWrapper.scala 109:23]
+  wire  csr_1_readAddr_ready = 3'h0 == regState; // @[Conditional.scala 37:30]
+  wire  _GEN_6 = csr_ARVALID | regRdReq; // @[AXIPlatformWrapper.scala 124:32]
+  wire  _T_13 = 3'h1 == regState; // @[Conditional.scala 37:30]
+  wire  _T_14 = csr_RREADY & RegFile_io_extIF_readData_valid; // @[AXIPlatformWrapper.scala 136:32]
+  wire  _T_15 = 3'h2 == regState; // @[Conditional.scala 37:30]
+  wire  _GEN_12 = csr_AWVALID | regModeWrite; // @[AXIPlatformWrapper.scala 145:33]
+  wire [31:0] _GEN_14 = csr_AWVALID ? csr_AWADDR : {{31'd0}, regWrAddr}; // @[AXIPlatformWrapper.scala 145:33]
+  wire  _T_16 = 3'h3 == regState; // @[Conditional.scala 37:30]
+  wire  _GEN_17 = csr_WVALID | regWrReq; // @[AXIPlatformWrapper.scala 157:33]
+  wire  _T_17 = 3'h4 == regState; // @[Conditional.scala 37:30]
+  wire  _GEN_28 = _T_16 ? 1'h0 : _T_17; // @[Conditional.scala 39:67]
+  wire [31:0] _GEN_32 = _T_15 ? _GEN_14 : {{31'd0}, regWrAddr}; // @[Conditional.scala 39:67]
+  wire  _GEN_34 = _T_15 ? 1'h0 : _T_16; // @[Conditional.scala 39:67]
+  wire  _GEN_36 = _T_15 ? 1'h0 : _GEN_28; // @[Conditional.scala 39:67]
+  wire  _GEN_37 = _T_13 & RegFile_io_extIF_readData_valid; // @[Conditional.scala 39:67]
+  wire  _GEN_40 = _T_13 ? 1'h0 : _T_15; // @[Conditional.scala 39:67]
+  wire [31:0] _GEN_43 = _T_13 ? {{31'd0}, regWrAddr} : _GEN_32; // @[Conditional.scala 39:67]
+  wire  _GEN_44 = _T_13 ? 1'h0 : _GEN_34; // @[Conditional.scala 39:67]
+  wire  _GEN_46 = _T_13 ? 1'h0 : _GEN_36; // @[Conditional.scala 39:67]
+  wire [31:0] _GEN_55 = csr_1_readAddr_ready ? {{31'd0}, regWrAddr} : _GEN_43; // @[Conditional.scala 40:58]
+  TestSum TestSum ( // @[PlatformWrapper.scala 66:21]
+    .clock(TestSum_clock),
+    .reset(TestSum_reset),
+    .io_memPort_0_memRdReq_ready(TestSum_io_memPort_0_memRdReq_ready),
+    .io_memPort_0_memRdReq_valid(TestSum_io_memPort_0_memRdReq_valid),
+    .io_memPort_0_memRdReq_bits_addr(TestSum_io_memPort_0_memRdReq_bits_addr),
+    .io_memPort_0_memRdRsp_ready(TestSum_io_memPort_0_memRdRsp_ready),
+    .io_memPort_0_memRdRsp_valid(TestSum_io_memPort_0_memRdRsp_valid),
+    .io_memPort_0_memRdRsp_bits_readData(TestSum_io_memPort_0_memRdRsp_bits_readData),
+    .io_start(TestSum_io_start),
+    .io_finished(TestSum_io_finished),
+    .io_baseAddr(TestSum_io_baseAddr),
+    .io_byteCount(TestSum_io_byteCount),
+    .io_sum(TestSum_io_sum),
+    .io_cycleCount(TestSum_io_cycleCount)
+  );
+  RegFile RegFile ( // @[PlatformWrapper.scala 97:23]
+    .clock(RegFile_clock),
+    .reset(RegFile_reset),
+    .io_extIF_cmd_valid(RegFile_io_extIF_cmd_valid),
+    .io_extIF_cmd_bits_regID(RegFile_io_extIF_cmd_bits_regID),
+    .io_extIF_cmd_bits_read(RegFile_io_extIF_cmd_bits_read),
+    .io_extIF_cmd_bits_write(RegFile_io_extIF_cmd_bits_write),
+    .io_extIF_cmd_bits_writeData(RegFile_io_extIF_cmd_bits_writeData),
+    .io_extIF_readData_valid(RegFile_io_extIF_readData_valid),
+    .io_extIF_readData_bits(RegFile_io_extIF_readData_bits),
+    .io_regOut_3(RegFile_io_regOut_3),
+    .io_regOut_4(RegFile_io_regOut_4),
+    .io_regOut_5(RegFile_io_regOut_5),
+    .io_regOut_7(RegFile_io_regOut_7),
+    .io_regIn_1_bits(RegFile_io_regIn_1_bits),
+    .io_regIn_2_bits(RegFile_io_regIn_2_bits),
+    .io_regIn_6_bits(RegFile_io_regIn_6_bits)
+  );
+  AXIMemReqAdp AXIMemReqAdp ( // @[AXIPlatformWrapper.scala 38:28]
+    .io_genericReqIn_ready(AXIMemReqAdp_io_genericReqIn_ready),
+    .io_genericReqIn_valid(AXIMemReqAdp_io_genericReqIn_valid),
+    .io_genericReqIn_bits_addr(AXIMemReqAdp_io_genericReqIn_bits_addr),
+    .io_genericReqIn_bits_numBytes(AXIMemReqAdp_io_genericReqIn_bits_numBytes),
+    .io_axiReqOut_ready(AXIMemReqAdp_io_axiReqOut_ready),
+    .io_axiReqOut_valid(AXIMemReqAdp_io_axiReqOut_valid),
+    .io_axiReqOut_bits_addr(AXIMemReqAdp_io_axiReqOut_bits_addr),
+    .io_axiReqOut_bits_len(AXIMemReqAdp_io_axiReqOut_bits_len)
+  );
+  AXIReadRspAdp AXIReadRspAdp ( // @[AXIPlatformWrapper.scala 42:28]
+    .io_axiReadRspIn_ready(AXIReadRspAdp_io_axiReadRspIn_ready),
+    .io_axiReadRspIn_valid(AXIReadRspAdp_io_axiReadRspIn_valid),
+    .io_axiReadRspIn_bits_data(AXIReadRspAdp_io_axiReadRspIn_bits_data),
+    .io_genericRspOut_ready(AXIReadRspAdp_io_genericRspOut_ready),
+    .io_genericRspOut_valid(AXIReadRspAdp_io_genericRspOut_valid),
+    .io_genericRspOut_bits_readData(AXIReadRspAdp_io_genericRspOut_bits_readData)
+  );
+  AXIMemReqAdp AXIMemReqAdp_1 ( // @[AXIPlatformWrapper.scala 46:29]
+    .io_genericReqIn_ready(AXIMemReqAdp_1_io_genericReqIn_ready),
+    .io_genericReqIn_valid(AXIMemReqAdp_1_io_genericReqIn_valid),
+    .io_genericReqIn_bits_addr(AXIMemReqAdp_1_io_genericReqIn_bits_addr),
+    .io_genericReqIn_bits_numBytes(AXIMemReqAdp_1_io_genericReqIn_bits_numBytes),
+    .io_axiReqOut_ready(AXIMemReqAdp_1_io_axiReqOut_ready),
+    .io_axiReqOut_valid(AXIMemReqAdp_1_io_axiReqOut_valid),
+    .io_axiReqOut_bits_addr(AXIMemReqAdp_1_io_axiReqOut_bits_addr),
+    .io_axiReqOut_bits_len(AXIMemReqAdp_1_io_axiReqOut_bits_len)
+  );
+  AXIWriteBurstReqAdapter AXIWriteBurstReqAdapter ( // @[AXIPlatformWrapper.scala 49:31]
+    .clock(AXIWriteBurstReqAdapter_clock),
+    .reset(AXIWriteBurstReqAdapter_reset),
+    .io_in_writeAddr_ready(AXIWriteBurstReqAdapter_io_in_writeAddr_ready),
+    .io_in_writeAddr_valid(AXIWriteBurstReqAdapter_io_in_writeAddr_valid),
+    .io_in_writeAddr_bits_addr(AXIWriteBurstReqAdapter_io_in_writeAddr_bits_addr),
+    .io_in_writeAddr_bits_len(AXIWriteBurstReqAdapter_io_in_writeAddr_bits_len),
+    .io_out_writeAddr_ready(AXIWriteBurstReqAdapter_io_out_writeAddr_ready),
+    .io_out_writeAddr_valid(AXIWriteBurstReqAdapter_io_out_writeAddr_valid),
+    .io_out_writeAddr_bits_addr(AXIWriteBurstReqAdapter_io_out_writeAddr_bits_addr),
+    .io_out_writeAddr_bits_len(AXIWriteBurstReqAdapter_io_out_writeAddr_bits_len),
+    .io_out_writeData_ready(AXIWriteBurstReqAdapter_io_out_writeData_ready),
+    .io_out_writeData_valid(AXIWriteBurstReqAdapter_io_out_writeData_valid),
+    .io_out_writeData_bits_last(AXIWriteBurstReqAdapter_io_out_writeData_bits_last)
+  );
+  FPGAQueue_1 FPGAQueue ( // @[FPGAQueue.scala 180:19]
+    .clock(FPGAQueue_clock),
+    .reset(FPGAQueue_reset),
+    .io_enq_ready(FPGAQueue_io_enq_ready),
+    .io_enq_bits_last(FPGAQueue_io_enq_bits_last),
+    .io_deq_ready(FPGAQueue_io_deq_ready),
+    .io_deq_valid(FPGAQueue_io_deq_valid),
+    .io_deq_bits_data(FPGAQueue_io_deq_bits_data),
+    .io_deq_bits_strb(FPGAQueue_io_deq_bits_strb),
+    .io_deq_bits_last(FPGAQueue_io_deq_bits_last)
+  );
+  assign mem0_ARADDR = AXIMemReqAdp_io_axiReqOut_bits_addr; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARSIZE = 3'h3; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARLEN = AXIMemReqAdp_io_axiReqOut_bits_len; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARBURST = 2'h1; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARCACHE = 4'h2; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_ARVALID = AXIMemReqAdp_io_axiReqOut_valid; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWADDR = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_addr; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWSIZE = 3'h3; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWLEN = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_len; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWBURST = 2'h1; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWCACHE = 4'h2; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_AWVALID = AXIWriteBurstReqAdapter_io_out_writeAddr_valid; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_WDATA = FPGAQueue_io_deq_bits_data; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_WSTRB = FPGAQueue_io_deq_bits_strb; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_WLAST = FPGAQueue_io_deq_bits_last; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_WVALID = FPGAQueue_io_deq_valid; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_BREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem0_RREADY = AXIReadRspAdp_io_axiReadRspIn_ready; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARADDR = 32'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARSIZE = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARLEN = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARBURST = 2'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARCACHE = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_ARVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWADDR = 32'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWSIZE = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWLEN = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWBURST = 2'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWCACHE = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_AWVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_WDATA = 64'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_WSTRB = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_WLAST = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_WVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_BREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem1_RREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARADDR = 32'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARSIZE = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARLEN = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARBURST = 2'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARCACHE = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_ARVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWADDR = 32'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWSIZE = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWLEN = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWBURST = 2'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWCACHE = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_AWVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_WDATA = 64'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_WSTRB = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_WLAST = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_WVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_BREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem2_RREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARADDR = 32'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARSIZE = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARLEN = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARBURST = 2'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARCACHE = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_ARVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWADDR = 32'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWSIZE = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWLEN = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWBURST = 2'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWID = 6'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWLOCK = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWCACHE = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWPROT = 3'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWQOS = 4'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_AWVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_WDATA = 64'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_WSTRB = 8'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_WLAST = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_WVALID = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_BREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign mem3_RREADY = 1'h0; // @[AXIPlatformWrapper.scala 21:25]
+  assign csr_ARREADY = 3'h0 == regState; // @[AXILiteDefs.scala 78:13]
+  assign csr_AWREADY = csr_1_readAddr_ready ? 1'h0 : _GEN_40; // @[AXILiteDefs.scala 72:13]
+  assign csr_WREADY = csr_1_readAddr_ready ? 1'h0 : _GEN_44; // @[AXILiteDefs.scala 84:12]
+  assign csr_BRESP = 2'h0; // @[AXILiteDefs.scala 89:11]
+  assign csr_BVALID = csr_1_readAddr_ready ? 1'h0 : _GEN_46; // @[AXILiteDefs.scala 87:12]
+  assign csr_RDATA = RegFile_io_extIF_readData_bits; // @[AXILiteDefs.scala 94:11]
+  assign csr_RRESP = 2'h0; // @[AXILiteDefs.scala 95:11]
+  assign csr_RVALID = csr_1_readAddr_ready ? 1'h0 : _GEN_37; // @[AXILiteDefs.scala 93:12]
+  assign TestSum_clock = clock;
+  assign TestSum_reset = reset | regWrapperReset; // @[PlatformWrapper.scala 69:15]
+  assign TestSum_io_memPort_0_memRdReq_ready = AXIMemReqAdp_io_genericReqIn_ready; // @[AXIPlatformWrapper.scala 39:29]
+  assign TestSum_io_memPort_0_memRdRsp_valid = AXIReadRspAdp_io_genericRspOut_valid; // @[AXIPlatformWrapper.scala 44:30]
+  assign TestSum_io_memPort_0_memRdRsp_bits_readData = AXIReadRspAdp_io_genericRspOut_bits_readData; // @[AXIPlatformWrapper.scala 44:30]
+  assign TestSum_io_start = RegFile_io_regOut_7[0]; // @[PlatformWrapper.scala 152:18]
+  assign TestSum_io_baseAddr = {RegFile_io_regOut_4,RegFile_io_regOut_5}; // @[PlatformWrapper.scala 130:16]
+  assign TestSum_io_byteCount = RegFile_io_regOut_3; // @[PlatformWrapper.scala 154:25]
+  assign RegFile_clock = clock;
+  assign RegFile_reset = reset;
+  assign RegFile_io_extIF_cmd_valid = _T_9 ? regRdReq : regWrReq; // @[AXIPlatformWrapper.scala 90:27 AXIPlatformWrapper.scala 110:29 AXIPlatformWrapper.scala 114:29]
+  assign RegFile_io_extIF_cmd_bits_regID = _GEN_3[2:0]; // @[RegFile.scala 16:11 AXIPlatformWrapper.scala 112:34 AXIPlatformWrapper.scala 116:34]
+  assign RegFile_io_extIF_cmd_bits_read = ~regModeWrite; // @[RegFile.scala 17:10 AXIPlatformWrapper.scala 111:33]
+  assign RegFile_io_extIF_cmd_bits_write = _T_9 ? 1'h0 : 1'h1; // @[RegFile.scala 18:11 AXIPlatformWrapper.scala 115:34]
+  assign RegFile_io_extIF_cmd_bits_writeData = _T_9 ? 32'h0 : regWrData; // @[RegFile.scala 19:15 AXIPlatformWrapper.scala 117:38]
+  assign RegFile_io_regIn_1_bits = TestSum_io_cycleCount; // @[PlatformWrapper.scala 162:40]
+  assign RegFile_io_regIn_2_bits = TestSum_io_sum; // @[PlatformWrapper.scala 162:40]
+  assign RegFile_io_regIn_6_bits = {{31'd0}, TestSum_io_finished}; // @[PlatformWrapper.scala 162:40]
+  assign AXIMemReqAdp_io_genericReqIn_valid = TestSum_io_memPort_0_memRdReq_valid; // @[AXIPlatformWrapper.scala 39:29]
+  assign AXIMemReqAdp_io_genericReqIn_bits_addr = TestSum_io_memPort_0_memRdReq_bits_addr; // @[AXIPlatformWrapper.scala 39:29]
+  assign AXIMemReqAdp_io_genericReqIn_bits_numBytes = 8'h8; // @[AXIPlatformWrapper.scala 39:29]
+  assign AXIMemReqAdp_io_axiReqOut_ready = mem0_ARREADY; // @[AXIPlatformWrapper.scala 40:26]
+  assign AXIReadRspAdp_io_axiReadRspIn_valid = mem0_RVALID; // @[AXIPlatformWrapper.scala 43:29]
+  assign AXIReadRspAdp_io_axiReadRspIn_bits_data = mem0_RDATA; // @[AXIPlatformWrapper.scala 43:29]
+  assign AXIReadRspAdp_io_genericRspOut_ready = TestSum_io_memPort_0_memRdRsp_ready; // @[AXIPlatformWrapper.scala 44:30]
+  assign AXIMemReqAdp_1_io_genericReqIn_valid = 1'h0; // @[AXIPlatformWrapper.scala 47:30]
+  assign AXIMemReqAdp_1_io_genericReqIn_bits_addr = 32'h0; // @[AXIPlatformWrapper.scala 47:30]
+  assign AXIMemReqAdp_1_io_genericReqIn_bits_numBytes = 8'h0; // @[AXIPlatformWrapper.scala 47:30]
+  assign AXIMemReqAdp_1_io_axiReqOut_ready = AXIWriteBurstReqAdapter_io_in_writeAddr_ready; // @[AXIPlatformWrapper.scala 52:27]
+  assign AXIWriteBurstReqAdapter_clock = clock;
+  assign AXIWriteBurstReqAdapter_reset = reset;
+  assign AXIWriteBurstReqAdapter_io_in_writeAddr_valid = AXIMemReqAdp_1_io_axiReqOut_valid; // @[AXIPlatformWrapper.scala 52:27]
+  assign AXIWriteBurstReqAdapter_io_in_writeAddr_bits_addr = AXIMemReqAdp_1_io_axiReqOut_bits_addr; // @[AXIPlatformWrapper.scala 52:27]
+  assign AXIWriteBurstReqAdapter_io_in_writeAddr_bits_len = AXIMemReqAdp_1_io_axiReqOut_bits_len; // @[AXIPlatformWrapper.scala 52:27]
+  assign AXIWriteBurstReqAdapter_io_out_writeAddr_ready = mem0_AWREADY; // @[AXIPlatformWrapper.scala 60:33]
+  assign AXIWriteBurstReqAdapter_io_out_writeData_ready = FPGAQueue_io_enq_ready; // @[FPGAQueue.scala 183:15]
+  assign FPGAQueue_clock = clock;
+  assign FPGAQueue_reset = reset;
+  assign FPGAQueue_io_enq_bits_last = AXIWriteBurstReqAdapter_io_out_writeData_bits_last; // @[FPGAQueue.scala 182:19]
+  assign FPGAQueue_io_deq_ready = mem0_WREADY; // @[AXIPlatformWrapper.scala 63:47]
+`ifdef RANDOMIZE_GARBAGE_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_INVALID_ASSIGN
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_REG_INIT
+`define RANDOMIZE
+`endif
+`ifdef RANDOMIZE_MEM_INIT
+`define RANDOMIZE
+`endif
+`ifndef RANDOM
+`define RANDOM $random
+`endif
+`ifdef RANDOMIZE_MEM_INIT
   integer initvar;
-  initial begin
-    #0.002;
-    regWrapperReset = {1{$random}};
-    regWrData = {1{$random}};
-    regState = {1{$random}};
-    regModeWrite = {1{$random}};
-    regRdAddr = {1{$random}};
-    regWrAddr = {1{$random}};
-    regRdReq = {1{$random}};
-    regWrReq = {1{$random}};
-  end
-// synthesis translate_on
 `endif
-
-  assign T44 = reset | regWrapperReset;
-  assign T45 = reset ? 1'h0 : T46;
-  assign T46 = T48 ? T47 : regWrapperReset;
-  assign T47 = T0[0];
-  assign T48 = T50 & T49;
-  assign T49 = T55 == 3'h0;
-  assign T50 = T34 & T24;
-  assign T51 = {31'h0, TestSum_io_finished};
-  assign T0 = T24 ? regWrData : 32'h0;
-  assign T52 = reset ? 32'h0 : T1;
-  assign T1 = T2 ? csr_WDATA : regWrData;
-  assign T2 = T3 & csr_WVALID;
-  assign T3 = 3'h3 == regState;
-  assign T53 = reset ? 3'h0 : T4;
-  assign T4 = T22 ? 3'h0 : T5;
-  assign T5 = T2 ? 3'h4 : T6;
-  assign T6 = T20 ? 3'h0 : T7;
-  assign T7 = T18 ? 3'h3 : T8;
-  assign T8 = T15 ? 3'h2 : T9;
-  assign T9 = T13 ? 3'h2 : T10;
-  assign T10 = T11 ? 3'h1 : regState;
-  assign T11 = T12 & csr_ARVALID;
-  assign T12 = 3'h0 == regState;
-  assign T13 = T12 & T14;
-  assign T14 = csr_ARVALID ^ 1'h1;
-  assign T15 = T17 & T16;
-  assign T16 = csr_RREADY & RegFile_io_extIF_readData_valid;
-  assign T17 = 3'h1 == regState;
-  assign T18 = T19 & csr_AWVALID;
-  assign T19 = 3'h2 == regState;
-  assign T20 = T19 & T21;
-  assign T21 = csr_AWVALID ^ 1'h1;
-  assign T22 = T23 & csr_BREADY;
-  assign T23 = 3'h4 == regState;
-  assign T24 = T25 ^ 1'h1;
-  assign T25 = regModeWrite ^ 1'h1;
-  assign T54 = reset ? 1'h0 : T26;
-  assign T26 = T18 ? 1'h1 : T27;
-  assign T27 = T11 ? 1'h0 : regModeWrite;
-  assign T55 = T28[2:0];
-  assign T28 = T24 ? T32 : T29;
-  assign T29 = T25 ? T30 : 32'h0;
-  assign T30 = regRdAddr / 3'h4;
-  assign T56 = reset ? 32'h0 : T31;
-  assign T31 = T11 ? csr_ARADDR : regRdAddr;
-  assign T32 = regWrAddr / 3'h4;
-  assign T57 = reset ? 32'h0 : T33;
-  assign T33 = T18 ? csr_AWADDR : regWrAddr;
-  assign T34 = T24 ? regWrReq : T35;
-  assign T35 = T25 ? regRdReq : 1'h0;
-  assign T58 = reset ? 1'h0 : T36;
-  assign T36 = T15 ? 1'h0 : T37;
-  assign T37 = T11 ? 1'h1 : regRdReq;
-  assign T59 = reset ? 1'h0 : T38;
-  assign T38 = T22 ? 1'h0 : T39;
-  assign T39 = T2 ? 1'h1 : T40;
-  assign T40 = T18 ? 1'h0 : regWrReq;
-  assign T41 = {RegFile_io_regOut_1, RegFile_io_regOut_2};
-  assign T42 = RegFile_io_regOut_6[0];
-  assign mem0_RREADY = AXIReadRspAdp_io_axiReadRspIn_ready;
-  assign mem0_ARQOS = AXIMemReqAdp_io_axiReqOut_bits_qos;
-  assign mem0_ARPROT = AXIMemReqAdp_io_axiReqOut_bits_prot;
-  assign mem0_ARCACHE = AXIMemReqAdp_io_axiReqOut_bits_cache;
-  assign mem0_ARLOCK = AXIMemReqAdp_io_axiReqOut_bits_lock;
-  assign mem0_ARID = AXIMemReqAdp_io_axiReqOut_bits_id;
-  assign mem0_ARBURST = AXIMemReqAdp_io_axiReqOut_bits_burst;
-  assign mem0_ARLEN = AXIMemReqAdp_io_axiReqOut_bits_len;
-  assign mem0_ARSIZE = AXIMemReqAdp_io_axiReqOut_bits_size;
-  assign mem0_ARADDR = AXIMemReqAdp_io_axiReqOut_bits_addr;
-  assign mem0_ARVALID = AXIMemReqAdp_io_axiReqOut_valid;
-  assign mem0_BREADY = AXIWriteRspAdp_io_axiWriteRspIn_ready;
-  assign mem0_WLAST = FPGAQueue_io_deq_bits_last;
-  assign mem0_WSTRB = FPGAQueue_io_deq_bits_strb;
-  assign mem0_WDATA = FPGAQueue_io_deq_bits_data;
-  assign mem0_WVALID = FPGAQueue_io_deq_valid;
-  assign mem0_AWQOS = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_qos;
-  assign mem0_AWPROT = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_prot;
-  assign mem0_AWCACHE = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_cache;
-  assign mem0_AWLOCK = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_lock;
-  assign mem0_AWID = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_id;
-  assign mem0_AWBURST = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_burst;
-  assign mem0_AWLEN = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_len;
-  assign mem0_AWSIZE = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_size;
-  assign mem0_AWADDR = AXIWriteBurstReqAdapter_io_out_writeAddr_bits_addr;
-  assign mem0_AWVALID = AXIWriteBurstReqAdapter_io_out_writeAddr_valid;
-  assign mem1_RREADY = 1'h0;
-  assign mem1_ARQOS = 4'h0;
-  assign mem1_ARPROT = 3'h0;
-  assign mem1_ARCACHE = 4'h0;
-  assign mem1_ARLOCK = 1'h0;
-  assign mem1_ARID = 6'h0;
-  assign mem1_ARBURST = 2'h0;
-  assign mem1_ARLEN = 8'h0;
-  assign mem1_ARSIZE = 3'h0;
-  assign mem1_ARADDR = 32'h0;
-  assign mem1_ARVALID = 1'h0;
-  assign mem1_BREADY = 1'h0;
-  assign mem1_WLAST = 1'h0;
-  assign mem1_WSTRB = 8'h0;
-  assign mem1_WDATA = 64'h0;
-  assign mem1_WVALID = 1'h0;
-  assign mem1_AWQOS = 4'h0;
-  assign mem1_AWPROT = 3'h0;
-  assign mem1_AWCACHE = 4'h0;
-  assign mem1_AWLOCK = 1'h0;
-  assign mem1_AWID = 6'h0;
-  assign mem1_AWBURST = 2'h0;
-  assign mem1_AWLEN = 8'h0;
-  assign mem1_AWSIZE = 3'h0;
-  assign mem1_AWADDR = 32'h0;
-  assign mem1_AWVALID = 1'h0;
-  assign mem2_RREADY = 1'h0;
-  assign mem2_ARQOS = 4'h0;
-  assign mem2_ARPROT = 3'h0;
-  assign mem2_ARCACHE = 4'h0;
-  assign mem2_ARLOCK = 1'h0;
-  assign mem2_ARID = 6'h0;
-  assign mem2_ARBURST = 2'h0;
-  assign mem2_ARLEN = 8'h0;
-  assign mem2_ARSIZE = 3'h0;
-  assign mem2_ARADDR = 32'h0;
-  assign mem2_ARVALID = 1'h0;
-  assign mem2_BREADY = 1'h0;
-  assign mem2_WLAST = 1'h0;
-  assign mem2_WSTRB = 8'h0;
-  assign mem2_WDATA = 64'h0;
-  assign mem2_WVALID = 1'h0;
-  assign mem2_AWQOS = 4'h0;
-  assign mem2_AWPROT = 3'h0;
-  assign mem2_AWCACHE = 4'h0;
-  assign mem2_AWLOCK = 1'h0;
-  assign mem2_AWID = 6'h0;
-  assign mem2_AWBURST = 2'h0;
-  assign mem2_AWLEN = 8'h0;
-  assign mem2_AWSIZE = 3'h0;
-  assign mem2_AWADDR = 32'h0;
-  assign mem2_AWVALID = 1'h0;
-  assign mem3_RREADY = 1'h0;
-  assign mem3_ARQOS = 4'h0;
-  assign mem3_ARPROT = 3'h0;
-  assign mem3_ARCACHE = 4'h0;
-  assign mem3_ARLOCK = 1'h0;
-  assign mem3_ARID = 6'h0;
-  assign mem3_ARBURST = 2'h0;
-  assign mem3_ARLEN = 8'h0;
-  assign mem3_ARSIZE = 3'h0;
-  assign mem3_ARADDR = 32'h0;
-  assign mem3_ARVALID = 1'h0;
-  assign mem3_BREADY = 1'h0;
-  assign mem3_WLAST = 1'h0;
-  assign mem3_WSTRB = 8'h0;
-  assign mem3_WDATA = 64'h0;
-  assign mem3_WVALID = 1'h0;
-  assign mem3_AWQOS = 4'h0;
-  assign mem3_AWPROT = 3'h0;
-  assign mem3_AWCACHE = 4'h0;
-  assign mem3_AWLOCK = 1'h0;
-  assign mem3_AWID = 6'h0;
-  assign mem3_AWBURST = 2'h0;
-  assign mem3_AWLEN = 8'h0;
-  assign mem3_AWSIZE = 3'h0;
-  assign mem3_AWADDR = 32'h0;
-  assign mem3_AWVALID = 1'h0;
-  assign csr_RRESP = 2'h0;
-  assign csr_RDATA = RegFile_io_extIF_readData_bits;
-  assign csr_RVALID = T43;
-  assign T43 = T17 ? RegFile_io_extIF_readData_valid : 1'h0;
-  assign csr_ARREADY = T12;
-  assign csr_BRESP = 2'h0;
-  assign csr_BVALID = T23;
-  assign csr_WREADY = T3;
-  assign csr_AWREADY = T19;
-  TestSum TestSum(.clk(clk), .reset(T44),
-       .io_memPort_0_memRdReq_ready( AXIMemReqAdp_io_genericReqIn_ready ),
-       .io_memPort_0_memRdReq_valid( TestSum_io_memPort_0_memRdReq_valid ),
-       .io_memPort_0_memRdReq_bits_channelID( TestSum_io_memPort_0_memRdReq_bits_channelID ),
-       .io_memPort_0_memRdReq_bits_isWrite( TestSum_io_memPort_0_memRdReq_bits_isWrite ),
-       .io_memPort_0_memRdReq_bits_addr( TestSum_io_memPort_0_memRdReq_bits_addr ),
-       .io_memPort_0_memRdReq_bits_numBytes( TestSum_io_memPort_0_memRdReq_bits_numBytes ),
-       .io_memPort_0_memRdReq_bits_metaData( TestSum_io_memPort_0_memRdReq_bits_metaData ),
-       .io_memPort_0_memRdRsp_ready( TestSum_io_memPort_0_memRdRsp_ready ),
-       .io_memPort_0_memRdRsp_valid( AXIReadRspAdp_io_genericRspOut_valid ),
-       .io_memPort_0_memRdRsp_bits_channelID( AXIReadRspAdp_io_genericRspOut_bits_channelID ),
-       .io_memPort_0_memRdRsp_bits_readData( AXIReadRspAdp_io_genericRspOut_bits_readData ),
-       .io_memPort_0_memRdRsp_bits_isWrite( AXIReadRspAdp_io_genericRspOut_bits_isWrite ),
-       .io_memPort_0_memRdRsp_bits_isLast( AXIReadRspAdp_io_genericRspOut_bits_isLast ),
-       .io_memPort_0_memRdRsp_bits_metaData( AXIReadRspAdp_io_genericRspOut_bits_metaData ),
-       .io_memPort_0_memWrReq_ready( AXIMemReqAdp_1_io_genericReqIn_ready ),
-       .io_memPort_0_memWrReq_valid( TestSum_io_memPort_0_memWrReq_valid ),
-       .io_memPort_0_memWrReq_bits_channelID( TestSum_io_memPort_0_memWrReq_bits_channelID ),
-       .io_memPort_0_memWrReq_bits_isWrite( TestSum_io_memPort_0_memWrReq_bits_isWrite ),
-       .io_memPort_0_memWrReq_bits_addr( TestSum_io_memPort_0_memWrReq_bits_addr ),
-       .io_memPort_0_memWrReq_bits_numBytes( TestSum_io_memPort_0_memWrReq_bits_numBytes ),
-       .io_memPort_0_memWrReq_bits_metaData( TestSum_io_memPort_0_memWrReq_bits_metaData ),
-       .io_memPort_0_memWrDat_ready( AXIWriteBurstReqAdapter_io_in_writeData_ready ),
-       .io_memPort_0_memWrDat_valid( TestSum_io_memPort_0_memWrDat_valid ),
-       .io_memPort_0_memWrDat_bits( TestSum_io_memPort_0_memWrDat_bits ),
-       .io_memPort_0_memWrRsp_ready( TestSum_io_memPort_0_memWrRsp_ready ),
-       .io_memPort_0_memWrRsp_valid( AXIWriteRspAdp_io_genericRspOut_valid ),
-       .io_memPort_0_memWrRsp_bits_channelID( AXIWriteRspAdp_io_genericRspOut_bits_channelID ),
-       .io_memPort_0_memWrRsp_bits_readData( AXIWriteRspAdp_io_genericRspOut_bits_readData ),
-       .io_memPort_0_memWrRsp_bits_isWrite( AXIWriteRspAdp_io_genericRspOut_bits_isWrite ),
-       .io_memPort_0_memWrRsp_bits_isLast( AXIWriteRspAdp_io_genericRspOut_bits_isLast ),
-       .io_memPort_0_memWrRsp_bits_metaData( AXIWriteRspAdp_io_genericRspOut_bits_metaData ),
-       .io_signature( TestSum_io_signature ),
-       .io_start( T42 ),
-       .io_finished( TestSum_io_finished ),
-       .io_baseAddr( T41 ),
-       .io_byteCount( RegFile_io_regOut_3 ),
-       .io_sum( TestSum_io_sum ),
-       .io_cycleCount( TestSum_io_cycleCount )
-  );
-  RegFile RegFile(.clk(clk), .reset(reset),
-       .io_extIF_cmd_valid( T34 ),
-       .io_extIF_cmd_bits_regID( T55 ),
-       .io_extIF_cmd_bits_read( T25 ),
-       .io_extIF_cmd_bits_write( T24 ),
-       .io_extIF_cmd_bits_writeData( T0 ),
-       .io_extIF_readData_valid( RegFile_io_extIF_readData_valid ),
-       .io_extIF_readData_bits( RegFile_io_extIF_readData_bits ),
-       //.io_extIF_regCount(  )
-       //.io_regOut_7(  )
-       .io_regOut_6( RegFile_io_regOut_6 ),
-       //.io_regOut_5(  )
-       //.io_regOut_4(  )
-       .io_regOut_3( RegFile_io_regOut_3 ),
-       .io_regOut_2( RegFile_io_regOut_2 ),
-       .io_regOut_1( RegFile_io_regOut_1 ),
-       //.io_regOut_0(  )
-       .io_regIn_7_valid( 1'h1 ),
-       .io_regIn_7_bits( TestSum_io_sum ),
-       .io_regIn_6_valid( 1'h0 ),
-       //.io_regIn_6_bits(  )
-       .io_regIn_5_valid( 1'h1 ),
-       .io_regIn_5_bits( T51 ),
-       .io_regIn_4_valid( 1'h1 ),
-       .io_regIn_4_bits( TestSum_io_cycleCount ),
-       .io_regIn_3_valid( 1'h0 ),
-       //.io_regIn_3_bits(  )
-       .io_regIn_2_valid( 1'h0 ),
-       //.io_regIn_2_bits(  )
-       .io_regIn_1_valid( 1'h0 ),
-       //.io_regIn_1_bits(  )
-       .io_regIn_0_valid( 1'h1 ),
-       .io_regIn_0_bits( TestSum_io_signature )
-  );
 `ifndef SYNTHESIS
-// synthesis translate_off
-    assign RegFile.io_regIn_6_bits = {1{$random}};
-    assign RegFile.io_regIn_3_bits = {1{$random}};
-    assign RegFile.io_regIn_2_bits = {1{$random}};
-    assign RegFile.io_regIn_1_bits = {1{$random}};
-// synthesis translate_on
+`ifdef FIRRTL_BEFORE_INITIAL
+`FIRRTL_BEFORE_INITIAL
 `endif
-  AXIMemReqAdp AXIMemReqAdp(
-       .io_genericReqIn_ready( AXIMemReqAdp_io_genericReqIn_ready ),
-       .io_genericReqIn_valid( TestSum_io_memPort_0_memRdReq_valid ),
-       .io_genericReqIn_bits_channelID( TestSum_io_memPort_0_memRdReq_bits_channelID ),
-       .io_genericReqIn_bits_isWrite( TestSum_io_memPort_0_memRdReq_bits_isWrite ),
-       .io_genericReqIn_bits_addr( TestSum_io_memPort_0_memRdReq_bits_addr ),
-       .io_genericReqIn_bits_numBytes( TestSum_io_memPort_0_memRdReq_bits_numBytes ),
-       .io_genericReqIn_bits_metaData( TestSum_io_memPort_0_memRdReq_bits_metaData ),
-       .io_axiReqOut_ready( mem0_ARREADY ),
-       .io_axiReqOut_valid( AXIMemReqAdp_io_axiReqOut_valid ),
-       .io_axiReqOut_bits_addr( AXIMemReqAdp_io_axiReqOut_bits_addr ),
-       .io_axiReqOut_bits_size( AXIMemReqAdp_io_axiReqOut_bits_size ),
-       .io_axiReqOut_bits_len( AXIMemReqAdp_io_axiReqOut_bits_len ),
-       .io_axiReqOut_bits_burst( AXIMemReqAdp_io_axiReqOut_bits_burst ),
-       .io_axiReqOut_bits_id( AXIMemReqAdp_io_axiReqOut_bits_id ),
-       .io_axiReqOut_bits_lock( AXIMemReqAdp_io_axiReqOut_bits_lock ),
-       .io_axiReqOut_bits_cache( AXIMemReqAdp_io_axiReqOut_bits_cache ),
-       .io_axiReqOut_bits_prot( AXIMemReqAdp_io_axiReqOut_bits_prot ),
-       .io_axiReqOut_bits_qos( AXIMemReqAdp_io_axiReqOut_bits_qos )
-  );
-  AXIReadRspAdp AXIReadRspAdp(
-       .io_axiReadRspIn_ready( AXIReadRspAdp_io_axiReadRspIn_ready ),
-       .io_axiReadRspIn_valid( mem0_RVALID ),
-       .io_axiReadRspIn_bits_data( mem0_RDATA ),
-       .io_axiReadRspIn_bits_id( mem0_RID ),
-       .io_axiReadRspIn_bits_last( mem0_RLAST ),
-       .io_axiReadRspIn_bits_resp( mem0_RRESP ),
-       .io_genericRspOut_ready( TestSum_io_memPort_0_memRdRsp_ready ),
-       .io_genericRspOut_valid( AXIReadRspAdp_io_genericRspOut_valid ),
-       .io_genericRspOut_bits_channelID( AXIReadRspAdp_io_genericRspOut_bits_channelID ),
-       .io_genericRspOut_bits_readData( AXIReadRspAdp_io_genericRspOut_bits_readData ),
-       .io_genericRspOut_bits_isWrite( AXIReadRspAdp_io_genericRspOut_bits_isWrite ),
-       .io_genericRspOut_bits_isLast( AXIReadRspAdp_io_genericRspOut_bits_isLast ),
-       .io_genericRspOut_bits_metaData( AXIReadRspAdp_io_genericRspOut_bits_metaData )
-  );
-  AXIMemReqAdp AXIMemReqAdp_1(
-       .io_genericReqIn_ready( AXIMemReqAdp_1_io_genericReqIn_ready ),
-       .io_genericReqIn_valid( TestSum_io_memPort_0_memWrReq_valid ),
-       .io_genericReqIn_bits_channelID( TestSum_io_memPort_0_memWrReq_bits_channelID ),
-       .io_genericReqIn_bits_isWrite( TestSum_io_memPort_0_memWrReq_bits_isWrite ),
-       .io_genericReqIn_bits_addr( TestSum_io_memPort_0_memWrReq_bits_addr ),
-       .io_genericReqIn_bits_numBytes( TestSum_io_memPort_0_memWrReq_bits_numBytes ),
-       .io_genericReqIn_bits_metaData( TestSum_io_memPort_0_memWrReq_bits_metaData ),
-       .io_axiReqOut_ready( AXIWriteBurstReqAdapter_io_in_writeAddr_ready ),
-       .io_axiReqOut_valid( AXIMemReqAdp_1_io_axiReqOut_valid ),
-       .io_axiReqOut_bits_addr( AXIMemReqAdp_1_io_axiReqOut_bits_addr ),
-       .io_axiReqOut_bits_size( AXIMemReqAdp_1_io_axiReqOut_bits_size ),
-       .io_axiReqOut_bits_len( AXIMemReqAdp_1_io_axiReqOut_bits_len ),
-       .io_axiReqOut_bits_burst( AXIMemReqAdp_1_io_axiReqOut_bits_burst ),
-       .io_axiReqOut_bits_id( AXIMemReqAdp_1_io_axiReqOut_bits_id ),
-       .io_axiReqOut_bits_lock( AXIMemReqAdp_1_io_axiReqOut_bits_lock ),
-       .io_axiReqOut_bits_cache( AXIMemReqAdp_1_io_axiReqOut_bits_cache ),
-       .io_axiReqOut_bits_prot( AXIMemReqAdp_1_io_axiReqOut_bits_prot ),
-       .io_axiReqOut_bits_qos( AXIMemReqAdp_1_io_axiReqOut_bits_qos )
-  );
-  AXIWriteBurstReqAdapter AXIWriteBurstReqAdapter(.clk(clk), .reset(reset),
-       .io_in_writeAddr_ready( AXIWriteBurstReqAdapter_io_in_writeAddr_ready ),
-       .io_in_writeAddr_valid( AXIMemReqAdp_1_io_axiReqOut_valid ),
-       .io_in_writeAddr_bits_addr( AXIMemReqAdp_1_io_axiReqOut_bits_addr ),
-       .io_in_writeAddr_bits_size( AXIMemReqAdp_1_io_axiReqOut_bits_size ),
-       .io_in_writeAddr_bits_len( AXIMemReqAdp_1_io_axiReqOut_bits_len ),
-       .io_in_writeAddr_bits_burst( AXIMemReqAdp_1_io_axiReqOut_bits_burst ),
-       .io_in_writeAddr_bits_id( AXIMemReqAdp_1_io_axiReqOut_bits_id ),
-       .io_in_writeAddr_bits_lock( AXIMemReqAdp_1_io_axiReqOut_bits_lock ),
-       .io_in_writeAddr_bits_cache( AXIMemReqAdp_1_io_axiReqOut_bits_cache ),
-       .io_in_writeAddr_bits_prot( AXIMemReqAdp_1_io_axiReqOut_bits_prot ),
-       .io_in_writeAddr_bits_qos( AXIMemReqAdp_1_io_axiReqOut_bits_qos ),
-       .io_in_writeData_ready( AXIWriteBurstReqAdapter_io_in_writeData_ready ),
-       .io_in_writeData_valid( TestSum_io_memPort_0_memWrDat_valid ),
-       .io_in_writeData_bits_data( TestSum_io_memPort_0_memWrDat_bits ),
-       .io_in_writeData_bits_strb( 8'hff ),
-       .io_in_writeData_bits_last( 1'h0 ),
-       .io_out_writeAddr_ready( mem0_AWREADY ),
-       .io_out_writeAddr_valid( AXIWriteBurstReqAdapter_io_out_writeAddr_valid ),
-       .io_out_writeAddr_bits_addr( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_addr ),
-       .io_out_writeAddr_bits_size( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_size ),
-       .io_out_writeAddr_bits_len( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_len ),
-       .io_out_writeAddr_bits_burst( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_burst ),
-       .io_out_writeAddr_bits_id( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_id ),
-       .io_out_writeAddr_bits_lock( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_lock ),
-       .io_out_writeAddr_bits_cache( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_cache ),
-       .io_out_writeAddr_bits_prot( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_prot ),
-       .io_out_writeAddr_bits_qos( AXIWriteBurstReqAdapter_io_out_writeAddr_bits_qos ),
-       .io_out_writeData_ready( FPGAQueue_io_enq_ready ),
-       .io_out_writeData_valid( AXIWriteBurstReqAdapter_io_out_writeData_valid ),
-       .io_out_writeData_bits_data( AXIWriteBurstReqAdapter_io_out_writeData_bits_data ),
-       .io_out_writeData_bits_strb( AXIWriteBurstReqAdapter_io_out_writeData_bits_strb ),
-       .io_out_writeData_bits_last( AXIWriteBurstReqAdapter_io_out_writeData_bits_last )
-  );
-  FPGAQueue_0 FPGAQueue(.clk(clk), .reset(reset),
-       .io_enq_ready( FPGAQueue_io_enq_ready ),
-       .io_enq_valid( AXIWriteBurstReqAdapter_io_out_writeData_valid ),
-       .io_enq_bits_data( AXIWriteBurstReqAdapter_io_out_writeData_bits_data ),
-       .io_enq_bits_strb( AXIWriteBurstReqAdapter_io_out_writeData_bits_strb ),
-       .io_enq_bits_last( AXIWriteBurstReqAdapter_io_out_writeData_bits_last ),
-       .io_deq_ready( mem0_WREADY ),
-       .io_deq_valid( FPGAQueue_io_deq_valid ),
-       .io_deq_bits_data( FPGAQueue_io_deq_bits_data ),
-       .io_deq_bits_strb( FPGAQueue_io_deq_bits_strb ),
-       .io_deq_bits_last( FPGAQueue_io_deq_bits_last )
-       //.io_count(  )
-  );
-  AXIWriteRspAdp AXIWriteRspAdp(
-       .io_axiWriteRspIn_ready( AXIWriteRspAdp_io_axiWriteRspIn_ready ),
-       .io_axiWriteRspIn_valid( mem0_BVALID ),
-       .io_axiWriteRspIn_bits_id( mem0_BID ),
-       .io_axiWriteRspIn_bits_resp( mem0_BRESP ),
-       .io_genericRspOut_ready( TestSum_io_memPort_0_memWrRsp_ready ),
-       .io_genericRspOut_valid( AXIWriteRspAdp_io_genericRspOut_valid ),
-       .io_genericRspOut_bits_channelID( AXIWriteRspAdp_io_genericRspOut_bits_channelID ),
-       .io_genericRspOut_bits_readData( AXIWriteRspAdp_io_genericRspOut_bits_readData ),
-       .io_genericRspOut_bits_isWrite( AXIWriteRspAdp_io_genericRspOut_bits_isWrite ),
-       .io_genericRspOut_bits_isLast( AXIWriteRspAdp_io_genericRspOut_bits_isLast ),
-       .io_genericRspOut_bits_metaData( AXIWriteRspAdp_io_genericRspOut_bits_metaData )
-  );
-
-  always @(posedge clk) begin
-    if(reset) begin
+initial begin
+  `ifdef RANDOMIZE
+    `ifdef INIT_RANDOM
+      `INIT_RANDOM
+    `endif
+    `ifndef VERILATOR
+      `ifdef RANDOMIZE_DELAY
+        #`RANDOMIZE_DELAY begin end
+      `else
+        #0.002 begin end
+      `endif
+    `endif
+`ifdef RANDOMIZE_REG_INIT
+  _RAND_0 = {1{`RANDOM}};
+  regWrapperReset = _RAND_0[0:0];
+  _RAND_1 = {1{`RANDOM}};
+  regState = _RAND_1[2:0];
+  _RAND_2 = {1{`RANDOM}};
+  regModeWrite = _RAND_2[0:0];
+  _RAND_3 = {1{`RANDOM}};
+  regRdReq = _RAND_3[0:0];
+  _RAND_4 = {1{`RANDOM}};
+  regRdAddr = _RAND_4[31:0];
+  _RAND_5 = {1{`RANDOM}};
+  regWrReq = _RAND_5[0:0];
+  _RAND_6 = {1{`RANDOM}};
+  regWrAddr = _RAND_6[0:0];
+  _RAND_7 = {1{`RANDOM}};
+  regWrData = _RAND_7[31:0];
+`endif // RANDOMIZE_REG_INIT
+  `endif // RANDOMIZE
+end // initial
+`ifdef FIRRTL_AFTER_INITIAL
+`FIRRTL_AFTER_INITIAL
+`endif
+`endif // SYNTHESIS
+  always @(posedge clock) begin
+    if (reset) begin
       regWrapperReset <= 1'h0;
-    end else if(T48) begin
-      regWrapperReset <= T47;
+    end else if (_T_4) begin
+      regWrapperReset <= RegFile_io_extIF_cmd_bits_writeData[0];
     end
-    if(reset) begin
-      regWrData <= 32'h0;
-    end else if(T2) begin
-      regWrData <= csr_WDATA;
+    if (reset) begin
+      regState <= 3'h0;
+    end else if (csr_1_readAddr_ready) begin
+      if (csr_ARVALID) begin
+        regState <= 3'h1;
+      end else begin
+        regState <= 3'h2;
+      end
+    end else if (_T_13) begin
+      if (_T_14) begin
+        regState <= 3'h2;
+      end
+    end else if (_T_15) begin
+      if (csr_AWVALID) begin
+        regState <= 3'h3;
+      end else begin
+        regState <= 3'h0;
+      end
+    end else if (_T_16) begin
+      if (csr_WVALID) begin
+        regState <= 3'h4;
+      end
+    end else if (_T_17) begin
+      if (csr_BREADY) begin
+        regState <= 3'h0;
+      end
     end
-    if(reset) begin
-      regState <= 3'h0;
-    end else if(T22) begin
-      regState <= 3'h0;
-    end else if(T2) begin
-      regState <= 3'h4;
-    end else if(T20) begin
-      regState <= 3'h0;
-    end else if(T18) begin
-      regState <= 3'h3;
-    end else if(T15) begin
-      regState <= 3'h2;
-    end else if(T13) begin
-      regState <= 3'h2;
-    end else if(T11) begin
-      regState <= 3'h1;
-    end
-    if(reset) begin
+    if (reset) begin
       regModeWrite <= 1'h0;
-    end else if(T18) begin
-      regModeWrite <= 1'h1;
-    end else if(T11) begin
-      regModeWrite <= 1'h0;
+    end else if (csr_1_readAddr_ready) begin
+      if (csr_ARVALID) begin
+        regModeWrite <= 1'h0;
+      end
+    end else if (!(_T_13)) begin
+      if (_T_15) begin
+        regModeWrite <= _GEN_12;
+      end
     end
-    if(reset) begin
+    if (reset) begin
+      regRdReq <= 1'h0;
+    end else if (csr_1_readAddr_ready) begin
+      regRdReq <= _GEN_6;
+    end else if (_T_13) begin
+      if (_T_14) begin
+        regRdReq <= 1'h0;
+      end
+    end
+    if (reset) begin
       regRdAddr <= 32'h0;
-    end else if(T11) begin
-      regRdAddr <= csr_ARADDR;
+    end else if (csr_1_readAddr_ready) begin
+      if (csr_ARVALID) begin
+        regRdAddr <= csr_ARADDR;
+      end
     end
-    if(reset) begin
-      regWrAddr <= 32'h0;
-    end else if(T18) begin
-      regWrAddr <= csr_AWADDR;
+    if (reset) begin
+      regWrReq <= 1'h0;
+    end else if (!(csr_1_readAddr_ready)) begin
+      if (!(_T_13)) begin
+        if (_T_15) begin
+          if (csr_AWVALID) begin
+            regWrReq <= 1'h0;
+          end
+        end else if (_T_16) begin
+          regWrReq <= _GEN_17;
+        end else if (_T_17) begin
+          if (csr_BREADY) begin
+            regWrReq <= 1'h0;
+          end
+        end
+      end
     end
-    if(reset) begin
-      regRdReq <= 1'h0;
-    end else if(T15) begin
-      regRdReq <= 1'h0;
-    end else if(T11) begin
-      regRdReq <= 1'h1;
+    if (reset) begin
+      regWrAddr <= 1'h0;
+    end else begin
+      regWrAddr <= _GEN_55[0];
     end
-    if(reset) begin
-      regWrReq <= 1'h0;
-    end else if(T22) begin
-      regWrReq <= 1'h0;
-    end else if(T2) begin
-      regWrReq <= 1'h1;
-    end else if(T18) begin
-      regWrReq <= 1'h0;
+    if (reset) begin
+      regWrData <= 32'h0;
+    end else if (!(csr_1_readAddr_ready)) begin
+      if (!(_T_13)) begin
+        if (!(_T_15)) begin
+          if (_T_16) begin
+            if (csr_WVALID) begin
+              regWrData <= csr_WDATA;
+            end
+          end
+        end
+      end
     end
   end
 endmodule
-

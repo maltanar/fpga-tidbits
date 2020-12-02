@@ -30,3 +30,7 @@ emulator/
 verilator/
 emu-*/
 vivado*.jou
+notes.md
+vivado
+Zedboard
+*.fir

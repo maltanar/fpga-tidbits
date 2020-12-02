@@ -31,8 +31,6 @@ trait PlatformWrapperParams {
   def coherentMem: Boolean
   val csrDataBits: Int = 32 // TODO let platforms configure own CSR width
 
-  var regDriverTargetDir: String
-
   def toMemReqParams(): MemReqParams = {
     new MemReqParams(memAddrBits, memDataBits, memIDBits, memMetaBits, sameIDInOrder)
   }
@@ -61,6 +59,9 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
     "platform.h", "wrapperregdriver.h"
   )
   def platformDriverFiles: Array[String]  // additional files
+
+  // Rename clock -> clk
+  clock.suggestName("clk")
 
   // instantiate the accelerator
   //val regWrapperReset = Reg(init = false.B, clock = Driver.implicitClock)
@@ -92,7 +93,7 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
   //val fxn = {x: (String, Data) => (roundMultiple(x._2.getWidth, wCSR))}
   val fxn = { x: (Element) => (roundMultiple(x.getWidth, wCSR))}
 
-  val numRegs = ownIO.map(fxn).reduce({_+_}) / wCSR
+  val numRegs = ownIO.map(fxn).sum / wCSR
 
   // instantiate the register file
   val regAddrBits = log2Ceil(numRegs)
@@ -120,19 +121,14 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
 
     val name = element.name
     val bits = element
-    println(s"IO element: ${element} I/O=${DataMirror.directionOf(element)}")
-    println(s"bits=${bits.getClass}")
     if(name != "signature") {
-      println(s"IO element: ${element.name} is not signature")
       val w = bits.getWidth
       if(w > wCSR) {
-        println(s"IO element: ${element.name} is wider than wCSR")
         // signal is wide, maps to several registers
         val numRegsToAlloc = roundMultiple(w, wCSR) / wCSR
         regFileMap(name) = (allocReg until allocReg + numRegsToAlloc).toArray
         // connect the I/O signal to the register file appropriately
         if(DataMirror.directionOf(element) == ActualDirection.Input) {
-          println(s"IO element: ${element.name} is input")
           // concatanate all assigned registers, connect to input
           bits := regFileMap(name).map(regFile.regOut(_)).reduce(Cat(_,_))
           for(i <- 0 until numRegsToAlloc) {
@@ -140,7 +136,6 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
             regFile.regIn(allocReg + i).bits := 0.U
           }
         } else if(DataMirror.directionOf(element) == ActualDirection.Output)  {
-          println(s"IO element: ${element.name} is output")
           for(i <- 0 until numRegsToAlloc) {
             regFile.regIn(allocReg + i).valid := true.B
             val ubound = math.min(i*wCSR+wCSR-1, w-1)
@@ -155,20 +150,16 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
         regFileMap(name) = Array(allocReg)
         // connect the I/O signal to the register file appropriately
         if(DataMirror.directionOf(element) == ActualDirection.Input)  {
-          println(s"IO element: ${element.name} is input")
-          regFile.regIn(allocReg).bits := 0.U //Tie off input. Added by erlingrj to avoid "reference not fully initialize"
-          regFile.regIn(allocReg).valid := false.B
-
           // handle Bool input cases,"multi-bit signal to Bool" error
           if(bits.getWidth == 1) {
             bits := regFile.regOut(allocReg)(0)
 
           } else { bits := regFile.regOut(allocReg) }
           // disable internal write for this register
+          regFile.regIn(allocReg).bits := 0.U //Tie off input. Added by erlingrj to avoid "reference not fully initialize"
           regFile.regIn(allocReg).valid := false.B
 
         } else if(DataMirror.directionOf(element) == ActualDirection.Output )  {
-          println(s"IO element: ${element.name} is output")
           // TODO don't always write (change detect?)
           regFile.regIn(allocReg).valid := true.B
           regFile.regIn(allocReg).bits := bits
@@ -252,6 +243,9 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
     val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == ActualDirection.Output).map(_.instanceName.substring(3))
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
 
+    println(statRegMap)
+    println(statRegs)
+    println(regFileMap)
     var hlsBlackBoxTemplateDefines = ""
   //  if(accel.hlsBlackBoxes.size != 0) {
   //    hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
@@ -307,7 +301,7 @@ protected:
 
     import java.io._
     // Create file
-    val filename = targetDir+"/"+driverName+".hpp"
+    val filename = targetDir+driverName+".hpp"
     println(filename)
     val file = new File(filename)
     if (!file.exists()) {
@@ -319,6 +313,4 @@ protected:
     writer.close()
     println("=======> Driver written to "+driverName+".hpp")
   }
-
-  generateRegDriver(p.regDriverTargetDir)
 }
