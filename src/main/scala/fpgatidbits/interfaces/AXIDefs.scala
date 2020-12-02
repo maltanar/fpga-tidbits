@@ -112,7 +112,7 @@ class AXIExternalIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) extends 
 }
 
 
-class AXIExternalReadOnlyIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) extends Bundle {
+class AXIReadOnlyExternalIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) extends Bundle {
 
   // Read address channel
   val ARADDR = Output(UInt(addrWidthBits.W))
@@ -158,7 +158,7 @@ class AXIExternalReadOnlyIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) 
     in.readData.bits.last := RLAST
     in.readData.bits.id := RID
   }
-  override def cloneType = { new AXIExternalReadOnlyIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
+  override def cloneType = { new AXIReadOnlyExternalIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
 }
 
 // Part I: Definitions for the actual data carried over AXI channels

@@ -13,22 +13,23 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
                                   instFxn: PlatformWrapperParams => GenericAccelerator)
   extends PlatformWrapper(p, instFxn) {
 
-  val csr = IO(new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits))
+  val csr = Wire(new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits))
   val mem = Wire(Vec(p.numMemPorts, new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)))
-  //val mem = VecInit(Seq.tabulate(p.numMemPorts) {idx => WireInit(new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits))})
+
 
   // add the actual external interfaces with the correct naming
   val extMemIf = VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
+  val extCsrIf = IO(Flipped(new AXILiteExternalIF(p.memAddrBits, p.csrDataBits))).suggestName("csr")
 
   // Make the connections between the external and internal AXI interface
   for ((extIf, intIf) <- extMemIf zip mem ) {
     extIf.connect(intIf)
   }
+  extCsrIf.connect(csr)
 
 
 
-
-  // memory port adapters and connections
+    // memory port adapters and connections
   // TODO use accel numMemPorts and plug unused
   for(i <- 0 until accel.numMemPorts) {
     // instantiate AXI request and response adapters for the mem interface
