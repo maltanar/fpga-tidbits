@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -9,19 +10,19 @@ import fpgatidbits.ocm._
 class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
-    val indsBase = UInt(INPUT, 64)
-    val valsBase = UInt(INPUT, 64)
-    val count = UInt(INPUT, 32)
-    val resultsOK = UInt(OUTPUT, 32)
-    val resultsNotOK = UInt(OUTPUT, 32)
+    val start = Input(Bool())
+    val finished = Output(Bool())
+    val indsBase = Input(UInt(64.W))
+    val valsBase = Input(UInt(64.W))
+    val count = Input(UInt(32.W))
+    val resultsOK = Output(UInt(32.W))
+    val resultsNotOK = Output(UInt(32.W))
     val perf = new Bundle {
-      val cycles = UInt(OUTPUT, 32)
+      val cycles = Output(UInt(32.W))
       val monInds = new StreamMonitorOutIF()
       val monRdReq = new StreamMonitorOutIF()
       val monRdRsp = new StreamMonitorOutIF()
-      val resultsOoO = UInt(OUTPUT, 32)
+      val resultsOoO = Output(UInt(32.W))
     }
   }
   io.signature := makeDefaultSignature()
@@ -33,10 +34,10 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // # bits per index, 32-bit integers are generally enough
   val indWidth = 32
   val datWidth = 64
-  val bytesPerInd = UInt(indWidth/8)
+  val bytesPerInd = (indWidth/8).U
   val numTxns = 32
 
-  val regIndCount = Reg(next = io.count)
+  val regIndCount = RegNext(io.count)
 
   // instantiate a StreamReader to read out the indices array
   val inds = Module(new StreamReader(new StreamReaderParams(
@@ -73,15 +74,15 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   // examine incoming results from gatherer
   // -- compare against known good value
-  val regResultsOK = Reg(init = UInt(0, 32))
-  val regResultsNotOK = Reg(init = UInt(0, 32))
-  val regTotal = Reg(init = UInt(0, 32))
-  val regActive = Reg(init = Bool(false))
-  val regCycles = Reg(init = UInt(0, 32))
-  val regNumOutOfOrder = Reg(init = UInt(0, 32))
+  val regResultsOK = RegInit(0.U(32.W))
+  val regResultsNotOK = RegInit(0.U(32.W))
+  val regTotal = RegInit(0.U(32.W))
+  val regActive = RegInit(false.B)
+  val regCycles = RegInit(0.U(32.W))
+  val regNumOutOfOrder = RegInit(0.U(32.W))
 
-  gather.out.ready := Bool(true)
-  io.finished := Bool(false)
+  gather.out.ready := true.B
+  io.finished := false.B
 
   regTotal := regResultsOK + regResultsNotOK
 
@@ -98,19 +99,19 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
 
   when(!regActive) {
-    regResultsOK := UInt(0)
-    regResultsNotOK := UInt(0)
-    regCycles := UInt(0)
-    regNumOutOfOrder := UInt(0)
+    regResultsOK := 0.U
+    regResultsNotOK := 0.U
+    regCycles := 0.U
+    regNumOutOfOrder := 0.U
     regActive := io.start
   } .otherwise {
     // watch incoming gather responses
     when(gather.out.ready & gather.out.valid) {
       val expVal = gather.out.bits.tag
       when(expVal === gather.out.bits.dat) {
-        regResultsOK := regResultsOK + UInt(1)
+        regResultsOK := regResultsOK + 1.U
       } .otherwise {
-        regResultsNotOK := regResultsNotOK + UInt(1)
+        regResultsNotOK := regResultsNotOK + 1.U
       }
       // increment OoO response counter if appropriate
       when(orderCheckQ.deq.bits.tag != gather.out.bits.tag) {
@@ -118,16 +119,16 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
           regResultsOK+regResultsNotOK,
           orderCheckQ.deq.bits.tag, gather.out.bits.tag
         )
-        regNumOutOfOrder := regNumOutOfOrder + UInt(1)
+        regNumOutOfOrder := regNumOutOfOrder + 1.U
       }
     }
 
     when(regTotal === regIndCount) {
-      io.finished := Bool(true)
-      when(!io.start) {regActive := Bool(false)}
+      io.finished := true.B
+      when(!io.start) {regActive := false.B}
     } .otherwise {
       // still some work to do, keep track of # cycles
-      regCycles := regCycles + UInt(1)
+      regCycles := regCycles + 1.U
     }
   }
 

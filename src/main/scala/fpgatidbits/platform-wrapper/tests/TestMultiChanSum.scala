@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.axi._
 import fpgatidbits.dma._
@@ -10,11 +11,11 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val numChans = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val baseAddr = Vec.fill(numChans) {UInt(INPUT, width=64)}
-    val byteCount = Vec.fill(numChans) {UInt(INPUT, width=32)}
-    val sum = Vec.fill(numChans) {UInt(OUTPUT, width=32)}
-    val status = Bool(OUTPUT)
+    val start = Input(Bool())
+    val baseAddr = Vec(numChans,Input(UInt(64.W)))
+    val byteCount = Vec(numChans, Input(UInt(32.W)))
+    val sum = Vec(numChans,  Output(UInt(32.W)))
+    val status = Output(Bool())
   }
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()
@@ -27,10 +28,11 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     ))).io
   }
 
-  val readers = Vec.tabulate(numChans) {i:Int => makeReader(i)}
-  val reducers = Vec.fill(numChans) {
+  VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
+  val readers = VecInit(Seq.tabulate(numChans) {i:Int => makeReader(i)})
+  val reducers = VecInit(Seq.fill(numChans) {
     Module(new StreamReducer(32, 0, {_+_})).io
-  }
+  })
 
   val intl = Module(new ReqInterleaver(numChans, mrp)).io
   val deintl = Module(new QueuedDeinterleaver(numChans, mrp, 4)).io

@@ -66,7 +66,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
     origReqID.read(freeReqID.idOut.bits) := io.reqOrdered.bits.channelID
   }
 
-  //StreamMonitor(readyReqs, Bool(true), "readyReqs")
+  //StreamMonitor(readyReqs, true.B, "readyReqs")
 
   // issued requests go to both mem req channel and busyReqs queue
   val reqIssueFork = Module(new StreamFork(

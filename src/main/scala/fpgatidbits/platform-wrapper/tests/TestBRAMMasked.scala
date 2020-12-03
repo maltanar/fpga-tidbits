@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -19,7 +20,7 @@ class TestBRAMMasked(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val maskUnit = 8
   val maskWidth = dataWidth/maskUnit
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val ports = Vec.fill (2) {new OCMMaskedSlaveIF(dataWidth, addrWidth, maskWidth)}
+    val ports = Vec(2, new OCMMaskedSlaveIF(dataWidth, addrWidth, maskWidth))
   }
   io.signature := makeDefaultSignature()
 

@@ -150,9 +150,9 @@ class StreamReader(val p: StreamReaderParams) extends Module {
 
   // uncomment below for performance-debugging StreamReader
   /*
-  val regCycleCount = Reg(init = UInt(0, 32))
-  val regCycleFifoNotValid = Reg(init = UInt(0, 32))
-  val regCycleMemRspNotValid = Reg(init = UInt(0, 32))
+  val regCycleCount = RegInit(0.U(32.W))
+  val regCycleFifoNotValid = RegInit(0.U(32.W))
+  val regCycleMemRspNotValid = RegInit(0.U(32.W))
   val act = io.start & !io.finished
   val regWasActive = Reg(next = act)
   when(io.active) {

@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -12,7 +13,7 @@ import fpgatidbits.ocm._
 class TestBRAM(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 0
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val ports = Vec.fill (2) {new OCMSlaveIF(32, 32, 10)}
+    val ports = Vec(2, new OCMSlaveIF(32, 32, 10))
   }
   io.signature := makeDefaultSignature()
 

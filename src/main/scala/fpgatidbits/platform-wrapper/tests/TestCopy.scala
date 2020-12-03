@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -10,12 +11,12 @@ import fpgatidbits.streams._
 class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
-    val srcAddr = UInt(INPUT, width = 64)
-    val dstAddr = UInt(INPUT, width = 64)
-    val byteCount = UInt(INPUT, width = 32)
-    val finBytes = UInt(OUTPUT, width = 32)
+    val start = Input(Bool())
+    val finished = Output(Bool())
+    val srcAddr = Input(UInt(64.W))
+    val dstAddr = Input(UInt(64.W))
+    val byteCount = Input(UInt(32.W))
+    val finBytes = Output(UInt(32.W))
   }
   io.signature := makeDefaultSignature()
 
@@ -26,18 +27,18 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val writePort = io.memPort(1)
 
   // plug unused valid signals
-  readPort.memWrReq.valid := Bool(false)
-  readPort.memWrDat.valid := Bool(false)
-  writePort.memRdReq.valid := Bool(false)
+  readPort.memWrReq.valid := false.B
+  readPort.memWrDat.valid := false.B
+  writePort.memRdReq.valid := false.B
 
   rrg.ctrl.start := io.start
-  rrg.ctrl.throttle := Bool(false)
+  rrg.ctrl.throttle := false.B
   rrg.ctrl.baseAddr := io.srcAddr
   rrg.ctrl.byteCount := io.byteCount
   rrg.reqs <> readPort.memRdReq
 
   wrg.ctrl.start := io.start
-  wrg.ctrl.throttle := Bool(false)
+  wrg.ctrl.throttle := false.B
   wrg.ctrl.baseAddr := io.dstAddr
   wrg.ctrl.byteCount := io.byteCount
   wrg.reqs <> writePort.memWrReq
@@ -46,24 +47,24 @@ class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   ReadRespFilter(readPort.memRdRsp) <> writePort.memWrDat
 
   // count write responses to determine finished
-  val regNumPendingReqs = Reg(init = UInt(0, 32))
-  val regRequestedBytes = Reg(init = UInt(0, 32))
+  val regNumPendingReqs = RegInit(0.U(32.W))
+  val regRequestedBytes = RegInit(0.U(32.W))
 
-  writePort.memWrRsp.ready := Bool(true)
+  writePort.memWrRsp.ready := true.B
 
   when(!io.start) {
-    regNumPendingReqs := UInt(0)
-    regRequestedBytes := UInt(0)
+    regNumPendingReqs := 0.U
+    regRequestedBytes := 0.U
   } .otherwise {
     val reqFired = writePort.memWrReq.valid & writePort.memWrReq.ready
     val rspFired = writePort.memWrRsp.valid & writePort.memWrRsp.ready
 
-    regRequestedBytes := regRequestedBytes + Mux(reqFired, writePort.memWrReq.bits.numBytes, UInt(0))
+    regRequestedBytes := regRequestedBytes + Mux(reqFired, writePort.memWrReq.bits.numBytes, 0.U)
 
-    when(reqFired && !rspFired) { regNumPendingReqs := regNumPendingReqs + UInt(1)}
-    .elsewhen(!reqFired && rspFired) { regNumPendingReqs := regNumPendingReqs - UInt(1) }
+    when(reqFired && !rspFired) { regNumPendingReqs := regNumPendingReqs + 1.U}
+    .elsewhen(!reqFired && rspFired) { regNumPendingReqs := regNumPendingReqs - 1.U }
   }
 
-  io.finished := io.start & (regRequestedBytes === io.byteCount) & (regNumPendingReqs === UInt(0))
+  io.finished := io.start & (regRequestedBytes === io.byteCount) & (regNumPendingReqs === 0.U)
   io.finBytes := regRequestedBytes
 }

@@ -38,7 +38,7 @@
             <spirit:name>CLK</spirit:name>
           </spirit:logicalPort>
           <spirit:physicalPort>
-            <spirit:name>clock</spirit:name>
+            <spirit:name>clk</spirit:name>
           </spirit:physicalPort>
         </spirit:portMap>
       </spirit:portMaps>
@@ -1516,7 +1516,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>1d870a0f</spirit:value>
+            <spirit:value>c74b2e3d</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1532,7 +1532,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>1d870a0f</spirit:value>
+            <spirit:value>c74b2e3d</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1553,7 +1553,7 @@
     </spirit:views>
     <spirit:ports>
       <spirit:port>
-        <spirit:name>clock</spirit:name>
+        <spirit:name>clk</spirit:name>
         <spirit:wire>
           <spirit:direction>in</spirit:direction>
           <spirit:wireTypeDefs>
@@ -4342,7 +4342,7 @@
       <spirit:file>
         <spirit:name>ZedBoardWrapper.v</spirit:name>
         <spirit:fileType>verilogSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_69332b0f</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_f2cd269f</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -4387,11 +4387,11 @@
         <xilinx:taxonomy>/BaseIP</xilinx:taxonomy>
       </xilinx:taxonomies>
       <xilinx:displayName>ZedBoardWrapper_v1_0</xilinx:displayName>
-      <xilinx:coreRevision>8</xilinx:coreRevision>
+      <xilinx:coreRevision>11</xilinx:coreRevision>
       <xilinx:upgrades>
         <xilinx:canUpgradeFrom>user.org:user:ZedBoardWrapper:1.0</xilinx:canUpgradeFrom>
       </xilinx:upgrades>
-      <xilinx:coreCreationDateTime>2020-12-02T16:30:05Z</xilinx:coreCreationDateTime>
+      <xilinx:coreCreationDateTime>2020-12-03T15:15:01Z</xilinx:coreCreationDateTime>
       <xilinx:tags>
         <xilinx:tag xilinx:name="nopcore"/>
         <xilinx:tag xilinx:name="user.org:user:ZedBoardWrapper:1.0_ARCHIVE_LOCATION">/home/maltanar/Dropbox/PhD/ip-repo/ZedBoardWrapper</xilinx:tag>
@@ -4446,15 +4446,57 @@
         <xilinx:tag xilinx:name="ui.data.coregen.dd@314d1578_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@528bb9f6_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
         <xilinx:tag xilinx:name="ui.data.coregen.dd@1ffd676_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5eae2d55_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3ee34d82_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@fd2a4a5_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3b8d64ca_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@73ee3c00_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@7ac1e92_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@22b17005_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5ba9d24b_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@36455e34_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@59d3f4c2_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@6b5bb65_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@68410beb_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3d573ac2_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3e88fee0_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@7d5dca58_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@53d193bf_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@15c36f04_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@7ce12ec8_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@6b184bef_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@65ce14d7_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@fe81db_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@1b54c93e_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@24bd2d1f_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@5221cb7c_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@78f52670_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@759794a4_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@1b47b56d_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@569508f0_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@201e7aa7_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3857754_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3453dc1c_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@1170e1c7_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@6a220483_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@6902cb11_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@34668b56_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@79974ca4_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@3635d58e_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@2c7dd5dc_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@72636b1_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@259c7452_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@326b5d8f_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
+        <xilinx:tag xilinx:name="ui.data.coregen.dd@22a8d8d0_ARCHIVE_LOCATION">/home/erling/dev/chisel/fpga-tidbits/src/main/resources/vivado-ip-cores/ZedBoardWrapper</xilinx:tag>
       </xilinx:tags>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2020.1</xilinx:xilinxVersion>
-      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="5a80a11c"/>
+      <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="c161316c"/>
       <xilinx:checksum xilinx:scope="addressSpaces" xilinx:value="228d07e5"/>
       <xilinx:checksum xilinx:scope="memoryMaps" xilinx:value="fb035809"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="81cc7e14"/>
-      <xilinx:checksum xilinx:scope="ports" xilinx:value="7d185130"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="03ffd1fc"/>
+      <xilinx:checksum xilinx:scope="ports" xilinx:value="9449ca36"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="9a8cf081"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>

@@ -6,6 +6,8 @@ import fpgatidbits.streams._
 
 // Tester-derived class to give stimulus and observe the outputs for the
 // Module to be tested
+
+/*
 class AffineLoopNestIndGenTester(c: AffineLoopNestIndGen) extends Tester(c) {
   val levels = c.n
   val r = scala.util.Random
@@ -92,3 +94,4 @@ class TestAffineLoopNestIndGen extends JUnitSuite {
     }
   }
 }
+*/

@@ -1,6 +1,7 @@
 package fpgatidbits.Testbenches
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -8,12 +9,12 @@ import fpgatidbits.streams._
 class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
   val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
-    val indsBase = UInt(INPUT, 64)
-    val valsBase = UInt(INPUT, 64)
-    val count = UInt(INPUT, 32)
-    val sum = UInt(OUTPUT, 32)
+    val start = Input(Bool())
+    val finished = Output(Bool())
+    val indsBase = Input(UInt(64.W))
+    val valsBase = Input(UInt(64.W))
+    val count = Input(UInt(32.W))
+    val sum = Output(UInt(32.W))
   }
   io.signature := makeDefaultSignature()
   // plug unused ports
@@ -24,19 +25,19 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val opBytes = UInt(p.memDataBits/8)
 
   rrgInds.ctrl.start := io.start
-  rrgInds.ctrl.throttle := Bool(false)
+  rrgInds.ctrl.throttle := false.B
   rrgInds.ctrl.baseAddr := io.indsBase
   rrgInds.ctrl.byteCount := io.count * opBytes
   rrgInds.reqs <> io.memPort(0).memRdReq
 
   def idsToReqs(ids: DecoupledIO[UInt]): DecoupledIO[GenericMemoryRequest] = {
-    val reqs = Decoupled(new GenericMemoryRequest(p.toMemReqParams())).asDirectionless
+    val reqs = Decoupled(new GenericMemoryRequest(p.toMemReqParams()))
     val req = reqs.bits
-    req.channelID := UInt(0)  // TODO parametrize!
-    req.isWrite := Bool(false)
+    req.channelID := 0.U  // TODO parametrize!
+    req.isWrite := false.B
     req.addr := io.valsBase + ids.bits * opBytes
     req.numBytes := opBytes // single-beat burst
-    req.metaData := UInt(0)
+    req.metaData := 0.U
 
     reqs.valid := ids.valid
     ids.ready := reqs.ready
@@ -45,13 +46,13 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
   val readDataFilter = {x: GenericMemoryResponse => x.readData}
 
-  val readInds = StreamFilter(io.memPort(0).memRdRsp, UInt(width=p.memDataBits), readDataFilter)
+  val readInds = StreamFilter(io.memPort(0).memRdRsp, UInt(p.memDataBits.W), readDataFilter)
   io.memPort(1).memRdReq <> idsToReqs(readInds)
 
   val red = Module(new StreamReducer(p.memDataBits, 0, {_+_})).io
   red.start := io.start
   red.byteCount := io.count * opBytes
-  red.streamIn <> StreamFilter(io.memPort(1).memRdRsp, UInt(width=p.memDataBits), readDataFilter)
+  red.streamIn <> StreamFilter(io.memPort(1).memRdRsp, UInt(p.memDataBits.W), readDataFilter)
 
   io.sum := red.reduced
   io.finished := red.finished
