@@ -20,18 +20,22 @@ object ZedBoardParams extends PlatformWrapperParams {
 }
 
 
-class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
+class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String, generateRegDriver: Boolean = true)
   extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zedboard.cpp", "zedboardregdriver.hpp", "axiregdriver.hpp"
   )
-  // Generate the RegFile driver
-  generateRegDriver(targetDir)
 
-  // Copy over the other needed files
-  val resRoot = Paths.get("./src/main/resources")
-  fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
-  println(s"=======> Driver files copied to ${targetDir}")
+  if (generateRegDriver) {
+    // Generate the RegFile driver
+    generateRegDriver(targetDir)
+
+    // Copy over the other needed files
+    val resRoot = Paths.get("./src/main/resources")
+    fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+    println(s"=======> Driver files copied to ${targetDir}")
+
+  }
 
 }
 

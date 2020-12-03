@@ -16,7 +16,6 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   val csr = Wire(new AXILiteSlaveIF(p.memAddrBits, p.csrDataBits))
   val mem = Wire(Vec(p.numMemPorts, new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)))
 
-
   // add the actual external interfaces with the correct naming
   val extMemIf = VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
   val extCsrIf = IO(Flipped(new AXILiteExternalIF(p.memAddrBits, p.csrDataBits))).suggestName("csr")
@@ -92,12 +91,11 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
 
   val sRead :: sReadRsp :: sWrite :: sWriteD :: sWriteRsp :: Nil = Enum(5)
   val regState = RegInit(sRead)
-
   val regModeWrite = RegInit(false.B)
   val regRdReq = RegInit(false.B)
   val regRdAddr = RegInit(0.U(p.memAddrBits.W))
   val regWrReq = RegInit(false.B)
-  val regWrAddr = RegInit(0.U(p.memAddrBits))
+  val regWrAddr = RegInit(0.U(p.memAddrBits.W))
   val regWrData = RegInit(0.U(p.csrDataBits.W))
   // AXI typically uses byte addressing, whereas regFile indices are
   // element indices -- so the AXI addr needs to be divided by #bytes
@@ -132,6 +130,7 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     }
 
     is(sReadRsp) {
+      println("sReadRsp")
       csr.readData.valid := regFile.extIF.readData.valid
       when (csr.readData.ready & regFile.extIF.readData.valid) {
         regState := sWrite

@@ -49,6 +49,10 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
 
   // instantiate the registers in the file
   val regFile = RegInit(VecInit(Seq.fill(numRegs){0.U(dataBits.W)}))
+  for (i <- 0 until numRegs) {
+    dontTouch(regFile(i))
+  }
+
 
   // latch the incoming commands
   val regCommand = RegNext(io.extIF.cmd.bits)
