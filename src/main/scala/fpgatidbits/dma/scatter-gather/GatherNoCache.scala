@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm._
 
 // a gather accelerator that services the reads directly from the memory
@@ -79,7 +80,7 @@ class GatherNoCache(
   // instantiated but not connected, the generated Verilog will have a syntax
   // error (due to the comma following the reset port, and nothing else coming
   // afterwards)
-  roc.doInit := Bool(false)
+  roc.doInit := false.B
 
   if(forceInOrder) {
     roc.reqMem <> io.memRdReq
@@ -95,7 +96,7 @@ class GatherNoCache(
 
   // offset internal cloakroom ID with the desired channel base ID
   memreq.bits.channelID := readyReqs.bits.id + UInt(chanBaseID)
-  memreq.bits.isWrite := Bool(false)
+  memreq.bits.isWrite := false.B
   // calculate address of desired element
   memreq.bits.addr := io.base + bytesPerVal * readyReqs.bits.ind
   memreq.bits.numBytes := bytesPerVal

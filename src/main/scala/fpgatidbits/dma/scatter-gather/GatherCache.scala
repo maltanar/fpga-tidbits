@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -28,11 +29,11 @@ class GatherNBCache_InOrderMissHandling(
   val io = new GatherIF(indWidth, datWidth, tagWidth, mrp) {
     // req - rsp interface for memory reads
     val memRdReq = Decoupled(new GenericMemoryRequest(mrp))
-    val memRdRsp = Decoupled(new GenericMemoryResponse(mrp)).flip
+    val memRdRsp = Flipped(Decoupled(new GenericMemoryResponse(mrp)))
   }
   // number of bits&bytes in each cacheline
   val bitsPerLine = elemsPerLine * datWidth
-  val bytesPerLine = UInt(bitsPerLine/8)
+  val bytesPerLine = (bitsPerLine/8).U
   // be extra conservative with allowed cacheline sizes for now
   // (either single or 8-beat bursts)
   if(bitsPerLine != mrp.dataWidth && bitsPerLine != 8*mrp.dataWidth)
@@ -72,9 +73,9 @@ class GatherNBCache_InOrderMissHandling(
   // the request is ready to be served.
   // define types for internal requests and responses:
   class InternalReq extends CloakroomBundle(outstandingTxns) {
-    val cacheLine = UInt(width = cacheLineNumBits)
-    val cacheTag = UInt(width = cacheTagBits)
-    val cacheOffset = UInt(width = cacheOffsetBitsAvoidW0W)
+    val cacheLine = UInt(cacheLineNumBits.W)
+    val cacheTag = UInt(cacheTagBits.W)
+    val cacheOffset = UInt(cacheOffsetBitsAvoidW0W.W)
 
     override val printfStr = "req: id = %d line = %d tag = %d ofs = %d\n"
     override val printfElems = {() => Seq(id, cacheLine, cacheTag, cacheOffset)}
@@ -84,7 +85,7 @@ class GatherNBCache_InOrderMissHandling(
   }
   class InternalTagRsp extends InternalReq {
     val isHit = Bool()
-    val dat = UInt(width = bitsPerLine)
+    val dat = UInt(bitsPerLine.W)
 
     override val printfStr = "req: id = %d linersp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
@@ -93,7 +94,7 @@ class GatherNBCache_InOrderMissHandling(
       new InternalTagRsp().asInstanceOf[this.type]
   }
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
-    val dat = UInt(width = datWidth)
+    val dat = UInt(datWidth.W)
 
     override val printfStr = "req: id = %d rsp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
@@ -112,7 +113,7 @@ class GatherNBCache_InOrderMissHandling(
     int.cacheLine := cacheLine(ext.ind)
     int.cacheTag := cacheTag(ext.ind)
     if(needOffset) int.cacheOffset := cacheOffset(ext.ind)
-    else int.cacheOffset := UInt(0)
+    else int.cacheOffset := 0.U
     int
   }
 
@@ -156,18 +157,18 @@ class GatherNBCache_InOrderMissHandling(
   )).io
   val tagRd = tagStore.ports(0)
   val tagWr = tagStore.ports(1)
-  tagRd.req.writeEn := Bool(false)
+  tagRd.req.writeEn := false.B
   tagRd.req.writeData := UInt(0)
-  tagWr.req.writeEn := Bool(false)
+  tagWr.req.writeEn := false.B
   val datStore = Module(new PipelinedDualPortBRAM(
     addrBits = cacheLineNumBits, dataBits = bitsPerLine,
     regIn = 0, regOut = pipelinedStorage
   )).io
   val datRd = datStore.ports(0)
   val datWr = datStore.ports(1)
-  datRd.req.writeEn := Bool(false)
+  datRd.req.writeEn := false.B
   datRd.req.writeData := UInt(0)
-  datWr.req.writeEn := Bool(false)
+  datWr.req.writeEn := false.B
 
   // various queues that hold intermediate results
   val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
@@ -195,7 +196,7 @@ class GatherNBCache_InOrderMissHandling(
     tagRd.req.addr := regTagInitAddr
     tagRd.req.writeEn := Bool(true)
     regTagInitAddr := regTagInitAddr + UInt(1)
-    when(regTagInitAddr === UInt(lines-1)) { regInitActive := Bool(false)}
+    when(regTagInitAddr === UInt(lines-1)) { regInitActive := false.B}
   }
 
   // ==========================================================================

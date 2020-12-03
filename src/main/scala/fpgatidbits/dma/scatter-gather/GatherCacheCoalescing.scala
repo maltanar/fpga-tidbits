@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 import fpgatidbits.dma._
 import fpgatidbits.streams._
@@ -154,18 +155,18 @@ class GatherNBCache_Coalescing(
   )).io
   val tagRd = tagStore.ports(0)
   val tagWr = tagStore.ports(1)
-  tagRd.req.writeEn := Bool(false)
+  tagRd.req.writeEn := false.B
   tagRd.req.writeData := UInt(0)
-  tagWr.req.writeEn := Bool(false)
+  tagWr.req.writeEn := false.B
   val datStore = Module(new PipelinedDualPortBRAM(
     addrBits = cacheLineNumBits, dataBits = bitsPerLine,
     regIn = 0, regOut = pipelinedStorage
   )).io
   val datRd = datStore.ports(0)
   val datWr = datStore.ports(1)
-  datRd.req.writeEn := Bool(false)
+  datRd.req.writeEn := false.B
   datRd.req.writeData := UInt(0)
-  datWr.req.writeEn := Bool(false)
+  datWr.req.writeEn := false.B
 
   // various queues that hold intermediate results
   val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
@@ -192,7 +193,7 @@ class GatherNBCache_Coalescing(
     tagRd.req.addr := regTagInitAddr
     tagRd.req.writeEn := Bool(true)
     regTagInitAddr := regTagInitAddr + UInt(1)
-    when(regTagInitAddr === UInt(lines-1)) { regInitActive := Bool(false)}
+    when(regTagInitAddr === UInt(lines-1)) { regInitActive := false.B}
   }
 
   // ==========================================================================
@@ -257,8 +258,8 @@ class GatherNBCache_Coalescing(
     val regCacheline = Reg(init = UInt(0, width = bitsPerLine))
     val regMisses = Vec.fill(maxMissPerLine) {Reg(init = new InternalReq())}
 
-    io.in.ready := Bool(false)
-    io.out.valid := Bool(false)
+    io.in.ready := false.B
+    io.out.valid := false.B
 
     val currentMiss = regMisses(regNumLeft-UInt(1))
     // copy same-named fields (cloakroom ID info) to handled miss
@@ -328,17 +329,17 @@ class GatherNBCache_Coalescing(
     io.rspOrdered <> ups.in
 
     // default signal values
-    usedID.enq.valid := Bool(false)
-    usedID.deq.ready := Bool(false)
+    usedID.enq.valid := false.B
+    usedID.deq.ready := false.B
 
-    pendingLines.clear_hit := Bool(false)
-    pendingLines.write := Bool(false)
+    pendingLines.clear_hit := false.B
+    pendingLines.write := false.B
     val incomingLine = Cat(io.in.bits.cacheTag, io.in.bits.cacheLine)
     pendingLines.write_tag := incomingLine
     pendingLines.tag := incomingLine
 
     // set up signal values to emit mem request
-    io.reqOrdered.valid := Bool(false)
+    io.reqOrdered.valid := false.B
     io.reqOrdered.bits.addr := io.base + bytesPerLine * incomingLine
     io.reqOrdered.bits.numBytes := bytesPerLine
 

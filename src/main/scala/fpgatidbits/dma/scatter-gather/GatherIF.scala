@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.streams._
 
 // interface for "gather"-accelerators

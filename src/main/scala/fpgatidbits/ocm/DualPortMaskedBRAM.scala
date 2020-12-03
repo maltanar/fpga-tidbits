@@ -1,6 +1,7 @@
 package fpgatidbits.ocm
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // creates a BRAM of desired size, which supports partial writes at "unit"
 // granularity. which parts will be written is determined by the writeMask.
@@ -11,13 +12,14 @@ class DualPortMaskedBRAM(addrBits: Int, dataBits: Int, unit: Int = 8)
 extends Module {
   val numBanks = dataBits/unit
   val io = new DualPortMaskedBRAMIO(addrBits, dataBits, numBanks)
-  val banks = Vec.fill(numBanks) {
+  val banks = VecInit(Seq.fill(numBanks) {
     Module(new DualPortBRAM(addrBits, unit)).io
-  }
+  })
+
 
   // assign zero to readData to enable partial assignment in loop
   for(p <- 0 until 2) {
-    io.ports(p).rsp.readData := UInt(0)
+    io.ports(p).rsp.readData := 0.U
   }
 
   for(i <- 0 until numBanks) {
@@ -40,7 +42,7 @@ class OCMMaskedRequest(writeWidth: Int, addrWidth: Int, maskWidth: Int)
 extends OCMRequest(writeWidth, addrWidth) {
   if(writeWidth % maskWidth != 0)
     throw new Exception("Mask-writable BRAM needs data width % mask width = 0")
-  val writeMask = Vec.fill(maskWidth) {Bool()}
+  val writeMask = VecInit(Seq.fill(maskWidth) {Bool()})
 
   override def cloneType: this.type =
     new OCMMaskedRequest(writeWidth, addrWidth, maskWidth).asInstanceOf[this.type]
@@ -48,8 +50,8 @@ extends OCMRequest(writeWidth, addrWidth) {
 
 class OCMMaskedSlaveIF(dataWidth: Int, addrWidth: Int, maskWidth: Int)
 extends Bundle {
-  val req = new OCMMaskedRequest(dataWidth, addrWidth, maskWidth).asInput()
-  val rsp = new OCMResponse(dataWidth).asOutput()
+  val req = Input(new OCMMaskedRequest(dataWidth, addrWidth, maskWidth))
+  val rsp = Output(new OCMResponse(dataWidth))
 
   override def cloneType: this.type =
     new OCMMaskedSlaveIF(dataWidth, addrWidth, maskWidth).asInstanceOf[this.type]
@@ -57,7 +59,7 @@ extends Bundle {
 
 class DualPortMaskedBRAMIO(addrBits: Int, dataBits: Int, maskBits: Int)
 extends Bundle {
-  val ports = Vec.fill(2) {new OCMMaskedSlaveIF(dataBits, addrBits, maskBits)}
+  val ports = Vec(2, new OCMMaskedSlaveIF(dataBits, addrBits, maskBits))
 
   override def cloneType: this.type =
     new DualPortMaskedBRAMIO(addrBits, dataBits, maskBits).asInstanceOf[this.type]
