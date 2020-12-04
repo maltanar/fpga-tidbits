@@ -12,7 +12,7 @@ import chisel3.util._
 // we use a BlackBox with a premade Verilog BRAM template.
 
 class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
-  val ports = VecInit(Seq.fill(2) {new OCMSlaveIF(dataBits, dataBits, addrBits)})
+  val ports = Vec(2, new OCMSlaveIF(dataBits, dataBits, addrBits))
 
   override def cloneType: this.type =
     new DualPortBRAMIO(addrBits, dataBits).asInstanceOf[this.type]
@@ -69,6 +69,7 @@ class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->da
   // collisions (sim access to same address with two memory ports)
 
   //val mem = Mem(UInt(width = dataBits), 1 << addrBits)
+  /*
   val mem = SyncReadMem(1 << addrBits, UInt(dataBits.W))
 
   for (i <- 0 until 2) {
@@ -81,6 +82,8 @@ class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->da
       mem(req.addr) := req.writeData
     }
   }
+
+   */
 }
 
 // no BlackBox (pure Chisel) version. won't synthesize to BRAM, but sometimes

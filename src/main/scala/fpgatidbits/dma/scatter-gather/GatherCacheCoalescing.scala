@@ -23,12 +23,13 @@ class GatherNBCache_Coalescing(
   tagWidth: Int,
   mrp: MemReqParams,
   orderRsps: Boolean = false
-) extends Module {
-  val io = new GatherIF(indWidth, datWidth, tagWidth, mrp) {
+) extends MultiIOModule {
+  val accel_io = IO(new GatherIF(indWidth, datWidth, tagWidth, mrp))
+  val mem_io = IO(new Bundle {
     // req - rsp interface for memory reads
     val memRdReq = Decoupled(new GenericMemoryRequest(mrp))
     val memRdRsp = Flipped(Decoupled(new GenericMemoryResponse(mrp)))
-  }
+  })
   // number of bits&bytes in each cacheline
   val bitsPerLine = elemsPerLine * datWidth
   val bytesPerLine = (bitsPerLine/8).U
@@ -107,7 +108,7 @@ class GatherNBCache_Coalescing(
   // ==========================================================================
   // the cloakroom - push/pop entering/exiting user-defined tags
   def undressFxn(ext: GatherReq): InternalReq = {
-    val int = new InternalReq()
+    val int = Wire(new InternalReq())
     int.cacheLine := cacheLine(ext.ind)
     int.cacheTag := cacheTag(ext.ind)
     if(needOffset) int.cacheOffset := cacheOffset(ext.ind)
@@ -116,20 +117,25 @@ class GatherNBCache_Coalescing(
   }
 
   def dressFxn(extIn: GatherReq, int: InternalRsp): GatherRsp = {
-    val extOut = io.out.bits.cloneType
+    val extOut = Wire(accel_io.out.bits.cloneType)
     extOut.dat := int.dat
     extOut.tag := extIn.tag
     extOut
   }
 
   val cloakroom = Module(new CloakroomLUTRAM(
-    num = outstandingTxns, genA = io.in.bits.cloneType, undress = undressFxn,
-    genC = irsp, dress = dressFxn
+    num = outstandingTxns,
+    genA = accel_io.in.bits,
+    undress = undressFxn,
+    genC = irsp,
+    dress = dressFxn,
+    genB = new InternalReq,
+    genD = new GatherRsp(datWidth,tagWidth)
   )).io
 
-  io.in <> cloakroom.extIn
+  accel_io.in <> cloakroom.extIn
   val readyReqs = FPGAQueue(cloakroom.intOut, 2)
-  val readyRspQ = Module(new FPGAQueue(cloakroom.intIn.bits, 2)).io
+  val readyRspQ = Module(new FPGAQueue(cloakroom.intIn.bits.cloneType, 2)).io
 
   if(orderRsps) {
     // use CloakroomOrderBuffer to ensure in-order responses
@@ -144,7 +150,7 @@ class GatherNBCache_Coalescing(
   }
 
   val readyRsps = readyRspQ.enq
-  cloakroom.extOut <> io.out
+  cloakroom.extOut <> accel_io.out
 
   // ==========================================================================
   // instantiate various components for the cache
@@ -180,8 +186,8 @@ class GatherNBCache_Coalescing(
     chanIDBase = chanBaseID
   ))).io
 
-  roc.reqMem <> io.memRdReq
-  io.memRdRsp <> roc.rspMem
+  roc.reqMem <> mem_io.memRdReq
+  mem_io.memRdRsp <> roc.rspMem
 
   // ==========================================================================
   // initialize tags (all lines invalid) on reset, using the tagRd port
@@ -212,7 +218,7 @@ class GatherNBCache_Coalescing(
   datRd.req.addr := readyReqs.bits.cacheLine
 
   tagRspQ.enq.valid := ShiftRegister(doHandleReq, storeLatency)
-  origReq <> tagRspQ.enq.bits
+  origReq.id := tagRspQ.enq.bits.id
   tagRspQ.enq.bits.dat := datRd.rsp.readData
   tagRspQ.enq.bits.isHit := tagMatch & tagValid
 
@@ -220,8 +226,8 @@ class GatherNBCache_Coalescing(
   val tagRspRoute = Module(new DecoupledOutputDemux(itagrsp, 2)).io
   tagRspRoute.sel := tagRspRoute.in.bits.isHit
   tagRspQ.deq <> tagRspRoute.in
-  tagRspRoute.out(0) <> missQ.enq
-  tagRspRoute.out(1) <> hitQ.enq
+  tagRspRoute.out(0).bits.id <> missQ.enq.bits.id
+  tagRspRoute.out(1).bits.id <> hitQ.enq.bits.id
 
   // move only the requested word at the correct offset if applicable
   if(needOffset) {
@@ -236,7 +242,7 @@ class GatherNBCache_Coalescing(
   class CoalescingMissHandlerRsp(maxMissPerLine: Int) extends PrintableBundle {
     val cacheline = UInt(bitsPerLine.W)
     val numMisses = UInt((log2Ceil(maxMissPerLine)+1).W)
-    val misses = VecInit(Seq.fill(maxMissPerLine){new InternalReq()})
+    val misses = Vec(maxMissPerLine, new InternalReq())
 
     override val printfStr = "numMisses %d, missed line %d, missed tag %d, cacheline %x \n"
     override val printfElems = {() => Seq(numMisses, misses(0).cacheLine, misses(0).cacheTag, cacheline)}
@@ -248,22 +254,22 @@ class GatherNBCache_Coalescing(
   // process a coalesced miss reply and spit out responses to the individual
   // cache misses contained within
   class CoalescedMissRspGen(maxMissPerLine: Int) extends  Module {
-    val io = new Bundle {
+    val io = IO(new Bundle {
       val in = Flipped(Decoupled(new CoalescingMissHandlerRsp(maxMissPerLine)))
       val out = Decoupled(new InternalRsp())
-    }
+    })
     val sIdle :: sProcess :: Nil = Enum(2)
     val regState = RegInit(sIdle)
     val regNumLeft = RegInit(0.U((log2Ceil(maxMissPerLine)+1).W))
     val regCacheline = RegInit(0.U(bitsPerLine.W))
-    val regMisses = VecInit(Seq.fill(maxMissPerLine) {RegInit(new InternalReq())})
+    val regMisses = RegInit(VecInit(Seq.fill(maxMissPerLine) {Wire(new InternalReq())}))
 
     io.in.ready := false.B
     io.out.valid := false.B
 
     val currentMiss = regMisses(regNumLeft-1.U)
     // copy same-named fields (cloakroom ID info) to handled miss
-    io.out.bits := currentMiss
+    io.out.bits.id := currentMiss.id
 
     if(needOffset) {
       // choose appropriate offset from cacheline
@@ -321,10 +327,18 @@ class GatherNBCache_Coalescing(
     val regNumMiss = VecInit(Seq.fill(nbMisses) {RegInit(0.U((log2Ceil(maxMissPerLine)+1).W))})
     val regTag = VecInit(Seq.fill(nbMisses) {RegInit(0.U((cacheLineNumBits+cacheTagBits).W))})
     // memory for keeping the pending requests to words
-    val memReqs = VecInit(Seq.fill(nbMisses) {
-      VecInit(Seq.fill(maxMissPerLine) {
-        RegInit(new InternalReq())})
-    })
+   // val memReqs = VecInit(Seq.fill(nbMisses) {
+   //   VecInit(Seq.fill(maxMissPerLine) {
+   //     RegInit(new InternalReq())})
+   // })
+
+    val memReqs = RegInit(VecInit(
+      Seq.fill(nbMisses) {
+        VecInit(Seq.fill(maxMissPerLine) {
+          Wire(new InternalReq())
+        })
+      }
+    ))
 
     // internal pool for ID management
     val usedID = Module(new FPGAQueue(UInt(log2Ceil(nbMisses).W), nbMisses)).io
@@ -398,7 +412,7 @@ class GatherNBCache_Coalescing(
   val cmh = Module(new CoalescingMissHandler(coalescePerLine)).io
   val cmrg = Module(new CoalescedMissRspGen(coalescePerLine)).io
   // wire up the miss handler components
-  cmh.base := io.base
+  cmh.base := accel_io.base
   cmh.reqOrdered <> roc.reqOrdered
   roc.rspOrdered <> cmh.rspOrdered
   missQ.deq <> cmh.in

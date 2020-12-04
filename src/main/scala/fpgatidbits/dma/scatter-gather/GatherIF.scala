@@ -41,6 +41,7 @@ extends Bundle {
   val base = Input(UInt(mrp.addrWidth.W))
   val in = Flipped(Decoupled(new GatherReq(indWidth, tagWidth)))
   val out = Decoupled(new GatherRsp(datWidth, tagWidth))
+
   override def cloneType: this.type =
     new GatherIF(indWidth, datWidth, tagWidth, mrp).asInstanceOf[this.type]
 }

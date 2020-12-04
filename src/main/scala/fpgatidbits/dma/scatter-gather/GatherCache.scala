@@ -126,7 +126,7 @@ class GatherNBCache_InOrderMissHandling(
 
   val cloakroom = Module(new CloakroomLUTRAM(
     num = outstandingTxns, genA = io.in.bits.cloneType, undress = undressFxn,
-    genC = irsp, dress = dressFxn
+    genC = irsp, dress = dressFxn, new InternalReq, new GatherRsp(datWidth, tagWidth)
   )).io
 
   io.in <> cloakroom.extIn

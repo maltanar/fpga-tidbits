@@ -89,7 +89,7 @@ object StreamUpsizer {
     ds.in.TVALID := in.valid
     in.ready := ds.in.TREADY
 
-    val decoupled_out = Decoupled(UInt(outW.W))
+    val decoupled_out = Wire(Decoupled(UInt(outW.W)))
     ds.out.TREADY := decoupled_out.ready
     decoupled_out.bits := ds.out.TDATA
     decoupled_out.valid := ds.out.TVALID

@@ -29,14 +29,19 @@ class CloakroomBundle(num: Int) extends PrintableBundle {
 
 class CloakroomIF
 [TA <: Data, TB <: CloakroomBundle, TC <: CloakroomBundle, TD <: Data]
-(genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
+(genA: TA,
+ undress: TA => TB,
+ genC: TC,
+ dress: (TA, TC) => TD,
+ genB: TB,
+ genD: TD)
 extends Bundle {
-  val extIn = Flipped(Decoupled(genA.cloneType))
-  val intOut = Decoupled(undress(genA.cloneType))
+  val extIn = Flipped(Decoupled(genA.cloneType)) //GatherReq
+  val intOut = Decoupled(genB.cloneType) //Undress(Type Gather Request)
   val intIn = Flipped(Decoupled(genC.cloneType))
-  val extOut = Decoupled(dress(genA.cloneType, genC.cloneType))
+  val extOut = Decoupled(genD.cloneType)
 
-  override def cloneType: this.type = new CloakroomIF(genA, undress, genC, dress).asInstanceOf[this.type]
+  override def cloneType: this.type = new CloakroomIF(genA, undress, genC, dress, genB, genD).asInstanceOf[this.type]
 }
 
 
@@ -44,9 +49,15 @@ extends Bundle {
 /* TODO add input/output queues? */
 class CloakroomLUTRAM
 [TA <: Data, TB <: CloakroomBundle, TC <: CloakroomBundle, TD <: Data]
-(num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
+(num: Int,
+ genA: TA,
+ undress: TA => TB,
+ genC: TC,
+ dress: (TA, TC) => TD,
+ genB: TB,
+ genD: TD)
 extends Module {
-  val io = new CloakroomIF(genA.cloneType, undress, genC.cloneType, dress)
+  val io = IO(new CloakroomIF(genA.cloneType, undress, genC.cloneType, dress, genB, genD))
 
   // context store (where the "cloaks" will be kept)
   //val ctxStore = Mem(genA.cloneType, num)
@@ -63,8 +74,11 @@ extends Module {
   }
 
   // join up available IDs with incoming requests, expose as intOut
-   StreamJoin(inA = io.extIn, inB = idPool.idOut,
-    genO = io.intOut.bits.cloneType, join = joinFxn
+   StreamJoin(
+     inA = io.extIn,
+     inB = idPool.idOut,
+     genO = io.intOut.bits.cloneType,
+     join = joinFxn
   ) <> io.intOut
 
   // add to context store when intOut is ready to go
@@ -91,12 +105,13 @@ extends Module {
   readyResps.outB.ready := io.extOut.ready
 }
 
+
 // cloakroom using BRAM as the context store, can be scaled to larger windows
 class CloakroomBRAM
 [TA <: Data, TB <: CloakroomBundle, TC <: CloakroomBundle, TD <: Data]
-(num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
+(num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD, genB: TB, genD: TD)
 extends Module {
-  val io = new CloakroomIF(genA.cloneType, undress, genC.cloneType, dress)
+  val io = IO(new CloakroomIF(genA.cloneType, undress, genC.cloneType, dress, genB, genD))
 
   // context store (where the "cloaks" will be kept)
   val ctxSize = genA.getWidth
@@ -190,10 +205,9 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
 
   // bitfield to keep track of response status
   val regFinished = RegInit(0.U(num.W))
-  val finishedSet = UInt(num.W)
-  finishedSet := 0.U(num.W)
-  val finishedClr = UInt(num.W)
-  finishedClr := 0.U(num.W)
+  val finishedSet = WireInit(0.U(num.W))
+  val finishedClr = WireInit(0.U(num.W))
+
   regFinished := (regFinished & (~finishedClr).asUInt) | finishedSet
 
   // headRsps is used for handshaking-over-latency for reading rsps from BRAM
@@ -203,7 +217,7 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
   // ===========================================================================
   // write path
   dataWr.req.writeEn := io.in.valid
-  dataWr.req.writeData := io.in.bits
+  dataWr.req.writeData := io.in.bits.asUInt
   dataWr.req.addr := io.in.bits.id
 
   // set finished flag for id when response received
@@ -221,7 +235,7 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
   dataRd.req.addr := regHeadInd
 
   headRsps.enq.valid := RegNext(doPopRsp)
-  headRsps.enq.bits := (dataRd.rsp.readData)
+  headRsps.enq.bits := (dataRd.rsp.readData).asTypeOf(headRsps.enq.bits)
 
   when(doPopRsp) {
     when(regHeadInd === (num-1).U) { regHeadInd := 0.U }
@@ -253,7 +267,7 @@ class InOrderCloakroom
 [TA <: Data, TB <: Data, TC <: Data, TD <: Data]
 (num: Int, genA: TA, undress: TA => TB, genC: TC, dress: (TA, TC) => TD)
 extends Module {
-  val io = new InOrderCloakroomIF(genA, undress, genC, dress)
+  val io = IO(new InOrderCloakroomIF(genA, undress, genC, dress))
 
   val storage = Module(new FPGAQueue(genA, num)).io
 

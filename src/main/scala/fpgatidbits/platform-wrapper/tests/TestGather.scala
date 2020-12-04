@@ -60,24 +60,33 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // instantiate the gather accelerator to be tested
   /* TODO parametrize choice of gather accel */
   val gather = Module(new GatherNBCache_Coalescing(
-    lines = 1024, nbMisses = numTxns, elemsPerLine = 8, pipelinedStorage = 0,
-    chanBaseID = 0, indWidth = indWidth, datWidth = datWidth,
-    tagWidth = indWidth, mrp = mrp, orderRsps = true, coalescePerLine = 8
-  )).io
+    lines = 1024,
+    nbMisses = numTxns,
+    elemsPerLine = 8,
+    pipelinedStorage = 0,
+    chanBaseID = 0,
+    indWidth = indWidth,
+    datWidth = datWidth,
+    tagWidth = indWidth,
+    mrp = mrp,
+    orderRsps = true,
+    coalescePerLine = 8
+  ))
 
-  gather.in.valid := inds.out.valid
-  inds.out.ready := gather.in.ready
+  gather.accel_io.in.valid := inds.out.valid
+  inds.out.ready := gather.accel_io.in.ready
   // use the incoming stream of indices both as load indices and tags --
   // we'll use the tag to check the loaded value
-  gather.in.bits.ind := inds.out.bits
-  gather.in.bits.tag := inds.out.bits
+  gather.accel_io.in.bits.ind := inds.out.bits
+  gather.accel_io.in.bits.tag := inds.out.bits
 
-  gather.base := io.valsBase
+  gather.accel_io.base := io.valsBase
 
   // wire up the memory system
   inds.req <> io.memPort(0).memRdReq
   io.memPort(0).memRdRsp <> inds.rsp
-  io.memPort(1) <> gather
+  io.memPort(1).memRdReq <> gather.mem_io.memRdReq
+  io.memPort(1).memRdRsp <> gather.mem_io.memRdRsp
 
   // examine incoming results from gatherer
   // -- compare against known good value
@@ -88,7 +97,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val regCycles = RegInit(0.U(32.W))
   val regNumOutOfOrder = RegInit(0.U(32.W))
 
-  gather.out.ready := true.B
+  gather.accel_io.out.ready := true.B
   io.finished := false.B
 
   regTotal := regResultsOK + regResultsNotOK
@@ -96,12 +105,12 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // keep a copy of all gather requests in the order they arrive,
   // we'll compare them with the gather responses to determine the number of
   // out-of-order responses
-  val orderCheckQ = Module(new Queue(gather.in.bits, 2*numTxns)).io
-  orderCheckQ.enq.valid := gather.in.valid & gather.in.ready
-  orderCheckQ.enq.bits := gather.in.bits
-  orderCheckQ.deq.ready := gather.out.ready & gather.out.valid
+  val orderCheckQ = Module(new Queue(gather.accel_io.in.bits.cloneType, 2*numTxns)).io
+  orderCheckQ.enq.valid := gather.accel_io.in.valid & gather.accel_io.in.ready
+  orderCheckQ.enq.bits := gather.accel_io.in.bits
+  orderCheckQ.deq.ready := gather.accel_io.out.ready & gather.accel_io.out.valid
 
-  when(gather.in.fire() & !orderCheckQ.enq.ready) {
+  when(gather.accel_io.in.fire() & !orderCheckQ.enq.ready) {
     printf("Error: No space left in orderCheckQ!\n")
   }
 
@@ -113,18 +122,18 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     regActive := io.start
   } .otherwise {
     // watch incoming gather responses
-    when(gather.out.ready & gather.out.valid) {
-      val expVal = gather.out.bits.tag
-      when(expVal === gather.out.bits.dat) {
+    when(gather.accel_io.out.ready & gather.accel_io.out.valid) {
+      val expVal = gather.accel_io.out.bits.tag
+      when(expVal === gather.accel_io.out.bits.dat) {
         regResultsOK := regResultsOK + 1.U
       } .otherwise {
         regResultsNotOK := regResultsNotOK + 1.U
       }
       // increment OoO response counter if appropriate
-      when(orderCheckQ.deq.bits.tag != gather.out.bits.tag) {
+      when(orderCheckQ.deq.bits.tag != gather.accel_io.out.bits.tag) {
         printf("Found OoO response at %d, expected %d found %d \n",
           regResultsOK+regResultsNotOK,
-          orderCheckQ.deq.bits.tag, gather.out.bits.tag
+          orderCheckQ.deq.bits.tag, gather.accel_io.out.bits.tag
         )
         regNumOutOfOrder := regNumOutOfOrder + 1.U
       }

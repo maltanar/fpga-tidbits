@@ -182,17 +182,17 @@ class BurstUpsizer(mIn: MemReqParams, wOut: Int) extends Module {
   val mOut = new MemReqParams(
     mIn.addrWidth, wOut, mIn.dataWidth, mIn.metaDataWidth, mIn.sameIDInOrder
   )
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val in = Flipped(Decoupled(new GenericMemoryResponse(mIn)))
     val out = Decoupled(new GenericMemoryResponse(mOut))
-  }
+  })
   val wIn = mIn.dataWidth
   if(wOut % wIn != 0) throw new Exception("Cannot upsize from unaligned size")
 
   // copy all fields by default
   io.out.bits := io.in.bits
   // upsize the read data if needed
-  var upsized = if(wOut > mIn.dataWidth) StreamUpsizer(ReadRespFilter(io.in), wOut, Decoupled(0.U)) else ReadRespFilter(io.in)
+  var upsized = if(wOut > mIn.dataWidth) StreamUpsizer(ReadRespFilter(io.in), wOut, Decoupled(UInt())) else ReadRespFilter(io.in)
 
   // use the upsized read data stream to drive output readData and handshake
   io.out.valid := upsized.valid

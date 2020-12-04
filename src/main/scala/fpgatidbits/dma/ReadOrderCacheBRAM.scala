@@ -112,10 +112,8 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
 
   // bitfield to keep track of burst finished status
   val regBurstFinished = RegInit(0.U(p.outstandingReqs.W))
-  val burstFinishedSet = UInt(p.outstandingReqs.W)
-  burstFinishedSet := 0.U
-  val burstFinishedClr = UInt(p.outstandingReqs.W)
-  burstFinishedClr := 0.U
+  val burstFinishedSet = WireInit(0.U(p.outstandingReqs.W))
+  val burstFinishedClr = WireInit(0.U(p.outstandingReqs.W))
   regBurstFinished := (regBurstFinished & (~burstFinishedClr).asUInt) | burstFinishedSet
 
   // set finished flag on last beat received

@@ -57,7 +57,7 @@ class CAMIO(entries: Int, addr_bits: Int, tag_bits: Int) extends Bundle {
 // (e.g compare only a subset of tag bits or such)
 class CAM(entries: Int, tag_bits: Int) extends Module {
   val addr_bits = log2Up(entries)
-  val io = new CAMIO(entries, addr_bits, tag_bits)
+  val io = IO(new CAMIO(entries, addr_bits, tag_bits))
   val cam_tags = SyncReadMem(entries, UInt(tag_bits.W))
   // valid (fullness) of each slot in the CAM
   val vb_array = RegInit(0.U(entries.W))

@@ -95,7 +95,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val bytesInBeat = (p.mrp.dataWidth/8).U // TODO correct for sub-word reads?
   busyRep.inElem.TVALID := busyReqs.deq.valid
   busyRep.inRepCnt.TVALID := busyReqs.deq.valid
-  busyRep.inElem.TDATA := busyReqs.deq.bits
+  busyRep.inElem.TDATA := busyReqs.deq.bits.asUInt
   busyRep.inRepCnt.TDATA := busyReqs.deq.bits.numBytes / bytesInBeat
   busyReqs.deq.ready := busyRep.inElem.TREADY
 
