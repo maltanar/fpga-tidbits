@@ -43,7 +43,7 @@ class DecoupledInputMux[T <: Data](gen: T, numChans: Int) extends Module {
 
 object DecoupledInputMux {
   def apply[T <: Data](sel: UInt, chans: Seq[DecoupledIO[T]]): DecoupledIO[T] = {
-    val inst = Module(new DecoupledInputMux(chans(0).bits, chans.size)).io
+    val inst = Module(new DecoupledInputMux(chans(0).bits.cloneType, chans.size)).io
     for(i <- 0 until chans.size) {inst.in(i) <> chans(i)}
     inst.sel := sel
     inst.out

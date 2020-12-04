@@ -79,9 +79,12 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   var orderedResponses = io.rsp
 
   if(p.readOrderCache) {
-    val roc = Module(new ReadOrderCache(new ReadOrderCacheParams(
-      mrp = p.mem, maxBurst = p.maxBeats, outstandingReqs = p.readOrderTxns,
-      chanIDBase = p.chanID
+    val roc = Module(new ReadOrderCache(
+      new ReadOrderCacheParams(
+        mrp = p.mem,
+        maxBurst = p.maxBeats,
+        outstandingReqs = p.readOrderTxns,
+        chanIDBase = p.chanID
     ))).io
 
     roc.doInit := io.doInit

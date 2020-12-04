@@ -160,6 +160,11 @@ class ReqIDQueue(idWidth: Int, maxEntries: Int, startID: Int) extends Module {
   initGen.init := (startID).U
 
   val idSources = Seq(io.idIn, initGen.seq)
+  //val mux = Module(new DecoupledInputMux(idSources(0).bits.cloneType, idSources.size))
+  //for (i <- idSources.indices) {mux.io.in(i) <> idSources(i)}
+  //val mux = DecoupledInputMux(regDoInit, idSources)
+  //mux <> idQ.enq
+
   DecoupledInputMux(regDoInit, idSources) <> idQ.enq
 }
 

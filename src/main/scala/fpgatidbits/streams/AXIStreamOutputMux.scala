@@ -44,7 +44,7 @@ class DecoupledOutputDemux[T <: Data](gen: T, numChans: Int) extends Module {
 
 object DecoupledOutputDemux {
   def apply[T <: Data](sel: UInt, chans: Seq[DecoupledIO[T]]): DecoupledIO[T] = {
-    val inst = Module(new DecoupledOutputDemux(chans(0).bits, chans.size)).io
+    val inst = Module(new DecoupledOutputDemux(chans(0).bits.cloneType, chans.size)).io
     for(i <- 0 until chans.size) {inst.out(i) <> chans(i)}
     inst.sel := sel
     inst.in

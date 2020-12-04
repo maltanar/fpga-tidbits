@@ -25,7 +25,7 @@ object StreamJoin {
   def apply[TiA <: Data, TiB <: Data, TO <: Data]
   (inA: DecoupledIO[TiA], inB: DecoupledIO[TiB], genO: TO,
   join: (TiA, TiB) => TO): DecoupledIO[TO] = {
-    val joiner = Module(new StreamJoin(inA.bits, inB.bits, genO, join)).io
+    val joiner = Module(new StreamJoin(inA.bits.cloneType, inB.bits.cloneType, genO.cloneType, join)).io
     joiner.inA <> inA
     joiner.inB <> inB
     joiner.out

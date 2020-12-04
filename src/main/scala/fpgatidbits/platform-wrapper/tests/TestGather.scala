@@ -9,7 +9,7 @@ import fpgatidbits.ocm._
 
 class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
+  val io = IO(new GenericAcceleratorIF(numMemPorts, p) {
     val start = Input(Bool())
     val finished = Output(Bool())
     val indsBase = Input(UInt(64.W))
@@ -24,7 +24,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       val monRdRsp = new StreamMonitorOutIF()
       val resultsOoO = Output(UInt(32.W))
     }
-  }
+  })
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
   // plug unused ports (write ports)
@@ -40,10 +40,17 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val regIndCount = RegNext(io.count)
 
   // instantiate a StreamReader to read out the indices array
-  val inds = Module(new StreamReader(new StreamReaderParams(
-    streamWidth = indWidth, fifoElems = 8, mem = mrp, chanID = 0,
-    maxBeats = p.burstBeats, disableThrottle = true, readOrderCache = true,
-    readOrderTxns = p.seqStreamTxns(), streamName = "inds"
+  val inds = Module(new StreamReader(
+    new StreamReaderParams(
+      streamWidth = indWidth,
+      fifoElems = 8,
+      mem = mrp,
+      chanID = 0,
+      maxBeats = p.burstBeats,
+      disableThrottle = true,
+      readOrderCache = true,
+      readOrderTxns = p.seqStreamTxns(),
+      streamName = "inds"
   ))).io
 
   inds.start := io.start
