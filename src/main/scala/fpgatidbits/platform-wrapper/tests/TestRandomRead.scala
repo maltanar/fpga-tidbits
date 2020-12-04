@@ -22,7 +22,7 @@ class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   plugMemWritePort(1)
 
   val rrgInds = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io
-  val opBytes = UInt(p.memDataBits/8)
+  val opBytes = (p.memDataBits/8).U
 
   rrgInds.ctrl.start := io.start
   rrgInds.ctrl.throttle := false.B

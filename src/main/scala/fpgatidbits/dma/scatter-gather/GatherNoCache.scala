@@ -16,28 +16,28 @@ class GatherNoCache(
   tagWidth: Int,
   mrp: MemReqParams
 ) extends Module {
-  val io = new GatherIF(indWidth, datWidth, tagWidth, mrp) {
+  val io = IO(new GatherIF(indWidth, datWidth, tagWidth, mrp) {
     // req - rsp interface for memory reads
     val memRdReq = Decoupled(new GenericMemoryRequest(mrp))
-    val memRdRsp = Decoupled(new GenericMemoryResponse(mrp)).flip
-  }
+    val memRdRsp = Flipped(Decoupled(new GenericMemoryResponse(mrp)))
+  })
   // the user-defined tags in the requests and the internal tags used for IDing
   // requests are separate. we keep the user-defined tags in a cloakroom until
   // the request is ready to be served.
   // define types for internal requests and responses:
   class InternalReq extends CloakroomBundle(outstandingTxns) {
-    val ind = UInt(width = indWidth)
+    val ind = UInt(indWidth.W)
     override def cloneType: this.type =
       new InternalReq().asInstanceOf[this.type]
   }
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
-    val dat = UInt(width = datWidth)
+    val dat = UInt(datWidth.W)
     override def cloneType: this.type =
       new InternalRsp().asInstanceOf[this.type]
   }
   val ireq = new InternalReq()
   val irsp = new InternalRsp()
-  val bytesPerVal = UInt(datWidth/8)
+  val bytesPerVal = (datWidth/8).U
 
   /* TODO IMPROVEMENT: add support for subword-sized gather*/
   if(mrp.dataWidth != datWidth)
@@ -95,12 +95,12 @@ class GatherNoCache(
   readyReqs.ready := memreq.ready
 
   // offset internal cloakroom ID with the desired channel base ID
-  memreq.bits.channelID := readyReqs.bits.id + UInt(chanBaseID)
+  memreq.bits.channelID := readyReqs.bits.id + (chanBaseID).U
   memreq.bits.isWrite := false.B
   // calculate address of desired element
   memreq.bits.addr := io.base + bytesPerVal * readyReqs.bits.ind
   memreq.bits.numBytes := bytesPerVal
-  memreq.bits.metaData := UInt(0)
+  memreq.bits.metaData := 0.U
 
   // ==========================================================================
   // accept responses from external memory
@@ -109,7 +109,7 @@ class GatherNoCache(
   readyRsps.valid := memrsp.valid
   memrsp.ready := readyRsps.ready
 
-  readyRsps.bits.id := memrsp.bits.channelID - UInt(chanBaseID)
+  readyRsps.bits.id := memrsp.bits.channelID - (chanBaseID).U
   readyRsps.bits.dat := memrsp.bits.readData
 
 }

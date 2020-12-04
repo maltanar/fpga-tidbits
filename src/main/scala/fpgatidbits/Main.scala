@@ -191,7 +191,7 @@ object MainObj {
    // "TestBRAM" -> {p => new TestBRAM(p)},
    // "TestBRAMMasked" -> {p => new TestBRAMMasked(p)},
    // "TestMemLatency" -> {p => new TestMemLatency(p)},
-   // "TestGather" -> {p => new TestGather(p)}
+    "TestGather" -> {p => new TestGather(p)}
   )
 
   val platformMap = TidbitsMakeUtils.platformMap

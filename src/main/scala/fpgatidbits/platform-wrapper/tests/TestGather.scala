@@ -132,8 +132,8 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     }
   }
 
-  // PrintableBundleStreamMonitor(gather.in, Bool(true), "in", true)
-  // PrintableBundleStreamMonitor(gather.out, Bool(true), "out", true)
+  // PrintableBundleStreamMonitor(gather.in, true.B, "in", true)
+  // PrintableBundleStreamMonitor(gather.out, true.B, "out", true)
 
   io.resultsOK := regResultsOK
   io.resultsNotOK := regResultsNotOK
