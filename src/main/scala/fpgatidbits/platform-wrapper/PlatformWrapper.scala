@@ -259,8 +259,12 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
       return s""" {"$regName", {$inds}} """
     }
     //val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
-    val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == ActualDirection.Output).map(_.instanceName.substring(3))
+    val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == ActualDirection.Output)
+                        .map({
+                          (el: Element) => instanceNametoName(el.instanceName)
+                        })
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
+
 
     println(statRegMap)
     println(statRegs)

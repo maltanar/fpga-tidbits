@@ -82,6 +82,18 @@ class GatherNBCache_Coalescing(
     override def cloneType: this.type =
       new InternalReq().asInstanceOf[this.type]
   }
+
+  object InternalReq {
+    def apply(): InternalReq = {
+      val ret = Wire(new InternalReq)
+      ret.cacheLine := 0.U
+      ret.cacheOffset := 0.U
+      ret.cacheTag := 0.U
+      ret.id := 0.U
+      ret
+    }
+  }
+
   class InternalTagRsp extends InternalReq {
     val isHit = Bool()
     val dat = UInt(bitsPerLine.W)
@@ -92,6 +104,7 @@ class GatherNBCache_Coalescing(
     override def cloneType: this.type =
       new InternalTagRsp().asInstanceOf[this.type]
   }
+
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
     val dat = UInt(datWidth.W)
 
@@ -222,6 +235,7 @@ class GatherNBCache_Coalescing(
   tagRspQ.enq.bits.dat := datRd.rsp.readData
   tagRspQ.enq.bits.isHit := tagMatch & tagValid
 
+
   // tag responses either go into hitQ or missQ
   val tagRspRoute = Module(new DecoupledOutputDemux(itagrsp, 2)).io
   tagRspRoute.sel := tagRspRoute.in.bits.isHit
@@ -262,7 +276,8 @@ class GatherNBCache_Coalescing(
     val regState = RegInit(sIdle)
     val regNumLeft = RegInit(0.U((log2Ceil(maxMissPerLine)+1).W))
     val regCacheline = RegInit(0.U(bitsPerLine.W))
-    val regMisses = RegInit(VecInit(Seq.fill(maxMissPerLine) {Wire(new InternalReq())}))
+    // erlingrj initialize InternalReqs
+    val regMisses = RegInit(VecInit(Seq.fill(maxMissPerLine) {WireInit(InternalReq())}))
 
     io.in.ready := false.B
     io.out.valid := false.B
@@ -332,13 +347,23 @@ class GatherNBCache_Coalescing(
    //     RegInit(new InternalReq())})
    // })
 
-    val memReqs = RegInit(VecInit(
-      Seq.fill(nbMisses) {
-        VecInit(Seq.fill(maxMissPerLine) {
-          Wire(new InternalReq())
-        })
-      }
-    ))
+   // val memReqs = RegInit(VecInit(
+  //    Seq.fill(nbMisses) {
+   //     VecInit(Seq.fill(maxMissPerLine) {
+   //       InternalReq
+   //     })
+   //   }
+   // ))
+
+    //erlingrj: Initialize all the InternalReqs
+     val memReqs = RegInit(VecInit(
+        Seq.fill(nbMisses) {
+         VecInit(Seq.fill(maxMissPerLine) {
+           WireInit(InternalReq())
+         })
+       }
+     ))
+
 
     // internal pool for ID management
     val usedID = Module(new FPGAQueue(UInt(log2Ceil(nbMisses).W), nbMisses)).io
