@@ -80,12 +80,26 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
   import scala.collection.immutable.ListMap
   //val ownIO2 = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
   def flatten(data: Data): Seq[Element] = data match {
-    case elt: Element => Seq(elt)
-    case agg: Aggregate => agg.getElements.flatMap(flatten)
+    case elt: Element => {
+      println(s"Reach bottom with el=${elt} name=${elt.name}")
+      Seq(elt)
+    }
+    case agg: Aggregate => {
+      println(s"agg=${agg} flatten again")
+      agg.getElements.flatMap(flatten)
+    }
+  }
+
+  def instanceNametoName(instanceName: String): String = {
+    instanceName
+      .replace('.', '_') // io.in1.a => io_in1_a
+      .replace('[', '_') // io.in1.myvec[0] => io_io1_myvec_0
+      .replace(']', ' ')
+      .drop(3) //remove "io_"
   }
   val ownIO = flatten(accel.io).filter(ownFilter)
 
-
+  println(s"ownIO=${ownIO}")
   // each I/O is assigned to at least one register index, possibly more if wide
   // round each I/O width to nearest csrWidth multiple, sum, divide by csrWidth
   val wCSR = p.csrDataBits
@@ -119,8 +133,12 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
 
   for(element <- ownIO) {
 
-    val name = element.name
+    val name = instanceNametoName(element.instanceName)
     val bits = element
+    println(s"element=${element} Got name=${name} and bits=${bits}")
+    println(element.instanceName)
+
+
     if(name != "signature") {
       val w = bits.getWidth
       if(w > wCSR) {
@@ -161,6 +179,7 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
 
         } else if(DataMirror.directionOf(element) == ActualDirection.Output )  {
           // TODO don't always write (change detect?)
+          println(element)
           regFile.regIn(allocReg).valid := true.B
           regFile.regIn(allocReg).bits := bits
         } else { throw new Exception("Wire in IO: "+name) }
@@ -226,7 +245,7 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
     val expected_signature: String = accel.hexSignature()
     var readWriteFxns: String = ""
     for(element <- ownIO) {
-      val name = element.instanceName.substring(3)
+      val name = instanceNametoName(element.instanceName)
       val bits = element.asUInt()
       if(DataMirror.directionOf(bits) == ActualDirection.Input) {
         readWriteFxns += makeRegWriteFxn(name) + "\n"

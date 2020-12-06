@@ -329,9 +329,9 @@ extends TesterWrapper(instFxn, targetDir) {
 
   val resRoot = Paths.get("./src/main/resources").toAbsolutePath
   // copy blackbox verilog, scripts, driver and SW support files
-  fileCopyBulk(s"$resRoot/verilog/", "verilator/", verilogBlackBoxFiles)
-  fileCopyBulk(s"$resRoot/script/", "verilator/", scriptFiles)
-  fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", "verilator/",
+  fileCopyBulk(s"$resRoot/verilog/", targetDir, verilogBlackBoxFiles)
+  fileCopyBulk(s"$resRoot/script/", targetDir, scriptFiles)
+  fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", targetDir,
     driverFiles)
 
 
