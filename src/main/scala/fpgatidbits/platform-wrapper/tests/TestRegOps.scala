@@ -13,6 +13,7 @@ class TestRegOps(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     val sum = Output(UInt(64.W))
     val cc = Output(UInt(32.W))
   })
+
   io.signature := makeDefaultSignature()
   io.sum := io.op(0) + io.op(1)
 

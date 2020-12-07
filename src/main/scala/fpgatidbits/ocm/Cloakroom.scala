@@ -64,7 +64,12 @@ extends Module {
   val ctxStore = SyncReadMem(num, genA.cloneType)
 
   // pool of available request IDs ("tickets" in the cloakrooms)
-  val idPool = Module(new ReqIDQueue(log2Up(num), num, 0)).io
+  val idPool = Module(new ReqIDQueue(log2Ceil(num), num, 0)).io
+
+  //erlingrj initialize fully
+  idPool.doInit := false.B
+  idPool.
+    initCount := 0.U
 
   // define join fnuction based on the undress function
   def joinFxn(a: TA, b: UInt): TB = {
