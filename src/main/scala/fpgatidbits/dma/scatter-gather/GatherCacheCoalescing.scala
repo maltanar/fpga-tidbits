@@ -199,6 +199,10 @@ class GatherNBCache_Coalescing(
     chanIDBase = chanBaseID
   ))).io
 
+  // erlingrj: Tie iff unused stuff
+  roc.doInit := false.B
+  roc.initCount := 0.U
+
   roc.reqMem <> mem_io.memRdReq
   mem_io.memRdRsp <> roc.rspMem
 
@@ -231,7 +235,11 @@ class GatherNBCache_Coalescing(
   datRd.req.addr := readyReqs.bits.cacheLine
 
   tagRspQ.enq.valid := ShiftRegister(doHandleReq, storeLatency)
-  origReq.id := tagRspQ.enq.bits.id
+  tagRspQ.enq.bits.id <> origReq.id
+  tagRspQ.enq.bits.cacheLine <> origReq.cacheLine
+  tagRspQ.enq.bits.cacheOffset <> origReq.cacheOffset
+  tagRspQ.enq.bits.cacheTag <> origReq.cacheTag
+
   tagRspQ.enq.bits.dat := datRd.rsp.readData
   tagRspQ.enq.bits.isHit := tagMatch & tagValid
 
@@ -240,8 +248,21 @@ class GatherNBCache_Coalescing(
   val tagRspRoute = Module(new DecoupledOutputDemux(itagrsp, 2)).io
   tagRspRoute.sel := tagRspRoute.in.bits.isHit
   tagRspQ.deq <> tagRspRoute.in
+  //erlingrj: Have to specify each connection and all connections
+  tagRspRoute.out(0).ready <> missQ.enq.ready
+  tagRspRoute.out(0).valid <> missQ.enq.valid
   tagRspRoute.out(0).bits.id <> missQ.enq.bits.id
+  tagRspRoute.out(0).bits.cacheOffset <> missQ.enq.bits.cacheOffset
+  tagRspRoute.out(0).bits.cacheLine <> missQ.enq.bits.cacheLine
+  tagRspRoute.out(0).bits.cacheTag <> missQ.enq.bits.cacheTag
+
+  tagRspRoute.out(1).ready <> hitQ.enq.ready
+  tagRspRoute.out(1).valid <> hitQ.enq.valid
   tagRspRoute.out(1).bits.id <> hitQ.enq.bits.id
+  //tagRspRoute.out(1).bits.cacheOffset <> hitQ.enq.bits.cacheOffset
+  //tagRspRoute.out(1).bits.cacheLine <> hitQ.enq.bits.cacheLine
+  //tagRspRoute.out(1).bits.cacheTag <> hitQ.enq.bits.cacheTag
+
 
   // move only the requested word at the correct offset if applicable
   if(needOffset) {
@@ -339,8 +360,12 @@ class GatherNBCache_Coalescing(
     })
     // content-associative storage for tracking pending cachelines
     val pendingLines = Module(new CAM(nbMisses,  cacheLineNumBits+cacheTagBits)).io
-    val regNumMiss = VecInit(Seq.fill(nbMisses) {RegInit(0.U((log2Ceil(maxMissPerLine)+1).W))})
-    val regTag = VecInit(Seq.fill(nbMisses) {RegInit(0.U((cacheLineNumBits+cacheTagBits).W))})
+
+    val regNumMiss = RegInit(VecInit(Seq.fill(nbMisses)(0.U((log2Ceil(maxMissPerLine)+1).W))))
+    val regTag = RegInit(VecInit(Seq.fill(nbMisses) (0.U((cacheLineNumBits+cacheTagBits).W))))
+
+    //val regNumMiss = VecInit(Seq.fill(nbMisses) {RegInit(0.U((log2Ceil(maxMissPerLine)+1).W))})
+    //val regTag = VecInit(Seq.fill(nbMisses) {RegInit(0.U((cacheLineNumBits+cacheTagBits).W))})
     // memory for keeping the pending requests to words
    // val memReqs = VecInit(Seq.fill(nbMisses) {
    //   VecInit(Seq.fill(maxMissPerLine) {
@@ -374,6 +399,11 @@ class GatherNBCache_Coalescing(
     // default signal values
     usedID.enq.valid := false.B
     usedID.deq.ready := false.B
+
+    // erlingrj: tie offunused stuff
+    io.reqOrdered.bits.metaData := 0.U
+    io.reqOrdered.bits.channelID := 0.U
+    io.reqOrdered.bits.isWrite := 0.U
 
     pendingLines.clear_hit := false.B
     pendingLines.write := false.B

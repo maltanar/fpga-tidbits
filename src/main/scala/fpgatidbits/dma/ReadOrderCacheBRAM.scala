@@ -145,6 +145,12 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   busyReqs.deq.ready := false.B
   freeReqID.idIn.valid := false.B
 
+  // erlingrj: TODO: This seems cumbersome. And maybe error prone?
+  // Tie off unused headRsps signals
+  headRsps.enq.bits.isWrite := false.B
+  headRsps.enq.bits.metaData := 0.U
+  headRsps.enq.bits.isLast := false.B
+
   when(doPopRsp) {
     when(regRspsPopped === headReqBeats - 1.U) {
       // when emitted responses = burst size, we are done

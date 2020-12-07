@@ -53,6 +53,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       streamName = "inds"
   ))).io
 
+  inds.doInit := false.B
+  inds.initCount := 0.U
+
   inds.start := io.start
   inds.baseAddr := io.indsBase
   inds.byteCount := bytesPerInd * regIndCount

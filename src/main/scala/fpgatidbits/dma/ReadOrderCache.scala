@@ -88,6 +88,9 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   io.rspOrdered.bits.isWrite := false.B
   io.rspOrdered.bits.metaData := 0.U
 
+  //erlingrj: tie off unused isLast
+  io.rspOrdered.bits.isLast := false.B
+
   // create a "repeated" version of the head of the busy queue -- each repeat
   // corresponds to one burst beat
   val repBitWidth = 1 + log2Up(p.maxBurst)
