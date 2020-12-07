@@ -118,7 +118,7 @@ class MultiChanQueueBRAM[T <: Data](
   val vec_do_deq = Mux(do_deq, UIntToOH(deqChan, chans), 0.U)
 
   for(i <- 0 until chans) {
-    when(vec_do_enq(i) != vec_do_deq(i)) {
+    when(vec_do_enq(i) =/= vec_do_deq(i)) {
       vec_maybe_full(i) := vec_do_enq(i)
     }
   }

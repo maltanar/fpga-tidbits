@@ -139,7 +139,7 @@ class OCMController(p: OCMParameters) extends Module {
 
   val ocm = io.ocm
 
-  io.mcif.busy := (regState != sIdle)
+  io.mcif.busy := (regState =/= sIdle)
 
   // use a FIFO queue to make burst reads with latency easier
   // TODO parametrize # entires in dump queue
