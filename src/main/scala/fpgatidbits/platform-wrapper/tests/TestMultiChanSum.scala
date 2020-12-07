@@ -10,13 +10,13 @@ import fpgatidbits.streams._
 class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val numChans = 2
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
+  val io = IO(new GenericAcceleratorIF(numMemPorts, p) {
     val start = Input(Bool())
     val baseAddr = Vec(numChans,Input(UInt(64.W)))
     val byteCount = Vec(numChans, Input(UInt(32.W)))
     val sum = Vec(numChans,  Output(UInt(32.W)))
     val status = Output(Bool())
-  }
+  })
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()

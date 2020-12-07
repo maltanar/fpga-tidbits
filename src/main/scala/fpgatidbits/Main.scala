@@ -182,9 +182,9 @@ object MainObj {
 
 
   val accelMap: AccelMap  = Map(
-   // "TestRegOps" -> {p => new TestRegOps(p)},
+    "TestRegOps" -> {p => new TestRegOps(p)},
     "TestSum" -> {p => new TestSum(p)},
-   // "TestMultiChanSum" -> {p => new TestMultiChanSum(p)},
+   //  "TestMultiChanSum" -> {p => new TestMultiChanSum(p)},
    // "TestSeqWrite" -> {p => new TestSeqWrite(p)},
    // "TestCopy" -> {p => new TestCopy(p)},
    // "TestRandomRead" -> {p => new TestRandomRead(p)},
