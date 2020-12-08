@@ -54,7 +54,10 @@ class MultiChanQueueBRAM[T <: Data](
 
   val ctrBits = log2Up(elemsPerChan)
 
-  val storage = Module(new DualPortBRAM(bramAddrBits, bramWidthBits)).io
+  val storageExt = Module(new DualPortBRAM(bramAddrBits, bramWidthBits)).io
+  val storage = Wire(new DualPortBRAMIO(bramAddrBits, bramWidthBits))
+  storageExt.a.connect(storage.ports(0))
+  storageExt.b.connect(storage.ports(1))
 
   val vec_enq_ptr = RegInit(VecInit(Seq.fill(chans) {0.U(ctrBits.W)}))
   val vec_deq_ptr = RegInit(VecInit(Seq.fill(chans) {0.U(ctrBits.W)}))

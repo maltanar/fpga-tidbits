@@ -67,7 +67,13 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   // a number of elements it has already received. we use the following BRAM
   // as a counter to keep track of the number of elements received for each
   // in-flight burst. we do a read-modify-write through this BRAM to do this.
-  val rspCounters = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
+  val rspCountersExt = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
+  val rspCounters = Wire(new DualPortBRAMIO(reqIDBits, ctrBits))
+  rspCountersExt.a.connect(rspCounters.ports(0))
+  rspCountersExt.b.connect(rspCounters.ports(1))
+
+
+
   val ctrRd = rspCounters.ports(0)
   val ctrWr = rspCounters.ports(1)
   // an issued request always means its storage space is ready, so we can always
@@ -97,10 +103,20 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
       can add registers prior to data store BRAM to improve
   */
   // store received data in BRAM
-  val storage = Module(new DualPortBRAM(
+  val storageExt = Module(new DualPortBRAM(
     addrBits = log2Up(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   )).io
+  val storage = Wire(new DualPortBRAMIO(
+    addrBits = log2Up(p.outstandingReqs * p.maxBurst),
+    dataBits = p.mrp.dataWidth
+  ))
+
+  storageExt.a.connect(storage.ports(0))
+  storageExt.b.connect(storage.ports(1))
+
+
+
   val dataRd = storage.ports(0)
   val dataWr = storage.ports(1)
   dataRd.req.writeEn := false.B

@@ -12,9 +12,19 @@ class DualPortMaskedBRAM(addrBits: Int, dataBits: Int, unit: Int = 8)
 extends Module {
   val numBanks = dataBits/unit
   val io = new DualPortMaskedBRAMIO(addrBits, dataBits, numBanks)
-  val banks = VecInit(Seq.fill(numBanks) {
+  val banksExt = VecInit(Seq.fill(numBanks) {
     Module(new DualPortBRAM(addrBits, unit)).io
   })
+  val banks = WireInit(VecInit(Seq.fill(numBanks) {
+    new DualPortBRAMIO(addrBits, unit)
+  }))
+
+  (banksExt zip banks).map({
+    case (ext, int) =>
+      ext.a.connect(int.ports(0))
+      ext.b.connect(int.ports(1))
+  })
+
 
 
   // assign zero to readData to enable partial assignment in loop

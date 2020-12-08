@@ -121,7 +121,12 @@ extends Module {
   // context store (where the "cloaks" will be kept)
   val ctxSize = genA.getWidth
   val ctxLat = 1  // latency to read context
-  val ctxStore = Module(new DualPortBRAM(log2Up(num), ctxSize)).io
+  val ctxStoreExt = Module(new DualPortBRAM(log2Up(num), ctxSize)).io
+  val ctxStore = Wire(new DualPortBRAMIO(log2Up(num), ctxSize))
+  ctxStoreExt.a.connect(ctxStore.ports(0))
+  ctxStoreExt.b.connect(ctxStore.ports(1))
+
+
   val ctxWrite = ctxStore.ports(0)
   val ctxRead = ctxStore.ports(1)
 
@@ -201,9 +206,17 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
   // TODO do we need bypass logic?
 
   // storage BRAM for incoming responses
-  val storage = Module(new DualPortBRAM(
+  val storageExt = Module(new DualPortBRAM(
     addrBits = idBits, dataBits = genC.getWidth
   )).io
+
+  val storage = Wire(new DualPortBRAMIO(
+    addrBits = idBits, dataBits = genC.getWidth
+  ))
+
+  storageExt.a.connect(storage.ports(0))
+  storageExt.b.connect(storage.ports(1))
+
   // name BRAM ports for easier access
   val dataRd = storage.ports(0)
   val dataWr = storage.ports(1)

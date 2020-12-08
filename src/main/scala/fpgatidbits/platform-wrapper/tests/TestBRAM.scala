@@ -17,7 +17,12 @@ class TestBRAM(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   }
   io.signature := makeDefaultSignature()
 
-  val mem = Module(new DualPortBRAM(10, 32)).io
+  val memExt = Module(new DualPortBRAM(10, 32)).io
+  val mem = Wire(new DualPortBRAMIO(10, 32))
+
+  memExt.a.connect(mem.ports(0))
+  memExt.b.connect(mem.ports(1))
+
   mem.ports(0) <> io.ports(0)
   mem.ports(1) <> io.ports(1)
 }

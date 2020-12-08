@@ -10,6 +10,31 @@ import chisel3.util._
 // Since (Xilinx) FPGA synthesis tools do not infer TDP BRAMs from
 // Chisel-generated Verilog (both ports in the same "always" block),
 // we use a BlackBox with a premade Verilog BRAM template.
+class DualPortBRAMExternalIO(addrBits: Int, dataBits: Int) extends Bundle {
+
+    val addr = Output(UInt(addrBits.W))
+    val din = Output(UInt(dataBits.W))
+    val wr = Output(Bool())
+    val dout = Input(UInt(dataBits.W))
+
+    override def cloneType: this.type =
+      new DualPortBRAMExternalIO(addrBits, dataBits).asInstanceOf[this.type]
+
+  def connect(in: OCMSlaveIF): Unit  = {
+    in.req.addr := addr
+    in.req.writeData := din
+    in.req.writeEn := wr
+    dout := in.rsp.readData
+  }
+
+  def connect(in: OCMMasterIF): Unit  = {
+    addr := in.req.addr
+    din := in.req.writeData
+    wr := in.req.writeEn
+    in.rsp.readData := dout
+  }
+}
+
 
 class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
   val ports = Vec(2, new OCMSlaveIF(dataBits, dataBits, addrBits))
@@ -17,15 +42,6 @@ class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
   override def cloneType: this.type =
     new DualPortBRAMIO(addrBits, dataBits).asInstanceOf[this.type]
 
-  ports(0).req.addr.suggestName("a_addr")
-  ports(0).req.writeData.suggestName("a_din")
-  ports(0).req.writeEn.suggestName("a_wr")
-  ports(0).rsp.readData.suggestName("a_dout")
-
-  ports(1).req.addr.suggestName("b_addr")
-  ports(1).req.writeData.suggestName("b_din")
-  ports(1).req.writeEn.suggestName("b_wr")
-  ports(1).rsp.readData.suggestName("b_dout")
 }
 
 // variant of DualPortBRAM with the desired number of registers at input and
@@ -44,22 +60,29 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
     Module(new DualPortBRAM(addrBits, dataBits)).io
   }
 
-  bram.ports(0).req := ShiftRegister(io.ports(0).req, regIn)
-  bram.ports(1).req := ShiftRegister(io.ports(1).req, regIn)
 
-  io.ports(0).rsp := ShiftRegister(bram.ports(0).rsp, regOut)
-  io.ports(1).rsp := ShiftRegister(bram.ports(1).rsp, regOut)
+  // Messy stuff. We instantiate the internal representation of the BRAM interface
+  val bramInternal = Wire(new DualPortBRAMIO(addrBits, dataBits))
+  // Then we access the two EXTERNAL ports (with the correct naming) and connect them to the internal interface
+  bram.a.connect(bramInternal.ports(0))
+  bram.b.connect(bramInternal.ports(1))
+
+  // From here we just use the normal internal representation
+  bramInternal.ports(0).req := ShiftRegister(io.ports(0).req, regIn)
+  bramInternal.ports(1).req := ShiftRegister(io.ports(1).req, regIn)
+
+  io.ports(0).rsp := ShiftRegister(bramInternal.ports(0).rsp, regOut)
+  io.ports(1).rsp := ShiftRegister(bramInternal.ports(1).rsp, regOut)
 }
 
 class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->dataBits, "ADDR" -> addrBits)) {
-  val io = IO(new DualPortBRAMIO(addrBits, dataBits))
-/*  setVerilogParameters(new VerilogParameters {
-    val DATA = dataBits
-    val ADDR = addrBits
+
+  val io = IO(new Bundle {
+    val a = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))
+    val b = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))
   })
 
 
- */
   // the clock does not get added to the BlackBox interface by default
 //  addClock(Driver.implicitClock)
 
@@ -88,16 +111,26 @@ class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->da
 
 // no BlackBox (pure Chisel) version. won't synthesize to BRAM, but sometimes
 // (if the depth is small) this may be more desirable.
-class DualPortBRAM_NoBlackBox(addrBits: Int, dataBits: Int) extends Module {
-  val io = IO(new DualPortBRAMIO(addrBits, dataBits))
+class DualPortBRAM_NoBlackBox(addrBits: Int, dataBits: Int) extends MultiIOModule {
+
+  val io = IO(new Bundle {
+    val a = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))
+    val b = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))
+  })
+
+  val ioInternal = new DualPortBRAMIO(addrBits, dataBits)
+
+
+  io.a.connect(ioInternal.ports(0))
+  io.b.connect(ioInternal.ports(1))
 
   //val mem = Mem(UInt(width = dataBits), 1 << addrBits)
   val mem = SyncReadMem(1 << addrBits, UInt(dataBits.W))
   for (i <- 0 until 2) {
-    val req = io.ports(i).req
-    val regAddr = RegNext(io.ports(i).req.addr)
+    val req = ioInternal.ports(i).req
+    val regAddr = RegNext(ioInternal.ports(i).req.addr)
 
-    io.ports(i).rsp.readData := mem(regAddr)
+    ioInternal.ports(i).rsp.readData := mem(regAddr)
 
     when (req.writeEn) {
       mem(req.addr) := req.writeData

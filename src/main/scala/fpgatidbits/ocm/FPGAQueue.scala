@@ -107,7 +107,11 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   // the threshold here needs to be (pfQueueCap-BRAM latency)
   val canPrefetch = (pf.count < 2.U)
 
-  val bram = Module(new DualPortBRAM(log2Up(entries), gen.getWidth)).io
+  val bramExt = Module(new DualPortBRAM(log2Up(entries), gen.getWidth)).io
+  val bram = Wire(new DualPortBRAMIO(log2Up(entries), gen.getWidth))
+  bramExt.a.connect(bram.ports(0))
+  bramExt.b.connect(bram.ports(1))
+
   val writePort = bram.ports(0)
   val readPort = bram.ports(1)
   writePort.req.writeData := io.enq.bits

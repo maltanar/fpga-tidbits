@@ -73,7 +73,11 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // a number of elements it has already received. we use the following BRAM
   // as a counter to keep track of the number of elements received for each
   // in-flight burst. we do a read-modify-write through this BRAM to do this.
-  val rspCounters = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
+  val rspCountersExt = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
+  val rspCounters = Wire(new DualPortBRAMIO(reqIDBits, ctrBits))
+  rspCountersExt.a.connect(rspCounters.ports(0))
+  rspCountersExt.b.connect(rspCounters.ports(1))
+
   val ctrRd = rspCounters.ports(0)
   val ctrWr = rspCounters.ports(1)
   // an issued request always means its storage space is ready, so we can always
