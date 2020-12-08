@@ -68,10 +68,10 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   // as a counter to keep track of the number of elements received for each
   // in-flight burst. we do a read-modify-write through this BRAM to do this.
   val rspCountersExt = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
-  val rspCounters = Wire(new DualPortBRAMIO(reqIDBits, ctrBits))
+  val rspCounters = Wire(new DualPortBRAMIOWrapper(reqIDBits, ctrBits))
   rspCountersExt.a.connect(rspCounters.ports(0))
   rspCountersExt.b.connect(rspCounters.ports(1))
-
+  rspCounters.ports.map(_.driveDefaults())
 
 
   val ctrRd = rspCounters.ports(0)
@@ -107,14 +107,14 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
     addrBits = log2Up(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   )).io
-  val storage = Wire(new DualPortBRAMIO(
+  val storage = Wire(new DualPortBRAMIOWrapper(
     addrBits = log2Up(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   ))
 
   storageExt.a.connect(storage.ports(0))
   storageExt.b.connect(storage.ports(1))
-
+  storage.ports.map(_.driveDefaults())
 
 
   val dataRd = storage.ports(0)

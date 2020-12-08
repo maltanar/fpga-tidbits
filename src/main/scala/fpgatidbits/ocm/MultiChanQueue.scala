@@ -55,7 +55,7 @@ class MultiChanQueueBRAM[T <: Data](
   val ctrBits = log2Up(elemsPerChan)
 
   val storageExt = Module(new DualPortBRAM(bramAddrBits, bramWidthBits)).io
-  val storage = Wire(new DualPortBRAMIO(bramAddrBits, bramWidthBits))
+  val storage = Wire(new DualPortBRAMIOWrapper(bramAddrBits, bramWidthBits))
   storageExt.a.connect(storage.ports(0))
   storageExt.b.connect(storage.ports(1))
 

@@ -12,10 +12,10 @@ import chisel3.util._
 // we use a BlackBox with a premade Verilog BRAM template.
 class DualPortBRAMExternalIO(addrBits: Int, dataBits: Int) extends Bundle {
 
-    val addr = Output(UInt(addrBits.W))
-    val din = Output(UInt(dataBits.W))
-    val wr = Output(Bool())
-    val dout = Input(UInt(dataBits.W))
+    val addr = Input(UInt(addrBits.W))
+    val din =  Input(UInt(dataBits.W))
+    val wr = Input(Bool())
+    val dout = Output(UInt(dataBits.W))
 
     override def cloneType: this.type =
       new DualPortBRAMExternalIO(addrBits, dataBits).asInstanceOf[this.type]
@@ -35,6 +35,14 @@ class DualPortBRAMExternalIO(addrBits: Int, dataBits: Int) extends Bundle {
   }
 }
 
+
+// Create this wrapper bundle that is meant to connect to the externalIO
+class DualPortBRAMIOWrapper(addrBits: Int, dataBits: Int) extends Bundle {
+  val ports = Vec(2, new OCMMasterIF(dataBits, dataBits, addrBits))
+
+  override def cloneType: this.type =
+    new DualPortBRAMIOWrapper(addrBits, dataBits).asInstanceOf[this.type]
+}
 
 class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
   val ports = Vec(2, new OCMSlaveIF(dataBits, dataBits, addrBits))
@@ -62,7 +70,7 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
 
 
   // Messy stuff. We instantiate the internal representation of the BRAM interface
-  val bramInternal = Wire(new DualPortBRAMIO(addrBits, dataBits))
+  val bramInternal = Wire(new DualPortBRAMIOWrapper(addrBits, dataBits))
   // Then we access the two EXTERNAL ports (with the correct naming) and connect them to the internal interface
   bram.a.connect(bramInternal.ports(0))
   bram.b.connect(bramInternal.ports(1))
@@ -78,8 +86,8 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
 class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->dataBits, "ADDR" -> addrBits)) {
 
   val io = IO(new Bundle {
-    val a = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))
-    val b = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))
+    val a = (new DualPortBRAMExternalIO(addrBits, dataBits))
+    val b = (new DualPortBRAMExternalIO(addrBits, dataBits))
   })
 
 

@@ -37,9 +37,9 @@ class CloakroomIF
  genD: TD)
 extends Bundle {
   val extIn = Flipped(Decoupled(genA.cloneType)) //GatherReq
-  val intOut = Decoupled(genB.cloneType) //Undress(Type Gather Request)
-  val intIn = Flipped(Decoupled(genC.cloneType))
-  val extOut = Decoupled(genD.cloneType)
+  val intOut = Decoupled(genB.cloneType) //Undress(InternalReq)
+  val intIn = Flipped(Decoupled(genC.cloneType)) //GatherResp
+  val extOut = Decoupled(genD.cloneType) //InternalResp
 
   override def cloneType: this.type = new CloakroomIF(genA, undress, genC, dress, genB, genD).asInstanceOf[this.type]
 }
@@ -68,8 +68,7 @@ extends Module {
 
   //erlingrj initialize fully
   idPool.doInit := false.B
-  idPool.
-    initCount := 0.U
+  idPool.initCount := 0.U
 
   // define join fnuction based on the undress function
   def joinFxn(a: TA, b: UInt): TB = {
@@ -122,7 +121,7 @@ extends Module {
   val ctxSize = genA.getWidth
   val ctxLat = 1  // latency to read context
   val ctxStoreExt = Module(new DualPortBRAM(log2Up(num), ctxSize)).io
-  val ctxStore = Wire(new DualPortBRAMIO(log2Up(num), ctxSize))
+  val ctxStore = Wire(new DualPortBRAMIOWrapper(log2Up(num), ctxSize))
   ctxStoreExt.a.connect(ctxStore.ports(0))
   ctxStoreExt.b.connect(ctxStore.ports(1))
 
@@ -210,13 +209,14 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
     addrBits = idBits, dataBits = genC.getWidth
   )).io
 
-  val storage = Wire(new DualPortBRAMIO(
+  val storage = Wire(new DualPortBRAMIOWrapper(
     addrBits = idBits, dataBits = genC.getWidth
   ))
 
+
   storageExt.a.connect(storage.ports(0))
   storageExt.b.connect(storage.ports(1))
-
+  storage.ports.map(_.driveDefaults())
   // name BRAM ports for easier access
   val dataRd = storage.ports(0)
   val dataWr = storage.ports(1)

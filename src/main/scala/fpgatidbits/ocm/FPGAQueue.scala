@@ -108,7 +108,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
   val canPrefetch = (pf.count < 2.U)
 
   val bramExt = Module(new DualPortBRAM(log2Up(entries), gen.getWidth)).io
-  val bram = Wire(new DualPortBRAMIO(log2Up(entries), gen.getWidth))
+  val bram = Wire(new DualPortBRAMIOWrapper(log2Up(entries), gen.getWidth))
   bramExt.a.connect(bram.ports(0))
   bramExt.b.connect(bram.ports(1))
 

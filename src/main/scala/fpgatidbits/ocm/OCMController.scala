@@ -73,6 +73,12 @@ class OCMMasterIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundl
 
   override def cloneType =
     { new OCMMasterIF(writeWidth, readWidth, addrWidth).asInstanceOf[this.type] }
+
+  def driveDefaults(): Unit = {
+    req.writeEn := false.B
+    req.writeData := 0.U
+    req.addr := 0.U
+  }
 }
 
 // slave interface is just the master interface flipped

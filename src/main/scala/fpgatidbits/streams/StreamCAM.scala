@@ -73,7 +73,7 @@ class CAM(entries: Int, tag_bits: Int) extends Module {
   val freeLocation = PriorityEncoder(~vb_array)
   io.freeInd := freeLocation
   // whether there are any free slots at all
-  io.hasFree := vb_array.orR
+  io.hasFree := ~vb_array.orR
 
   // produce masks to allow simultaneous write+clear
   val writeMask = Mux(io.write, UIntToOH(freeLocation), (0.U(entries.W)))
