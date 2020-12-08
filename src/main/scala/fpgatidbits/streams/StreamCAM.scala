@@ -51,6 +51,9 @@ class CAMIO(entries: Int, addr_bits: Int, tag_bits: Int) extends Bundle {
   val write_tag = Input(UInt(tag_bits.W))
   val hasFree = Output(Bool())
   val freeInd = Output(UInt(log2Ceil(entries).W))
+
+  override def cloneType: this.type =
+    new CAMIO(entries,addr_bits,tag_bits).asInstanceOf[this.type]
 }
 
 // TODO make the CAM search/match function customizable?

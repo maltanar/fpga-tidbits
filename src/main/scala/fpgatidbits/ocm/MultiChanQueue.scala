@@ -9,6 +9,9 @@ class MultiChanQueueIO[T <: Data](gen: T, chans: Int) extends Bundle {
   val in = Flipped(Decoupled(gen))
   val out = Decoupled(gen)
   val outSel = Input(UInt(log2Ceil(chans).W))
+
+  override def cloneType: this.type =
+    new MultiChanQueueIO(gen, chans).asInstanceOf[this.type]
 }
 
 // a super simple multichannel queue implementation: basically a bunch of queues,
