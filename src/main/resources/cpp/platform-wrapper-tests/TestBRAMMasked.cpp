@@ -15,6 +15,7 @@ int main() {
   string cmd;
   unsigned int addr, dat, writeMask;
 
+  cout << "Enter Command r [address] / w [address] [data] [writeMask]: ";
   cin >> cmd;
 
   // commands:
