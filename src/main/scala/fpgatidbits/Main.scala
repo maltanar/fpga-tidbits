@@ -243,8 +243,26 @@ object MainObj {
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
     fileCopy(testRoot + accelName  + ".cpp", s"$targetDir/main.cpp")
-
   }
+
+  def makeIntegrationTest(args: Array[String]) = {
+    val accelName = args(0)
+    val targetDir = Paths.get(".").toString.dropRight(1) + s"integration-test-${accelName}/"
+
+
+    val accInst = accelMap(accelName)
+    val platformInst = {f => new VerilatedTesterWrapper(f, targetDir)}
+    val chiselArgs = Array("--target-dir", targetDir)
+
+    // generate verilog for the accelerator and create the regfile driver
+    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
+
+    // copy test application
+    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
+    val testRoot = s"$resRoot/cpp/platform-wrapper-integration-tests/"
+    fileCopy(testRoot + "Integration" + accelName  + ".cpp", s"$targetDir/main.cpp")
+  }
+
 
   def makeDriver(args: Array[String]) = {
     val accelName = args(0)
@@ -258,7 +276,7 @@ object MainObj {
   def showHelp() = {
     println("Usage: run <op> <accel> <platform>")
     println("where:")
-    println("<op> = (v)erilog (d)river ve(r)ilator")
+    println("<op> = (v)erilog (d)river ve(r)ilator integration (t)est")
     println("<accel> = " + accelMap.keys.reduce({_ + " " +_}))
     println("<platform> = " + platformMap.keys.reduce({_ + " " +_}))
   }
@@ -280,7 +298,9 @@ object MainObj {
       return
     } else if (op == "verilator" || op == "r") {
       makeVerilator(rst)
-    }else {
+    }else if (op == "test" || op == "t") {
+      makeIntegrationTest(rst)
+    } else{
       showHelp()
       return
     }

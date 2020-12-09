@@ -333,8 +333,5 @@ extends TesterWrapper(instFxn, targetDir) {
   fileCopyBulk(s"$resRoot/script/", targetDir, scriptFiles)
   fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", targetDir,
     driverFiles)
-
-
-
-
 }
+
