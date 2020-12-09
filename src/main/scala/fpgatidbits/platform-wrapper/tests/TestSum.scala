@@ -38,7 +38,7 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   //  when inspecting verilog output of chisel2 synthesis they are commented out of the
   //  module interface of StreamReader, how?
   reader.doInit := false.B
-  reader.initCount := 0.U
+  reader.initCount := 8.U
 
   red.start := io.start
   red.byteCount := io.byteCount

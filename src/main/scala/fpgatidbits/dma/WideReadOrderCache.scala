@@ -75,6 +75,7 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   // in-flight burst. we do a read-modify-write through this BRAM to do this.
   val rspCountersExt = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
   val rspCounters = Wire(new DualPortBRAMIOWrapper(reqIDBits, ctrBits))
+  rspCountersExt.clk := clock
   rspCountersExt.a.connect(rspCounters.ports(0))
   rspCountersExt.b.connect(rspCounters.ports(1))
 

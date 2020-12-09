@@ -109,6 +109,7 @@ class BRAMQueue[T <: Data](gen: T, val entries: Int) extends Module {
 
   val bramExt = Module(new DualPortBRAM(log2Up(entries), gen.getWidth)).io
   val bram = Wire(new DualPortBRAMIOWrapper(log2Up(entries), gen.getWidth))
+  bramExt.clk := clock
   bramExt.a.connect(bram.ports(0))
   bramExt.b.connect(bram.ports(1))
 

@@ -53,8 +53,10 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       streamName = "inds"
   ))).io
 
-  inds.doInit := false.B
-  inds.initCount := 0.U
+
+  // Set initCount to readOrderTxns because that is passed in to roc to freeReqId
+  inds.doInit := true.B
+  inds.initCount := 62.U
 
   inds.start := io.start
   inds.baseAddr := io.indsBase
@@ -87,6 +89,9 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   // wire up the memory system
   inds.req <> io.memPort(0).memRdReq
+
+  inds.req.ready := io.memPort(0).memRdReq.ready
+
   io.memPort(0).memRdRsp <> inds.rsp
   io.memPort(1).memRdReq <> gather.mem_io.memRdReq
   io.memPort(1).memRdRsp <> gather.mem_io.memRdRsp

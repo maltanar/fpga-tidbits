@@ -61,11 +61,14 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
 ) extends Module {
   val io = IO(new DualPortBRAMIO(addrBits, dataBits))
   // instantiate the desired BRAM
-  val bram = if(dataBits <= 36 && addrBits <= 4) {
+  val useBlackBox = (dataBits <= 36 && addrBits <= 4)
+  val bram = if(useBlackBox) {
     // use pure Chisel for small memories (just synth to LUTs)
     Module(new DualPortBRAM_NoBlackBox(addrBits, dataBits)).io
   } else {
-    Module(new DualPortBRAM(addrBits, dataBits)).io
+    val bramBB = Module(new DualPortBRAM(addrBits, dataBits))
+    bramBB.io.clk := clock
+    bramBB.io
   }
 
 
@@ -83,11 +86,13 @@ class PipelinedDualPortBRAM(addrBits: Int, dataBits: Int,
   io.ports(1).rsp := ShiftRegister(bramInternal.ports(1).rsp, regOut)
 }
 
+
 class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->dataBits, "ADDR" -> addrBits)) {
 
   val io = IO(new Bundle {
     val a = (new DualPortBRAMExternalIO(addrBits, dataBits))
     val b = (new DualPortBRAMExternalIO(addrBits, dataBits))
+    val clk = Input(Clock())
   })
 
 

@@ -100,7 +100,7 @@ abstract class PrintableBundle extends Bundle {
 object PrintableBundleStreamMonitor {
   def apply[T <: PrintableBundle](stream: DecoupledIO[T], enable: Bool,
     streamName: String = "stream", dbg: Boolean = false): StreamMonitorOutIF = {
-    val mon = Module(new PrintableBundleStreamMonitor(stream.bits, streamName, dbg))
+    val mon = Module(new PrintableBundleStreamMonitor(stream.bits.cloneType, streamName, dbg))
     mon.io.enable := enable
     mon.io.validIn := stream.valid
     mon.io.readyIn := stream.ready

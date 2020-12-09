@@ -94,7 +94,7 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
     instanceName
       .replace('.', '_') // io.in1.a => io_in1_a
       .replace('[', '_') // io.in1.myvec[0] => io_io1_myvec_0
-      .replace(']', ' ')
+      .replaceAll("]", "") // remove the ending bracket
       .drop(3) //remove "io_"
   }
   val ownIO = flatten(accel.io).filter(ownFilter)

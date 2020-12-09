@@ -76,8 +76,8 @@ class OCMMasterIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundl
 
   def driveDefaults(): Unit = {
     req.writeEn := false.B
-    req.writeData := 0.U
-    req.addr := 0.U
+    req.writeData := DontCare
+    req.addr := DontCare
   }
 }
 

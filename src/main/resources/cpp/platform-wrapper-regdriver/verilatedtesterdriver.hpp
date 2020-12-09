@@ -18,6 +18,8 @@ using namespace std;
 #define __TESTERDRIVER_DEBUG(x) (0)
 #endif
 
+#define TRACE
+
 #ifdef TRACE
 #include "verilated_vcd_c.h"
 #endif

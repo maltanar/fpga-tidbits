@@ -13,6 +13,7 @@ import fpgatidbits.streams._
 
 class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   val io = IO(new ReadOrderCacheIO(p.mrp, p.maxBurst))
+
   val beat = 0.U(p.mrp.dataWidth.W)
   val rid = 0.U(p.mrp.idWidth.W)
   val mreq = new GenericMemoryRequest(p.mrp)
@@ -61,8 +62,8 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
 
   //==========================================================================
 
-  val ctrBits = log2Up(p.maxBurst)
-  val reqIDBits = log2Up(p.outstandingReqs)
+  val ctrBits = log2Ceil(p.maxBurst)
+  val reqIDBits = log2Ceil(p.outstandingReqs)
   // since burst responses can be interleaved, each in-flight burst can have
   // a number of elements it has already received. we use the following BRAM
   // as a counter to keep track of the number of elements received for each
@@ -104,14 +105,14 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   */
   // store received data in BRAM
   val storageExt = Module(new DualPortBRAM(
-    addrBits = log2Up(p.outstandingReqs * p.maxBurst),
+    addrBits = log2Ceil(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   )).io
   val storage = Wire(new DualPortBRAMIOWrapper(
-    addrBits = log2Up(p.outstandingReqs * p.maxBurst),
+    addrBits = log2Ceil(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   ))
-
+  storageExt.clk := clock
   storageExt.a.connect(storage.ports(0))
   storageExt.b.connect(storage.ports(1))
   storage.ports.map(_.driveDefaults())

@@ -68,7 +68,7 @@ extends Module {
 
   //erlingrj initialize fully
   idPool.doInit := false.B
-  idPool.initCount := 0.U
+  idPool.initCount := num.U
 
   // define join fnuction based on the undress function
   def joinFxn(a: TA, b: UInt): TB = {
@@ -122,6 +122,7 @@ extends Module {
   val ctxLat = 1  // latency to read context
   val ctxStoreExt = Module(new DualPortBRAM(log2Up(num), ctxSize)).io
   val ctxStore = Wire(new DualPortBRAMIOWrapper(log2Up(num), ctxSize))
+  ctxStoreExt.clk := clock
   ctxStoreExt.a.connect(ctxStore.ports(0))
   ctxStoreExt.b.connect(ctxStore.ports(1))
 
@@ -212,6 +213,7 @@ class CloakroomOrderBuffer[TC <: CloakroomBundle]
   val storage = Wire(new DualPortBRAMIOWrapper(
     addrBits = idBits, dataBits = genC.getWidth
   ))
+  storageExt.clk := clock
 
 
   storageExt.a.connect(storage.ports(0))

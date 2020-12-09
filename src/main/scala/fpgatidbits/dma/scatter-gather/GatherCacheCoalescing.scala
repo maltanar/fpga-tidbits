@@ -147,7 +147,7 @@ class GatherNBCache_Coalescing(
   )).io
 
   accel_io.in <> cloakroom.extIn
-  val readyReqs = FPGAQueue(cloakroom.intOut, 2)
+  val readyReqs = FPGAQueue(cloakroom.intOut, 2) //0
   val readyRspQ = Module(new FPGAQueue(cloakroom.intIn.bits.cloneType, 2)).io
 
   if(orderRsps) {
@@ -172,6 +172,7 @@ class GatherNBCache_Coalescing(
     addrBits = cacheLineNumBits, dataBits = 1 + cacheTagBits,
     regIn = 0, regOut = pipelinedStorage
   )).io
+
   val tagRd = tagStore.ports(0)
   val tagWr = tagStore.ports(1)
   tagRd.req.writeEn := false.B
@@ -181,6 +182,7 @@ class GatherNBCache_Coalescing(
     addrBits = cacheLineNumBits, dataBits = bitsPerLine,
     regIn = 0, regOut = pipelinedStorage
   )).io
+
   val datRd = datStore.ports(0)
   val datWr = datStore.ports(1)
   datRd.req.writeEn := false.B
@@ -188,7 +190,7 @@ class GatherNBCache_Coalescing(
   datWr.req.writeEn := false.B
 
   // various queues that hold intermediate results
-  val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
+  val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io //2
   val hitQ = Module(new FPGAQueue(irsp, 2)).io
   val missQ = Module(new FPGAQueue(ireq, 2)).io
   val handledQ = Module(new FPGAQueue(irsp, 2)).io
@@ -199,9 +201,10 @@ class GatherNBCache_Coalescing(
     chanIDBase = chanBaseID
   ))).io
 
-  // erlingrj: Tie iff unused stuff
+  // erlingrj: Tie iff unused stuff. Set doInit to false
+  // set initCount to same as capacity of the internal ReqID which is nbMisses
   roc.doInit := false.B
-  roc.initCount := 0.U
+  roc.initCount := nbMisses.U
 
   roc.reqMem <> mem_io.memRdReq
   mem_io.memRdRsp <> roc.rspMem
@@ -498,11 +501,12 @@ class GatherNBCache_Coalescing(
   //val regCnt = Reg(init = UInt(0, 32))
   //when(readyReqs.fire()) { regCnt := regCnt + 1.U}
   //val doMon = (regCnt > 0.U) && (regCnt < UInt(5882))
+
   /*
   val doMon = true.B
   val doVerboseDebug = true
 
-  PrintableBundleStreamMonitor(io.in, doMon, "io.in", doVerboseDebug)
+  PrintableBundleStreamMonitor(accel_io.in, doMon, "io.in", doVerboseDebug)
   StreamMonitor(cloakroom.extIn, doMon, "cloakroom.extIn", doVerboseDebug)
   StreamMonitor(cloakroom.intOut, doMon, "cloakroom.intOut", doVerboseDebug)
   PrintableBundleStreamMonitor(readyReqs, doMon, "readyReqs", doVerboseDebug)
@@ -513,11 +517,11 @@ class GatherNBCache_Coalescing(
   PrintableBundleStreamMonitor(cmrg.in, doMon, "cmrg.in", doVerboseDebug)
   StreamMonitor(handledQ.enq, doMon, "handledQ.enq", doVerboseDebug)
   PrintableBundleStreamMonitor(readyRsps, doMon, "readyRsps", doVerboseDebug)
-  PrintableBundleStreamMonitor(io.out, doMon, "io.out", doVerboseDebug)
-  */
+  PrintableBundleStreamMonitor(accel_io.out, doMon, "io.out", doVerboseDebug)
 
-  /*
-  PrintableBundleStreamMonitor(io.memRdRsp, true.B, "memRdRsp", true)
-  PrintableBundleStreamMonitor(io.memRdReq, true.B, "memRdReq", true)
+
+
+  PrintableBundleStreamMonitor(mem_io.memRdRsp, true.B, "memRdRsp", true)
+  PrintableBundleStreamMonitor(mem_io.memRdReq, true.B, "memRdReq", true)
   */
 }

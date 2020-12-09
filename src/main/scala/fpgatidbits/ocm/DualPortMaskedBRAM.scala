@@ -21,6 +21,7 @@ extends Module {
 
   (banksExt zip banks).map({
     case (ext, int) =>
+      ext.clk := clock
       ext.a.connect(int.ports(0))
       ext.b.connect(int.ports(1))
   })
