@@ -229,7 +229,7 @@ object MainObj {
 
   def makeVerilator(args: Array[String]) = {
     val accelName = args(0)
-    val targetDir = Paths.get(".").toString.dropRight(1) + s"verilator-${accelName}/"
+    val targetDir = Paths.get(".").toString.dropRight(1) + s"verilator/${accelName}/"
 
 
     val accInst = accelMap(accelName)
@@ -247,7 +247,7 @@ object MainObj {
 
   def makeIntegrationTest(args: Array[String]) = {
     val accelName = args(0)
-    val targetDir = Paths.get(".").toString.dropRight(1) + s"integration-test-${accelName}/"
+    val targetDir = Paths.get(".").toString.dropRight(1) + s"integration-tests/${accelName}/"
 
 
     val accInst = accelMap(accelName)

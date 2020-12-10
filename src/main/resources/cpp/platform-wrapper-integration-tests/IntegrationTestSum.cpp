@@ -34,13 +34,17 @@ bool Run_TestSum(WrapperRegDriver * platform, int upper) {
 	return res == golden;
 }
 
-int main()
+int main(int argc, char** argv)
 {
-
+    if (argc != 2) {
+        cout << "Please pass the number of tests to run as the only command line argument" <<endl;
+        return -1;
+      }
+      int n_tests = atoi(argv[1]);
 
     int testPassed = 0;
     cout << "Running TestSum integration test ... " <<endl;
-    for (int i = 0; i<100; i++) {
+    for (int i = 0; i<n_tests; i++) {
         WrapperRegDriver * platform = initPlatform();
         if (Run_TestSum(platform, i)) {
             testPassed++;
@@ -52,10 +56,7 @@ int main()
         deinitPlatform(platform);
     }
 
-    cout << "Passed " <<testPassed <<" tests" <<endl;
-
-
-
+    cout << "TestSum Passed " <<testPassed <<" tests" <<endl;
 
 	return 0;
 }
