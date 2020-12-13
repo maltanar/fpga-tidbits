@@ -5,10 +5,10 @@ set -e
 # First run all the Chisel Unit tests
 #sbt 'test'
 
-N_TESTS=10
+N_TESTS=100
 
 # The  run all the integration tests
-declare -a testArr=("TestSum" "TestRegOps" "TestBRAM" "TestBRAMMasked")
+declare -a testArr=("TestMultiChanSum" "TestSum" "TestRegOps" "TestBRAM" "TestBRAMMasked")
 
 for t in "${testArr[@]}"
 do
