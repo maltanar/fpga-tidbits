@@ -7,7 +7,7 @@ import chisel3.util._
 class ReqInterleaver(numPipes: Int, p: MemReqParams) extends Module {
   val io = IO(new Bundle {
     // individual request pipes
-    val reqIn = VecInit(Seq.fill(numPipes) {Flipped(Decoupled(new GenericMemoryRequest(p)))})
+    val reqIn = Vec(numPipes, Flipped(Decoupled(new GenericMemoryRequest(p))))
     // interleaved request pipe
     val reqOut = Decoupled(new GenericMemoryRequest(p))
   })

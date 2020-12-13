@@ -84,22 +84,35 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
   // one FSM per port, rather simple, but supports bursts
   for(i <- 0 until accel.numMemPorts) {
     // reads
-    val sWaitRd :: sRead :: Nil = Enum(2)
+    val sWaitRd :: sRead :: sReadRsp :: Nil = Enum(3)
     val regStateRead = RegInit(sWaitRd)
     val regReadRequest = RegInit(GenericMemoryRequest(mrp))
+    val regReadResponse = RegInit(GenericMemoryResponse(mrp))
+    val regReadResponseValid = RegInit(false.B)
+
+    val wireMemReadAddr = WireInit(0.U(p.memAddrBits.W))
+    val wireMemReadData = Wire(UInt(p.memDataBits.W))
+
+    wireMemReadData := mem(addrToWord(wireMemReadAddr))
+
 
     val accmp = accio.memPort(i)
     val accRdReq = addLatency(15, accmp.memRdReq)
     val accRdRsp = accmp.memRdRsp
 
+
+    accRdRsp.bits := regReadResponse
     accRdReq.ready := false.B
-    accRdRsp.valid := false.B
+    accRdRsp.valid := regReadResponseValid
+
     accRdRsp.bits.channelID := regReadRequest.channelID
     accRdRsp.bits.metaData := 0.U
     accRdRsp.bits.isWrite := false.B
     accRdRsp.bits.isLast := false.B
-    accRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+    accRdRsp.bits.readData := wireMemReadData
 
+
+    regReadResponseValid := false.B //Defaults to false
     switch(regStateRead) {
       is(sWaitRd) {
         accRdReq.ready := true.B
@@ -113,31 +126,47 @@ extends PlatformWrapper(TesterWrapperParams, instFxn) {
         when(regReadRequest.numBytes === 0.U) {
           // prefetch the read request if possible to minimize waiting
           accRdReq.ready := true.B
-          when (accRdReq.valid) {
+          when(accRdReq.valid) {
             regReadRequest := accRdReq.bits
             // stay in this state and continue processing
-          } .otherwise {regStateRead := sWaitRd}
+          }.otherwise {
+            regStateRead := sWaitRd
+          }
         }
-        .otherwise {
-          accRdRsp.valid := true.B
-          accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
+          .otherwise {
+            // Process memory request
+
+            regReadResponse.isLast := (regReadRequest.numBytes === memUnitBytes)
+            regReadResponseValid := true.B
+            wireMemReadAddr := regReadRequest.addr
+
+            regStateRead := sReadRsp
+          }
+      }
+      is (sReadRsp) {
+          // SyncReadMem readData reponse has arrived
+
           when (accRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
             regReadRequest.addr := regReadRequest.addr + (memUnitBytes)
+            regReadResponseValid := false.B
 
-            // was this the last beat of burst transferred?
             when(regReadRequest.numBytes === memUnitBytes) {
               // prefetch the read request if possible to minimize waiting
               accRdReq.ready := true.B
               when (accRdReq.valid) {
                 regReadRequest := accRdReq.bits
+                regStateRead := sRead
                 // stay in this state and continue processing
+              }.otherwise {
+                regStateRead := sWaitRd
               }
+            }.otherwise {
+              regStateRead := sRead
             }
           }
         }
       }
-    }
 
     // writes
     val sWaitWr :: sWrite :: Nil = Enum(2)

@@ -28,7 +28,7 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     ))).io
   }
 
-  VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
+  //VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
   val readers = VecInit(Seq.tabulate(numChans) {i:Int => makeReader(i)})
   val reducers = VecInit(Seq.fill(numChans) {
     Module(new StreamReducer(32, 0, {_+_})).io
@@ -44,9 +44,14 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     readers(i).baseAddr := io.baseAddr(i)
     readers(i).byteCount := io.byteCount(i)
 
+    readers(i).doInit := false.B
+    readers(i).initCount := 0.U
+
     readers(i).req <> intl.reqIn(i)
     deintl.rspOut(i) <> readers(i).rsp
-    readers(i).out <> reducers(i).streamIn
+    readers(i).out.ready :=  reducers(i).streamIn.ready
+    reducers(i).streamIn.valid := readers(i).out.valid
+    reducers(i).streamIn.bits := readers(i).out.bits
 
     reducers(i).start := io.start
     reducers(i).byteCount := io.byteCount(i)
