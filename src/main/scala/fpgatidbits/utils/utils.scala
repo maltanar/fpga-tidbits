@@ -4,8 +4,8 @@ import chisel3._
 import chisel3.util._
 
 // For testing
-import chisel3.tester._
-import chisel3.tester.RawTester.test
+//import chisel3.tester._
+//import chisel3.tester.RawTester.test
 
 object BitExtraction {
   def apply(word: UInt, high: UInt, low: UInt): UInt = {

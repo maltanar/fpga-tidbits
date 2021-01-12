@@ -6,16 +6,17 @@ import fpgatidbits.streams._
 import fpgatidbits.ocm._
 
 class StreamReaderParams(
-  val streamWidth: Int,
-  val fifoElems: Int,
-  val mem: MemReqParams,
-  val maxBeats: Int,
-  val chanID: Int,
-  val disableThrottle: Boolean = false,
-  val readOrderCache: Boolean = false,
-  val readOrderTxns: Int = 4,
-  val streamName: String = "stream"
-)
+                          val streamWidth: Int,
+                          val fifoElems: Int,
+                          val mem: MemReqParams,
+                          val maxBeats: Int,
+                          val chanID: Int,
+                          val disableThrottle: Boolean = false,
+                          val readOrderCache: Boolean = false,
+                          val readOrderTxns: Int = 4,
+                          val streamName: String = "stream",
+                          val useChiselQueue: Boolean = false
+                        )
 
 class StreamReaderIF(private val w: Int, private val p: MemReqParams) extends Bundle {
   val start = Input(Bool())
@@ -54,8 +55,16 @@ class StreamReader(val p: StreamReaderParams) extends Module {
 
   // read request generator
   val rg = Module(new ReadReqGen(p.mem, p.chanID, p.maxBeats)).io
-  // FIFO to store read data
-  val fifo = Module(new FPGAQueue(StreamElem, p.fifoElems)).io
+  // FIFO to store read data.
+  // erlingrj: I added a temporary parameter so I can generate a normal Chisel Queue
+  //  this should be solved someplace else in the future
+  // TODO: Refactor option between using Chisel Queue and FPGAQueue
+  val fifo =
+  if (p.useChiselQueue) {
+    Module(new Queue(StreamElem, p.fifoElems)).io
+  } else {
+    Module(new FPGAQueue(StreamElem, p.fifoElems)).io
+  }
   val streamBytes = (p.streamWidth/8).U
   val memWidthBytes = p.mem.dataWidth/8
 
@@ -68,9 +77,9 @@ class StreamReader(val p: StreamReaderParams) extends Module {
 
   val regDoneBytes = RegInit(0.U(32.W))
   when(!io.start) { regDoneBytes := 0.U }
-  .elsewhen(io.out.valid & io.out.ready) {
-    regDoneBytes := regDoneBytes + (p.streamWidth/8).U
-  }
+    .elsewhen(io.out.valid & io.out.ready) {
+      regDoneBytes := regDoneBytes + (p.streamWidth/8).U
+    }
   val allResponsesDone = (regDoneBytes === io.byteCount)
   io.active := io.start & !allResponsesDone
   io.finished := allResponsesDone
@@ -85,7 +94,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
         maxBurst = p.maxBeats,
         outstandingReqs = p.readOrderTxns,
         chanIDBase = p.chanID
-    ))).io
+      ))).io
 
     roc.doInit := io.doInit
     roc.initCount := io.initCount
