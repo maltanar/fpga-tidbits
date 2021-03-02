@@ -63,36 +63,7 @@ object TidbitsMakeUtils {
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
-  /*
-  def makeEmulatorLibrary(accInst: AccelInstFxn, outDir: String, gOpts: Seq[String] = Seq(), chiselOpts: Seq[String] = Seq()) = {
-    val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
-    val platformInst = platformMap("Tester")
-    val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
-    val chiselArgs = Array("--backend","c","--targetDir", fullDir) ++ chiselOpts
 
-    //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst, )))
-
-    val p = platformInst(accInst)
-    // build reg driver
-    p.generateRegDriver(s"$fullDir")
-    // copy emulator driver and SW support files
-    fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
-    val drvFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
-    // get only the cpp files
-    val regex = "(.*\\.cpp)"
-    val cppDrvFiles = drvFiles.filter(x => x matches regex)
-    // call g++ to produce a shared library
-    println("Compiling hardware emulator as library...")
-    val gc = Seq(
-      "g++", "-shared", "-fPIC", "-o", s"$fullDir/driver.a"
-    ) ++ gOpts ++ cppDrvFiles ++ Seq(outDir+"/TesterWrapper.cpp")
-    println(gc.mkString(" "))
-    val gcret = gc.!!
-    println(gcret)
-    println(s"Hardware emulator library built as $fullDir/driver.a")
-  }
-*/
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
     val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
     val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
