@@ -97,14 +97,19 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
     val accmp = accio.memPort(i)
     val accRdReq = addLatency(15, accmp.memRdReq)
     val accRdRsp = accmp.memRdRsp
+    val memRead = WireInit(mem(addrToWord(regReadRequest.addr)))
+    val memReadValid = RegInit(false.B)
+    memReadValid := false.B
 
     accRdReq.ready := false.B
-    accRdRsp.valid := false.B
     accRdRsp.bits.channelID := regReadRequest.channelID
     accRdRsp.bits.metaData := 0.U
     accRdRsp.bits.isWrite := false.B
     accRdRsp.bits.isLast := false.B
-    accRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+
+    accRdRsp.valid := memReadValid
+    accRdRsp.bits.readData := memRead
+
 
     switch(regStateRead) {
       is(sWaitRd) {
@@ -125,7 +130,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
           } .otherwise {regStateRead := sWaitRd}
         }
           .otherwise {
-            accRdRsp.valid := true.B
+            memReadValid := true.B
             accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
             when (accRdRsp.ready) {
               regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
@@ -199,7 +204,7 @@ object GenericAccelImplicits {
   implicit class GenericAccelTesterDriver(c: TesterWrapper) {
     val regFile = c.io.regFileIF
     def nameToRegIdx(str: String): Int  = {
-      c.regFileMap(str)(0).toInt
+      c.regFileMap(str).last
     }
 
     def writeReg(regName: String, value: UInt) = {
