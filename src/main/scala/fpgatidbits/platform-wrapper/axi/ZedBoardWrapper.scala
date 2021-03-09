@@ -3,7 +3,10 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import java.nio.file.Paths
+
 import fpgatidbits.TidbitsMakeUtils._
+
+import scala.io.Source
 // platform wrapper for the ZedBoard
 
 object ZedBoardParams extends PlatformWrapperParams {
@@ -29,10 +32,10 @@ class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targ
   if (generateRegDriver) {
     // Generate the RegFile driver
     generateRegDriver(targetDir)
-
     // Copy over the other needed files
-    val resRoot = Paths.get("./src/main/resources")
-    fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+    //val resRoot = getClass.getResource("").getPath
+    val resRoot = new java.io.File(".").getCanonicalPath
+    fileCopyBulk(s"${resRoot}/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
     println(s"=======> Driver files copied to ${targetDir}")
 
   }

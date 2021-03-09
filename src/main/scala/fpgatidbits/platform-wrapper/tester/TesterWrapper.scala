@@ -417,7 +417,7 @@ class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerato
   val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
     "platform.h", "verilatedtesterdriver.hpp")
 
-  val resRoot = Paths.get("./src/main/resources").toAbsolutePath
+  val resRoot = Paths.get("./fpga-tidbits/src/main/resources").toAbsolutePath
   // copy blackbox verilog, scripts, driver and SW support files
   fileCopyBulk(s"$resRoot/verilog/", targetDir, verilogBlackBoxFiles)
   fileCopyBulk(s"$resRoot/script/", targetDir, scriptFiles)
