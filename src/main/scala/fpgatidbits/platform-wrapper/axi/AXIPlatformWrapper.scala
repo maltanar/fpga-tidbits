@@ -6,6 +6,7 @@ import fpgatidbits.dma._
 import fpgatidbits.regfile._
 import fpgatidbits.axi._
 import fpgatidbits.ocm._
+import chisel3.experimental.noPrefix
 
 // wrapper for AXI platforms
 
@@ -17,8 +18,8 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   val mem = Wire(Vec(p.numMemPorts, new AXIMasterIF(p.memAddrBits, p.memDataBits, p.memIDBits)))
 
   // add the actual external interfaces with the correct naming
-  val extMemIf = VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
-  val extCsrIf = IO(Flipped(new AXILiteExternalIF(p.memAddrBits, p.csrDataBits))).suggestName("csr")
+  val extMemIf = noPrefix {VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")}) }
+  val extCsrIf = noPrefix {IO(Flipped(new AXILiteExternalIF(p.memAddrBits, p.csrDataBits))).suggestName("csr") }
 
   // Make the connections between the external and internal AXI interface
   for ((extIf, intIf) <- extMemIf zip mem ) {
