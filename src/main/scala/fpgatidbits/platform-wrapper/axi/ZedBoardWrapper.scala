@@ -31,6 +31,7 @@ class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targ
 
   if (generateRegDriver) {
     // Generate the RegFile driver
+    println("Generating Register Driver at directory:" + targetDir)
     generateRegDriver(targetDir)
     // Copy over the other needed files
     //val resRoot = getClass.getResource("").getPath

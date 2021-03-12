@@ -324,7 +324,7 @@ protected:
 
     import java.io._
     // Create file
-    val filename = targetDir+driverName+".hpp"
+    val filename = targetDir+"/" + driverName+".hpp"
     println("Writing to "+filename )
     println(filename)
     val file = new File(filename)
