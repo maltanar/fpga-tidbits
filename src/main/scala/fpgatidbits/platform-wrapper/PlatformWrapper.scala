@@ -81,11 +81,9 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
   //val ownIO2 = ListMap(accel.io.flatten.filter(ownFilter).toSeq.sortBy(_._1):_*)
   def flatten(data: Data): Seq[Element] = data match {
     case elt: Element => {
-      println(s"Reach bottom with el=${elt} name=${elt.name}")
       Seq(elt)
     }
     case agg: Aggregate => {
-      println(s"agg=${agg} flatten again")
       agg.getElements.flatMap(flatten)
     }
   }
@@ -99,7 +97,6 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
   }
   val ownIO = flatten(accel.io).filter(ownFilter)
 
-  println(s"ownIO=${ownIO}")
   // each I/O is assigned to at least one register index, possibly more if wide
   // round each I/O width to nearest csrWidth multiple, sum, divide by csrWidth
   val wCSR = p.csrDataBits
@@ -135,8 +132,6 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
 
     val name = instanceNametoName(element.instanceName)
     val bits = element
-    println(s"element=${element} Got name=${name} and bits=${bits}")
-    println(element.instanceName)
 
 
     if(name != "signature") {

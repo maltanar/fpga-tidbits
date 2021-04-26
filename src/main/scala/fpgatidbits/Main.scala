@@ -163,6 +163,7 @@ object MainObj {
     "TestBRAMMasked" -> {p => new TestBRAMMasked(p)},
     //"TestMemLatency" -> {p => new TestMemLatency(p)},
     //"TestGather" -> {p => new TestGather(p)}
+    "TestSinglePortBRAM" -> {p => new TestSinglePortBRAM(p)}
   )
 
   val platformMap = TidbitsMakeUtils.platformMap
@@ -172,8 +173,14 @@ object MainObj {
   }
 
   def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
-    for(f <- fileNames)
-      fileCopy(fromDir + f, toDir + f)
+    println(s"copy from ${fromDir} to ${toDir}")
+    for(f <- fileNames) {
+      if (f(0) != "/" && toDir.last != "/") {
+        fileCopy(fromDir + f, toDir + "/" + f)
+      } else {
+        fileCopy(fromDir + f, toDir + f)
+      }
+    }
   }
 
   def directoryDelete(dir: String): Unit = {
@@ -192,9 +199,9 @@ object MainObj {
     chisel3.Driver.execute(chiselArgs, () => platformInst(accInst, targetDir))
 
     // Copy test application
-    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
-    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
-    fileCopy(testRoot + accelName  + ".cpp", s"${targetDir}/main.cpp")
+//    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
+//    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
+//    fileCopy(testRoot + accelName  + ".cpp", s"${targetDir}/main.cpp")
 
   }
 

@@ -113,7 +113,12 @@ object VivadoSynth {
     try {
       val omxDir = "/home/erling/tools/oh-my-xilinx"
       //val compile_res = Process(s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart", new File(path), "OHMYXILINX" -> s"$omxDir").!!
-      val compile_res = Process(s"bash -c $omxDir/vivadocompile.sh $topModuleName clk $fpgaPart", new File(path), "OHMYXILINX" -> s"$omxDir").!!
+      val compile_res = Process(Seq("bash", "-c", s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart"),
+        new File(path),
+        "OHMYXILINX" -> s"$omxDir",
+      ).!!
+
+      println(compile_res)
       val result_res = Process(s"cat results_$topModuleName/res.txt", new File(path)).!!
       // do some string parsing to pull out the numbers
       val result_lines = result_res.split("\n")
@@ -131,7 +136,11 @@ object VivadoSynth {
         bram = bram_fields(1).toInt,
         dsp = dsps_fields(1).toInt, target_ns = req_ns, fmax_mhz = fmax_mhz)
     } catch {
-      case error: Throwable ⇒ println("Characterization ERROR: something went wrong. Synthesis failed, probably out of resources")
+      case error: Throwable ⇒ {
+        println("Characterization ERROR: something went wrong. Synthesis failed, probably out of resources")
+        println(error.getMessage)
+        println(error.printStackTrace())
+      }
     }
 
     println("Results for parameters:")

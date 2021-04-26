@@ -43,7 +43,7 @@ class ReadReqGen(p: MemReqParams, chanID: Int, maxBeats: Int) extends Module {
   // default outputs
   io.stat.error := false.B
   io.stat.finished := false.B
-  io.stat.active := (regState != sIdle)
+  io.stat.active := (regState =/= sIdle)
   io.reqs.valid := false.B
   io.reqs.bits.channelID := chanID.U
   io.reqs.bits.isWrite := false.B

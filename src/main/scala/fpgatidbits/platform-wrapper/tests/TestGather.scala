@@ -138,7 +138,7 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
         regResultsNotOK := regResultsNotOK + 1.U
       }
       // increment OoO response counter if appropriate
-      when(orderCheckQ.deq.bits.tag != gather.accel_io.out.bits.tag) {
+      when(orderCheckQ.deq.bits.tag =/= gather.accel_io.out.bits.tag) {
         printf("Found OoO response at %d, expected %d found %d \n",
           regResultsOK+regResultsNotOK,
           orderCheckQ.deq.bits.tag, gather.accel_io.out.bits.tag

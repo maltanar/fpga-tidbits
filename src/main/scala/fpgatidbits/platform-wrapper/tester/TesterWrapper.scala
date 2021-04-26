@@ -98,7 +98,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
     val accRdReq = addLatency(15, accmp.memRdReq)
     val accRdRsp = accmp.memRdRsp
     val memRead = WireInit(mem(addrToWord(regReadRequest.addr)))
-    val memReadValid = RegInit(false.B)
+    val memReadValid = WireInit(false.B)
     memReadValid := false.B
 
     accRdReq.ready := false.B
@@ -132,7 +132,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
           .otherwise {
             memReadValid := true.B
             accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
-            when (accRdRsp.ready) {
+            when (accRdRsp.fire()) {
               regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
               regReadRequest.addr := regReadRequest.addr + (memUnitBytes)
 

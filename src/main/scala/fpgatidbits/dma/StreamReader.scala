@@ -45,7 +45,7 @@ object RoundUpAlign {
     val lower = x(numZeroAddrBits-1, 0)
     val upper = x(x.getWidth-1, numZeroAddrBits)
     val isAligned = (lower === 0.U)
-    return Mux(isAligned, x, Cat(upper+1.U, 0.U(numZeroAddrBits.W)))
+    return Mux(isAligned, x, Cat(Cat(0.U(1.W),upper)+1.U, 0.U(numZeroAddrBits.W)))
   }
 }
 
