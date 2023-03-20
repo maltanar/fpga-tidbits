@@ -8,6 +8,8 @@ CHISEL_FLAGS :=
 top_srcdir ?= .
 top_file := src/main/scala/Main.scala
 executables := $(filter-out top, $(notdir $(basename $(wildcard $(srcdir)/*.scala))))
+integration_test_script = test-all.sh
+
 
 default: emulator
 
@@ -27,7 +29,12 @@ driver:
 emulator:
 	$(SBT) $(SBT_FLAGS) "emulator $(ACCEL) $(PLATFORM)"
 
-test:
+unit-test:
 	$(SBT) $(SBT_FLAGS) test
 
-.PHONY: all emulator verilog driver test
+integration-test:
+	./$(integration_test_script)
+
+test: unit-test integration-test
+
+.PHONY: all emulator verilog driver test unit-test integration-test

@@ -1,13 +1,11 @@
 #include <iostream>
 using namespace std;
 
-#include "TestSum.hpp"
+#include "ExampleSum.hpp"
 #include "platform.h"
 
-bool Run_TestSum(WrapperRegDriver * platform, int upper) {
-	TestSum t(platform);
-
-
+bool Run_ExampleSum(WrapperRegDriver * platform, int upper) {
+	ExampleSum t(platform);
 
 	unsigned int * hostBuf = new unsigned int[upper];
 	unsigned int bufsize = upper * sizeof(unsigned int);
@@ -43,20 +41,20 @@ int main(int argc, char** argv)
       int n_tests = atoi(argv[1]);
 
     int testPassed = 0;
-    cout << "Running TestSum integration test ... " <<endl;
+    cout << "Running ExampleSum integration test ... " <<endl;
     for (int i = 0; i<n_tests; i++) {
         WrapperRegDriver * platform = initPlatform();
-        if (Run_TestSum(platform, i)) {
+        if (Run_ExampleSum(platform, i)) {
             testPassed++;
         } else{
-            cout << "TestSum failed for i=" <<i <<endl;
+            cout << "ExampleSum failed for i=" <<i <<endl;
             return -1;
         }
 
         deinitPlatform(platform);
     }
 
-    cout << "TestSum Passed " <<testPassed <<" tests" <<endl;
+    cout << "ExampleSum Passed " <<testPassed <<" tests" <<endl;
 
 	return 0;
 }

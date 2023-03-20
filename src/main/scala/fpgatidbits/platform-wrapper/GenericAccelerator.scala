@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 // parameters for PlatformWrapper?
 
 // interface definition for GenericAccelerator-derived modules
-class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends Bundle {
+abstract class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends Bundle {
   // memory ports
   val memPort = Vec(numMemPorts,new GenericMemoryMasterPort(p.toMemReqParams()))
   // use the signature field for sanity and version checks

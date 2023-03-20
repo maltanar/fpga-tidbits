@@ -80,8 +80,6 @@ class GatherNBCache_InOrderMissHandling(
     override val printfStr = "req: id = %d line = %d tag = %d ofs = %d\n"
     override val printfElems = {() => Seq(id, cacheLine, cacheTag, cacheOffset)}
 
-    override def cloneType: this.type =
-      new InternalReq().asInstanceOf[this.type]
   }
   class InternalTagRsp extends InternalReq {
     val isHit = Bool()
@@ -90,8 +88,6 @@ class GatherNBCache_InOrderMissHandling(
     override val printfStr = "req: id = %d linersp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
 
-    override def cloneType: this.type =
-      new InternalTagRsp().asInstanceOf[this.type]
   }
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
     val dat = UInt(datWidth.W)
@@ -99,8 +95,6 @@ class GatherNBCache_InOrderMissHandling(
     override val printfStr = "req: id = %d rsp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
 
-    override def cloneType: this.type =
-      new InternalRsp().asInstanceOf[this.type]
   }
   val ireq = new InternalReq()
   val itagrsp = new InternalTagRsp()

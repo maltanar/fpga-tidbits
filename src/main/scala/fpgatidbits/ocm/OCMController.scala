@@ -45,8 +45,6 @@ class OCMRequest(private val writeWidth: Int, private val addrWidth: Int) extend
   val addr = UInt(addrWidth.W)
   val writeData = UInt(writeWidth.W)
   val writeEn = Bool()
-
-  override def cloneType = {new OCMRequest(writeWidth, addrWidth).asInstanceOf[this.type]}
 }
 
 object NullOCMRequest {
@@ -61,8 +59,6 @@ object NullOCMRequest {
 
 class OCMResponse(private val readWidth: Int) extends Bundle {
   val readData = UInt(readWidth.W)
-
-  override def cloneType = {new OCMResponse(readWidth).asInstanceOf[this.type]}
 }
 
 // master interface for an OCM access port (read/write, possibly with different
@@ -70,9 +66,6 @@ class OCMResponse(private val readWidth: Int) extends Bundle {
 class OCMMasterIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundle {
   val req = Output(new OCMRequest(writeWidth, addrWidth))
   val rsp = Input(new OCMResponse(readWidth))
-
-  override def cloneType =
-    { new OCMMasterIF(writeWidth, readWidth, addrWidth).asInstanceOf[this.type] }
 
   def driveDefaults(): Unit = {
     req.writeEn := false.B
@@ -86,8 +79,6 @@ class OCMSlaveIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundle
   val req = Input(new OCMRequest(writeWidth, addrWidth))
   val rsp = Output(new OCMResponse(readWidth))
 
-  override def cloneType =
-    { new OCMSlaveIF(writeWidth, readWidth, addrWidth).asInstanceOf[this.type] }
 }
 
 class OnChipMemoryBlackBoxIF(p: OCMParameters) extends Bundle {

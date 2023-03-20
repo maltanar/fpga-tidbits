@@ -1,11 +1,11 @@
 #include <iostream>
 using namespace std;
 
-#include "TestMultiChanSum.hpp"
+#include "ExampleMultiChanSum.hpp"
 #include "platform.h"
 
-bool Run_TestMultiChanSum(WrapperRegDriver * platform, uint ub, uint offs) {
-	TestMultiChanSum t(platform);
+bool Run_ExampleMultiChanSum(WrapperRegDriver * platform, uint ub, uint offs) {
+	ExampleMultiChanSum t(platform);
 
 
 	unsigned int * hostBuf0 = new unsigned int[ub];
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
      }
      int n_tests = atoi(argv[1]);
 
-  cout <<"Running TestMultiChanSum integration test with " <<n_tests <<" iterations ..." <<endl;
+  cout <<"Running ExampleMultiChanSum integration test with " <<n_tests <<" iterations ..." <<endl;
 
 
   WrapperRegDriver * platform = initPlatform();
@@ -66,15 +66,15 @@ int main(int argc, char **argv) {
     offset = (uint16_t) rand();
 
 
-	if(Run_TestMultiChanSum(platform, upper_bound, offset) != true) {
-	    cout <<"TestMultiChanSum failed with ub=" <<upper_bound <<" offset=" <<offset <<endl;
+	if(Run_ExampleMultiChanSum(platform, upper_bound, offset) != true) {
+	    cout <<"ExampleMultiChanSum failed with ub=" <<upper_bound <<" offset=" <<offset <<endl;
 	    return -1;
 	} else {
 	    passed_tests++;
 	}
 }
 
-    cout <<"TestMultiChanSum passed " <<passed_tests <<" tests" <<endl;
+    cout <<"ExampleMultiChanSum passed " <<passed_tests <<" tests" <<endl;
 	deinitPlatform(platform);
 	return 0;
 

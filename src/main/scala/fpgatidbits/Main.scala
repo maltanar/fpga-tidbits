@@ -1,12 +1,10 @@
 package fpgatidbits
 
 import chisel3._
-import chisel3.util._
-import fpgatidbits.Testbenches._
-import fpgatidbits.axi._
-import fpgatidbits.dma._
 import fpgatidbits.PlatformWrapper._
-import java.io.{File,FileInputStream,FileOutputStream}
+import fpgatidbits.examples._
+
+import java.io.{File, FileInputStream, FileOutputStream}
 import sys.process._
 import java.nio.file.Paths
 
@@ -16,17 +14,17 @@ object TidbitsMakeUtils {
   type PlatformMap = Map[String, PlatformInstFxn]
 
   val platformMap: PlatformMap = Map(
-    "ZedBoard" -> {( f, targetDir ) => new ZedBoardWrapper(f, targetDir)},
-    "PYNQZ1" -> {( f, targetDir )  => new PYNQZ1Wrapper(f, targetDir)},
-//    "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
-//    "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
-//    "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
-//    "PYNQZCU104CC" -> {f => new PYNQZCU104CCWrapper(f)},
-//    "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
-//    "ZC706" -> {f => new ZC706Wrapper(f)},
-//    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
-    "VerilatedTester" -> {( f, targetDir )  => new VerilatedTesterWrapper(f, targetDir)},
-    "Tester" -> {( f, targetDir )  => new TesterWrapper(f, targetDir)}
+    "ZedBoard" -> { (f, targetDir) => new ZedBoardWrapper(f, targetDir) },
+    "PYNQZ1" -> { (f, targetDir) => new PYNQZ1Wrapper(f, targetDir) },
+    //    "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
+    //    "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
+    //    "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
+    //    "PYNQZCU104CC" -> {f => new PYNQZCU104CCWrapper(f)},
+    //    "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
+    //    "ZC706" -> {f => new ZC706Wrapper(f)},
+    //    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
+    "VerilatedTester" -> { (f, targetDir) => new VerilatedTesterWrapper(f, targetDir) },
+    "Tester" -> { (f, targetDir) => new TesterWrapper(f, targetDir) }
   )
 
   // handy to have a few commonly available Xilinx FPGA boards here
@@ -40,17 +38,18 @@ object TidbitsMakeUtils {
     "ZC706" -> "xc7z045ffg900-2",
     "KU115" -> "xcku115-flvb2104-2-e",
     "VU9P" -> "xcvu9p-flgb2104-2-i",
-  "VerilatedTester" -> "xczu3eg-sbva484-1-i" // use Ultra96 part for tester
+    "VerilatedTester" -> "xczu3eg-sbva484-1-i" // use Ultra96 part for tester
   )
 
   import scala.language.postfixOps
+
   def fileCopy(from: String, to: String) = {
 
     s"cp -f $from $to" !
   }
 
   def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
-    for(f <- fileNames)
+    for (f <- fileNames)
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
 
@@ -61,7 +60,7 @@ object TidbitsMakeUtils {
     val mkd = s"mkdir -p $fullDir".!!
     // copy necessary files to build the driver
     fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
-    val fullFiles = p.platformDriverFiles.map(x => fullDir+"/"+x)
+    val fullFiles = p.platformDriverFiles.map(x => fullDir + "/" + x)
     // call g++ to produce a shared library
     println("Compiling driver as library...")
     val gc = (Seq(
@@ -74,12 +73,12 @@ object TidbitsMakeUtils {
   def makeVerilator(accInst: AccelInstFxn, destDir: String) = {
     val tidbitsDir = Paths.get(".").toAbsolutePath
 
-    val platformInst = {f => new VerilatedTesterWrapper(f, tidbitsDir + "/verilator/")}
-    val chiselArgs = Array("--backend","v","--targetDir", s"$destDir")
+    val platformInst = { f => new VerilatedTesterWrapper(f, tidbitsDir + "/verilator/") }
+    val chiselArgs = Array("--backend", "v", "--targetDir", s"$destDir")
     // generate verilog for the accelerator
     //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
     (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst)))
-//    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
+    //    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
     val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
     val scriptFiles = Seq("verilator-build.sh")
     val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
@@ -144,18 +143,18 @@ object MainObj {
   type PlatformMap = Map[String, PlatformInstFxn]
 
 
-  val accelMap: AccelMap  = Map(
-    "TestRegOps" -> {p => new TestRegOps(p)},
-    "TestSum" -> {p => new TestSum(p)},
-    "TestMultiChanSum" -> {p => new TestMultiChanSum(p)},
-    //"TestSeqWrite" -> {p => new TestSeqWrite(p)},
-    //"TestCopy" -> {p => new TestCopy(p)},
-    //"TestRandomRead" -> {p => new TestRandomRead(p)},
-    "TestBRAM" -> {p => new TestBRAM(p)},
-    "TestBRAMMasked" -> {p => new TestBRAMMasked(p)},
-    //"TestMemLatency" -> {p => new TestMemLatency(p)},
-    //"TestGather" -> {p => new TestGather(p)}
-    "TestSinglePortBRAM" -> {p => new TestSinglePortBRAM(p)}
+  val accelMap: AccelMap = Map(
+    "ExampleRegOps" -> {p => new ExampleRegOps(p)},
+    "ExampleSum" -> { p => new ExampleSum(p) },
+    "ExampleMultiChanSum" -> {p => new ExampleMultiChanSum(p)},
+    "ExampleSeqWrite" -> {p => new ExampleSeqWrite(p)},
+    "ExampleCopy" -> {p => new ExampleCopy(p)},
+    "ExampleRandomRead" -> {p => new ExampleRandomRead(p)},
+    "ExampleBRAM" -> {p => new ExampleBRAM(p)},
+    "ExampleBRAMMasked" -> {p => new ExampleBRAMMasked(p)},
+    "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
+    "ExampleGather" -> {p => new ExampleGather(p)},
+    "ExampleSinglePortBRAM" -> {p => new ExampleSinglePortBRAM(p)}
   )
 
   val platformMap = TidbitsMakeUtils.platformMap
@@ -166,7 +165,7 @@ object MainObj {
 
   def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
     println(s"copy from ${fromDir} to ${toDir}")
-    for(f <- fileNames) {
+    for (f <- fileNames) {
       if (f(0) != "/" && toDir.last != "/") {
         fileCopy(fromDir + f, toDir + "/" + f)
       } else {
@@ -189,12 +188,12 @@ object MainObj {
     val chiselArgs = Array("")
 
     (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst, targetDir)))
-//    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst, targetDir))
+    //    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst, targetDir))
 
     // Copy test application
-//    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
-//    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
-//    fileCopy(testRoot + accelName  + ".cpp", s"${targetDir}/main.cpp")
+    //    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
+    //    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
+    //    fileCopy(testRoot + accelName  + ".cpp", s"${targetDir}/main.cpp")
 
   }
 
@@ -204,17 +203,17 @@ object MainObj {
 
 
     val accInst = accelMap(accelName)
-    val platformInst = {f => new VerilatedTesterWrapper(f, targetDir)}
+    val platformInst = { f => new VerilatedTesterWrapper(f, targetDir) }
     val chiselArgs = Array("--target-dir", targetDir)
 
-    (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst)))
+    (new chisel3.stage.ChiselStage).emitVerilog(Module(new VerilatedTesterWrapper(accInst, targetDir)), chiselArgs)
     // generate verilog for the accelerator and create the regfile driver
-//    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
+    //    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
 
     // copy test application
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
-    fileCopy(testRoot + accelName  + ".cpp", s"$targetDir/main.cpp")
+    fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
   def makeIntegrationTest(args: Array[String]) = {
@@ -223,17 +222,17 @@ object MainObj {
 
 
     val accInst = accelMap(accelName)
-    val platformInst = {f => new VerilatedTesterWrapper(f, targetDir)}
+    val platformInst = { f => new VerilatedTesterWrapper(f, targetDir) }
     val chiselArgs = Array("--target-dir", targetDir)
     (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst)))
 
     // generate verilog for the accelerator and create the regfile driver
-//    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
+    //    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
 
     // copy test application
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-integration-tests/"
-    fileCopy(testRoot + "Integration" + accelName  + ".cpp", s"$targetDir/main.cpp")
+    fileCopy(testRoot + "Integration" + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
 
@@ -250,8 +249,12 @@ object MainObj {
     println("Usage: run <op> <accel> <platform>")
     println("where:")
     println("<op> = (v)erilog (d)river ve(r)ilator integration (t)est")
-    println("<accel> = " + accelMap.keys.reduce({_ + " " +_}))
-    println("<platform> = " + platformMap.keys.reduce({_ + " " +_}))
+    println("<accel> = " + accelMap.keys.reduce({
+      _ + " " + _
+    }))
+    println("<platform> = " + platformMap.keys.reduce({
+      _ + " " + _
+    }))
   }
 
   def main(args: Array[String]): Unit = {
@@ -271,9 +274,9 @@ object MainObj {
       return
     } else if (op == "verilator" || op == "r") {
       makeVerilator(rst)
-    }else if (op == "test" || op == "t") {
+    } else if (op == "test" || op == "t") {
       makeIntegrationTest(rst)
-    } else{
+    } else {
       showHelp()
       return
     }

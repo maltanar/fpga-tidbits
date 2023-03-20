@@ -182,6 +182,6 @@ object VivadoSynth {
     }
 
     logfile.close()
-    return design_space
+    return design_space.toSeq
   }
 }

@@ -38,10 +38,6 @@ class GenericMemoryRequest(p: MemReqParams) extends PrintableBundle {
   val printfStr = "id %d addr %d numBytes %d \n"
   val printfElems = {() => Seq(channelID, addr, numBytes)}
 
-  override def cloneType = {
-    new GenericMemoryRequest(p).asInstanceOf[this.type]
-  }
-
   def driveDefaults() = {
     channelID := 0.U
     isWrite := false.B
@@ -86,10 +82,6 @@ class GenericMemoryResponse(p: MemReqParams) extends PrintableBundle {
 
   val printfStr = "id %d readData %x isLast %d \n"
   val printfElems = {() => Seq(channelID, readData, isLast)}
-
-  override def cloneType = {
-    new GenericMemoryResponse(p).asInstanceOf[this.type]
-  }
 
   def driveDefaults() = {
     channelID := 0.U

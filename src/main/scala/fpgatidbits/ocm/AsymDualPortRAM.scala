@@ -34,12 +34,12 @@ class AsymDualPortRAM(p: OCMParameters) extends Module {
       val wordsToRead = p.readWidth / p.writeWidth
       val rdData = Cat((wordsToRead-1 to 0 by -1).map( {i: Int => mem(base+i.U)}))
       // use shift register to satisfy read latency requirement
-      io.ports(i).rsp.readData := ShiftRegister(p.readLatency, rdData)
+      io.ports(i).rsp.readData := ShiftRegister(rdData, p.readLatency)
     } else {
       // small reads, big writes
       // address corresponds directly to read cell address
       val rdData = mem(base)
-      io.ports(i).rsp.readData := ShiftRegister(p.readLatency, rdData)
+      io.ports(i).rsp.readData := ShiftRegister(rdData, p.readLatency)
       // need to write to multiple cells
       val wordsToWrite = p.writeWidth / p.readWidth
       when (io.ports(i).req.writeEn) {

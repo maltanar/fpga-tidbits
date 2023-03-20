@@ -63,8 +63,6 @@ extends OCMRequest(writeWidth, addrWidth) {
 
   val writeMask = Vec(maskWidth, Bool())
 
-  override def cloneType: this.type =
-    new OCMMaskedRequest(writeWidth, addrWidth, maskWidth).asInstanceOf[this.type]
 }
 
 class OCMMaskedSlaveIF(dataWidth: Int, addrWidth: Int, maskWidth: Int)
@@ -72,14 +70,9 @@ extends Bundle {
   val req = Input(new OCMMaskedRequest(dataWidth, addrWidth, maskWidth))
   val rsp = Output(new OCMResponse(dataWidth))
 
-  override def cloneType: this.type =
-    new OCMMaskedSlaveIF(dataWidth, addrWidth, maskWidth).asInstanceOf[this.type]
 }
 
 class DualPortMaskedBRAMIO(addrBits: Int, dataBits: Int, maskBits: Int)
 extends Bundle {
   val ports = Vec(2, new OCMMaskedSlaveIF(dataBits, addrBits, maskBits))
-
-  override def cloneType: this.type =
-    new DualPortMaskedBRAMIO(addrBits, dataBits, maskBits).asInstanceOf[this.type]
 }

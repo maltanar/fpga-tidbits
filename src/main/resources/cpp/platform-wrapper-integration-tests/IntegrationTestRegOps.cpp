@@ -1,14 +1,14 @@
 #include <iostream>
 using namespace std;
 
-#include "TestRegOps.hpp"
+#include "ExampleRegOps.hpp"
 #include "platform.h"
 #include <cstdlib>
 #include <time.h>
 
 
-bool Run_TestRegOps(WrapperRegDriver * platform, uint32_t a, uint32_t b) {
-  TestRegOps t(platform);
+bool Run_ExampleRegOps(WrapperRegDriver * platform, uint32_t a, uint32_t b) {
+  ExampleRegOps t(platform);
   t.set_op_0(a);
   t.set_op_1(b);
 
@@ -26,21 +26,21 @@ int main(int argc, char **argv)
   srand(time(NULL));
   WrapperRegDriver * platform = initPlatform();
 
-  cout << "Running TestRegOps integration test ..." <<endl;
+  cout << "Running ExampleRegOps integration test ..." <<endl;
   int passed_tests = 0;
 
   for (int i=0; i<n_tests; i++) {
     uint32_t a_in = rand();
     uint32_t b_in = rand();
-    if(Run_TestRegOps(platform, a_in, b_in)) {
+    if(Run_ExampleRegOps(platform, a_in, b_in)) {
         passed_tests++;
     } else {
-        cout <<"TestRegOps failed for a=" <<a_in <<" b=" <<b_in <<endl;
+        cout <<"ExampleRegOps failed for a=" <<a_in <<" b=" <<b_in <<endl;
         return -1;
     }
   }
 
-  cout <<"TestRegOps passed " <<passed_tests <<endl;
+  cout <<"ExampleRegOps passed " <<passed_tests <<endl;
 
   deinitPlatform(platform);
 

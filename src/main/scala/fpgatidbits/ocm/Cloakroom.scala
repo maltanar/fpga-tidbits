@@ -23,8 +23,6 @@ class CloakroomBundle(num: Int) extends PrintableBundle {
 
   val printfStr = "id = %d\n"
   val printfElems = {() => Seq(id)}
-
-  override def cloneType: this.type = new CloakroomBundle(num).asInstanceOf[this.type]
 }
 
 class CloakroomIF
@@ -41,7 +39,6 @@ extends Bundle {
   val intIn = Flipped(Decoupled(genC.cloneType)) //GatherResp
   val extOut = Decoupled(genD.cloneType) //InternalResp
 
-  override def cloneType: this.type = new CloakroomIF(genA, undress, genC, dress, genB, genD).asInstanceOf[this.type]
 }
 
 
@@ -159,7 +156,6 @@ extends Module {
   class IntInWithCtx extends Bundle {
     val intIn = genC.cloneType
     val ctx = genA.cloneType
-    override def cloneType: this.type = new IntInWithCtx().asInstanceOf[this.type]
   }
   val intInWithCtx = new IntInWithCtx()
 
@@ -279,8 +275,6 @@ extends Bundle {
   val intOut = Decoupled(undress(genA.cloneType))
   val intIn = Flipped(Decoupled(genC.cloneType))
   val extOut = Decoupled(dress(genA.cloneType, genC.cloneType))
-
-  override def cloneType: this.type = new InOrderCloakroomIF(genA, undress, genC, dress).asInstanceOf[this.type]
 }
 
 class InOrderCloakroom

@@ -12,9 +12,6 @@ class RespDeinterleaverIF(numPipes: Int, p: MemReqParams) extends Bundle {
   // number of decode errors (ID width no matching pipe)
   val decodeErrors = Output(UInt(32.W))
 
-  override def cloneType = {
-    new RespDeinterleaverIF(numPipes, p).asInstanceOf[this.type]
-  }
 }
 
 class QueuedDeinterleaver(numPipes: Int, p: MemReqParams, n: Int,
