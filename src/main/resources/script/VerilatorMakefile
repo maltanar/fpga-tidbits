@@ -1,17 +1,18 @@
 EMULATOR_BIN:=emu
-TRACE:=true
+TRACE ?= false
 VERILATOR_SRC_DIR=/usr/share/verilator/include
 VERIlATOR_SRC_GEN_DIR=verilated
 VERILATOR_OPTIONS=-Iother-verilog -Wno-assignin -Wno-fatal -Wno-lint -Wno-style -Wno-COMBDLY -Wno-STMTDLY
 
 ifeq ($(TRACE),true)
   VERILATOR_OPTIONS += --trace
+  CC_OPTIONS += -DTRACE
 endif
 
 PLATFORM := TesterWrapper
 
 $(EMULATOR_BIN):
-	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) --exe --build main.cpp platform-verilatedtester.cpp
+	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) -CFLAGS "$(CC_OPTIONS)" --exe --build main.cpp platform-verilatedtester.cpp
 	@cp obj_dir/V$(PLATFORM) $(EMULATOR_BIN)
 
 build: $(EMULATOR_BIN)

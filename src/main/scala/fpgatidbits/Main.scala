@@ -70,70 +70,6 @@ object TidbitsMakeUtils {
     println(s"Hardware driver library built as $fullDir/driver.a")
   }
 
-  def makeVerilator(accInst: AccelInstFxn, destDir: String) = {
-    val tidbitsDir = Paths.get(".").toAbsolutePath
-
-    val platformInst = { f => new VerilatedTesterWrapper(f, tidbitsDir + "/verilator/") }
-    val chiselArgs = Array("--backend", "v", "--targetDir", s"$destDir")
-    // generate verilog for the accelerator
-    //chiselMain(chiselArgs, () => Module(platformInst(accInst)))
-    (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst)))
-    //    chisel3.Driver.execute(chiselArgs, () => Module(platformInst(accInst)))
-    val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")
-    val scriptFiles = Seq("verilator-build.sh")
-    val driverFiles = Seq("wrapperregdriver.h", "platform-verilatedtester.cpp",
-      "platform.h", "verilatedtesterdriver.hpp")
-
-    // copy blackbox verilog, scripts, driver and SW support files
-    fileCopyBulk(s"$tidbitsDir/verilog/", destDir, verilogBlackBoxFiles)
-    fileCopyBulk(s"$tidbitsDir/script/", destDir, scriptFiles)
-    fileCopyBulk(s"$tidbitsDir/cpp/platform-wrapper-regdriver/", destDir,
-      driverFiles)
-    // build driver
-    //platformInst(accInst).generateRegDriver(destDir)
-  }
-
-  /*
-  def makeHLSDependencies(
-    // the accelerator instantiation function
-    accInst: AccelInstFxn,
-    // path to HLS sources, each HLSBlackBox function assumed to live under
-    // a .cpp file with its own name under this folder
-    hlsSrcDir: String,
-    // target directory where generated Verilog will be placed
-    destDir: String,
-    // include directories for HLS sources
-    inclDirs: Seq[String] = Seq(),
-    // FPGA part to use during HLS synthesis
-    fpgaPart: String = "xc7z020clg400-1",
-    // target clock period for HLS synthesis, in nanoseconds
-    nsClk: String = "5.0"
-  ) = {
-    // make an instance of the accelerator using the given function
-    val acc = accInst(TesterWrapperParams)
-
-    println("Generating HLS dependencies...")
-    // generate HLS for each registered HLSBlackBox dependency
-    for(hls_bb <- acc.hlsBlackBoxes) {
-      val hls_fxn_name = hls_bb.getClass.getSimpleName
-      println(s"Generating HLS for ${hls_fxn_name}")
-      // use a temp dir for synthesis, remove if exists
-      val synDir = s"/tmp/hls_syn_${hls_fxn_name}"
-      s"rm -rf $synDir".!!
-      s"mkdir -p $synDir".!!
-      // generate include file that sets args for templated functions
-      println(s"Writing template defines to ${synDir}/${hls_fxn_name}_TemplateDefs.hpp")
-      hls_bb.generateTemplateDefines(s"${synDir}/${hls_fxn_name}_TemplateDefs.hpp")
-      val inclDirs_withTemplateDefines = inclDirs ++ Seq(s"${synDir}")
-      // call HLS synthesis to generate Verilog
-      TidbitsHLSTools.hlsToVerilog(
-        s"${hlsSrcDir}/${hls_fxn_name}.cpp",
-        destDir, synDir, hls_fxn_name, hls_fxn_name,
-        inclDirs_withTemplateDefines, fpgaPart, nsClk
-      )
-    }
-  }
-  */
 }
 
 object MainObj {
@@ -184,11 +120,9 @@ object MainObj {
     val accInst = accelMap(accelName)
     val platformInst = platformMap(platformName)
     val targetDir = Paths.get(".").toString.dropRight(1) + s"$platformName-$accelName-driver/"
-    println(targetDir)
     val chiselArgs = Array("")
 
     (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst, targetDir)))
-    //    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst, targetDir))
 
     // Copy test application
     //    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
@@ -199,16 +133,11 @@ object MainObj {
 
   def makeVerilator(args: Array[String]) = {
     val accelName = args(0)
-    val targetDir = Paths.get(".").toString.dropRight(1) + s"verilator/${accelName}/"
-
-
     val accInst = accelMap(accelName)
-    val platformInst = { f => new VerilatedTesterWrapper(f, targetDir) }
+    val targetDir = Paths.get(".").toString.dropRight(1) + s"verilator/${accelName}/"
     val chiselArgs = Array("--target-dir", targetDir)
 
-    (new chisel3.stage.ChiselStage).emitVerilog(Module(new VerilatedTesterWrapper(accInst, targetDir)), chiselArgs)
-    // generate verilog for the accelerator and create the regfile driver
-    //    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
+    (new chisel3.stage.ChiselStage).emitVerilog(new VerilatedTesterWrapper(accInst, targetDir), chiselArgs)
 
     // copy test application
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
@@ -219,20 +148,15 @@ object MainObj {
   def makeIntegrationTest(args: Array[String]) = {
     val accelName = args(0)
     val targetDir = Paths.get(".").toString.dropRight(1) + s"integration-tests/${accelName}/"
-
-
     val accInst = accelMap(accelName)
-    val platformInst = { f => new VerilatedTesterWrapper(f, targetDir) }
     val chiselArgs = Array("--target-dir", targetDir)
-    (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst)))
 
-    // generate verilog for the accelerator and create the regfile driver
-    //    chisel3.Driver.execute(chiselArgs, () => platformInst(accInst))
+    (new chisel3.stage.ChiselStage).emitVerilog(new VerilatedTesterWrapper(accInst, targetDir), chiselArgs)
 
     // copy test application
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-integration-tests/"
-    fileCopy(testRoot + "Integration" + accelName + ".cpp", s"$targetDir/main.cpp")
+    fileCopy(testRoot + "Test" + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
 

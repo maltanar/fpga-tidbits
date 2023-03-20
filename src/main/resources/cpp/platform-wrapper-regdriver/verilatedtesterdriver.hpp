@@ -18,8 +18,6 @@ using namespace std;
 #define __TESTERDRIVER_DEBUG(x) (0)
 #endif
 
-#define TRACE
-
 #ifdef TRACE
 #include "verilated_vcd_c.h"
 #endif
@@ -179,13 +177,13 @@ protected:
 
   void step(int n = 1) {
     for(int i = 0; i < n; i++) {
-      m_inst->clk = 1;
+      m_inst->clock = 1;
       m_inst->eval();
 #ifdef TRACE
       m_tfp->dump(m_time);
 #endif
       m_time++;
-      m_inst->clk = 0;
+      m_inst->clock = 0;
       m_inst->eval();
 #ifdef TRACE
       m_tfp->dump(m_time);
