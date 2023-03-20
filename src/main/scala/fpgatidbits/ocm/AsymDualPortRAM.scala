@@ -2,7 +2,7 @@ package fpgatidbits.ocm
 
 import chisel3._
 import chisel3.util._
-import chisel3.iotesters._
+//import chisel3.iotesters._
 
 // simple model for a dual-port OCM with asymmetric r/w widths
 // not intended for synthesis, only for simulation
@@ -34,12 +34,12 @@ class AsymDualPortRAM(p: OCMParameters) extends Module {
       val wordsToRead = p.readWidth / p.writeWidth
       val rdData = Cat((wordsToRead-1 to 0 by -1).map( {i: Int => mem(base+i.U)}))
       // use shift register to satisfy read latency requirement
-      io.ports(i).rsp.readData := ShiftRegister(n=p.readLatency, in=rdData)
+      io.ports(i).rsp.readData := ShiftRegister(p.readLatency, rdData)
     } else {
       // small reads, big writes
       // address corresponds directly to read cell address
       val rdData = mem(base)
-      io.ports(i).rsp.readData := ShiftRegister(n=p.readLatency, in=rdData)
+      io.ports(i).rsp.readData := ShiftRegister(p.readLatency, rdData)
       // need to write to multiple cells
       val wordsToWrite = p.writeWidth / p.readWidth
       when (io.ports(i).req.writeEn) {
@@ -53,22 +53,22 @@ class AsymDualPortRAM(p: OCMParameters) extends Module {
 
 // TODO this test will only work on 8w/32r OCM and tests very little
 
-
-class AsymDualPortRAMTester(c: AsymDualPortRAM) extends PeekPokeTester(c) {
-  val p = c.ocmParams
-  val p0 = c.io.ports(0)
-
-  var wr_data = List(0xef, 0xbe, 0xad, 0xde)
-  var addr = 4
-  for (i <- wr_data) {
-    poke(p0.req.addr, addr)
-    poke(p0.req.writeData, i)
-    poke(p0.req.writeEn, 1)
-    step(1)
-    addr = addr + 1
-  }
-  poke(p0.req.writeEn, 0)
-  poke(p0.req.addr, 4)
-  step(p.readLatency)
-  expect(p0.rsp.readData, 0xdeadbeef)
-}
+//
+//class AsymDualPortRAMTester(c: AsymDualPortRAM) extends PeekPokeTester(c) {
+//  val p = c.ocmParams
+//  val p0 = c.io.ports(0)
+//
+//  var wr_data = List(0xef, 0xbe, 0xad, 0xde)
+//  var addr = 4
+//  for (i <- wr_data) {
+//    poke(p0.req.addr, addr)
+//    poke(p0.req.writeData, i)
+//    poke(p0.req.writeEn, 1)
+//    step(1)
+//    addr = addr + 1
+//  }
+//  poke(p0.req.writeEn, 0)
+//  poke(p0.req.addr, 4)
+//  step(p.readLatency)
+//  expect(p0.rsp.readData, 0xdeadbeef)
+//}

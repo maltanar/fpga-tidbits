@@ -29,7 +29,7 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
     if (wWidth <= rWidth) x else x << (log2Ceil(wWidth/rWidth))
   }
 
-  def printParams() {
+  def printParams(): Unit =  {
     println("OCM parameters:")
     println("Address width: " + addrWidth.toString)
     println("Total # bits: " + bits.toString)
@@ -101,7 +101,7 @@ class OnChipMemory(p: OCMParameters, ocmName: String) extends BlackBox {
   val io = IO(new OnChipMemoryBlackBoxIF(p))
 
 
-  def renameSignals() {
+  def renameSignals(): Unit = {
     val portLetters = Array("a", "b")
     for(i <- 0 until p.portCount) {
       io.ports(i).req.writeEn.suggestName("we"+portLetters(i))
@@ -154,7 +154,7 @@ class OCMController(p: OCMParameters) extends Module {
   val dumpQ = Module(new Queue(UInt(p.readWidth.W), entries = fifoCapacity))
   // shift registers to compensate for OCM read latency (address to valid)
   // -1 since this is already sourced from a register
-  dumpQ.io.enq.valid := ShiftRegister(in=regDumpValid, n=p.readLatency-1)
+  dumpQ.io.enq.valid := ShiftRegister(regDumpValid, p.readLatency-1)
   dumpQ.io.enq.bits := ocm.rsp.readData
   dumpQ.io.deq <> io.mcif.dumpPort
 

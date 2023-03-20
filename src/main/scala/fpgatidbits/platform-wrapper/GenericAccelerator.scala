@@ -57,13 +57,13 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   }
 
   // drive default values for memory read port i
-  def plugMemReadPort(i: Int) {
+  def plugMemReadPort(i: Int): Unit = {
     io.memPort(i).memRdReq.valid := false.B
     io.memPort(i).memRdReq.bits.driveDefaults()
     io.memPort(i).memRdRsp.ready := false.B
   }
   // drive default values for memory write port i
-  def plugMemWritePort(i: Int) {
+  def plugMemWritePort(i: Int): Unit = {
     io.memPort(i).memWrReq.valid := false.B
     io.memPort(i).memWrReq.bits.driveDefaults()
     io.memPort(i).memWrDat.valid := false.B

@@ -54,7 +54,7 @@ class GenericMemoryRequest(p: MemReqParams) extends PrintableBundle {
 object GenericMemoryRequest {
   def apply(p: MemReqParams): GenericMemoryRequest = {
     val n = Wire(new GenericMemoryRequest(p))
-    n.driveDefaults
+    n.driveDefaults()
     n
   }
 
@@ -103,7 +103,7 @@ class GenericMemoryResponse(p: MemReqParams) extends PrintableBundle {
 object GenericMemoryResponse {
   def apply(p: MemReqParams): GenericMemoryResponse = {
     val n = Wire(new GenericMemoryResponse(p))
-    n.driveDefaults
+    n.driveDefaults()
     n
   }
 }

@@ -231,7 +231,7 @@ class AXIMasterIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) extends B
   val readData    = Flipped(Decoupled(new AXIReadData(dataWidthBits, idBits)))
 
   // drive default/"harmless" values to leave no output uninitialized
-  def driveDefaults() {
+  def driveDefaults(): Unit = {
     writeAddr.valid := false.B
     writeData.valid := false.B
     writeResp.ready := false.B
@@ -275,7 +275,7 @@ class AXIMasterReadOnlyIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) e
   val readData    = Flipped(Decoupled(new AXIReadData(dataWidthBits, idBits)))
 
   // rename signals to be compatible with those in the Xilinx template
-  def renameSignals(ifName: String) {
+  def renameSignals(ifName: String): Unit =  {
     // read address channel
     readAddr.bits.addr.suggestName(ifName + "_ARADDR")
     readAddr.bits.prot.suggestName(ifName + "_ARPROT")
