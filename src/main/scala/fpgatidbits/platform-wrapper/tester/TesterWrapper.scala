@@ -64,13 +64,14 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
   io.regFileIF <> regFile.extIF
 
   // instantiate the "main memory"
-  val mem = SyncReadMem(memWords, UInt(p.memDataBits.W))
+  val mainMemory = SyncReadMem(memWords, UInt(p.memDataBits.W))
 
   def addrToWord(x: UInt) = {x >> (log2Ceil(p.memDataBits/8))}
   val memWord = addrToWord(io.memAddr)
-  io.memReadData := mem.read(memWord)
 
-  when (io.memWriteEn) {mem.write(memWord, io.memWriteData)}
+  io.memReadData := mainMemory.read(memWord)
+
+  when (io.memWriteEn) {mainMemory.write(memWord, io.memWriteData)}
 
   def addLatency[T <: Data](n: Int, prod: DecoupledIO[T]): DecoupledIO[T] = {
     if(n == 1) {
@@ -84,26 +85,25 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
   // one FSM per port, rather simple, but supports bursts
   for(i <- 0 until accel.numMemPorts) {
     // reads
-    val sWaitRd :: sRead :: Nil = Enum(2)
+    // FIXME: This is dumbed down alot to make it work.
+    val sWaitRd :: sRead :: sResp :: Nil = Enum(3)
     val regStateRead = RegInit(sWaitRd)
     val regReadRequest = RegInit(GenericMemoryRequest(mrp))
 
     val accmp = accio.memPort(i)
     val accRdReq = addLatency(15, accmp.memRdReq)
     val accRdRsp = accmp.memRdRsp
-    val memRead = WireInit(mem(addrToWord(regReadRequest.addr)))
+
+    val memRead = mainMemory.read(addrToWord(regReadRequest.addr))
     val memReadValid = WireInit(false.B)
-    memReadValid := false.B
 
     accRdReq.ready := false.B
     accRdRsp.bits.channelID := regReadRequest.channelID
     accRdRsp.bits.metaData := 0.U
     accRdRsp.bits.isWrite := false.B
     accRdRsp.bits.isLast := false.B
-
-    accRdRsp.valid := memReadValid
     accRdRsp.bits.readData := memRead
-
+    accRdRsp.valid := false.B
 
     switch(regStateRead) {
       is(sWaitRd) {
@@ -115,32 +115,21 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
       }
 
       is(sRead) {
-        when(regReadRequest.numBytes === 0.U) {
-          // prefetch the read request if possible to minimize waiting
-          accRdReq.ready := true.B
-          when (accRdReq.valid) {
-            regReadRequest := accRdReq.bits
-            // stay in this state and continue processing
-          } .otherwise {regStateRead := sWaitRd}
-        }
-          .otherwise {
-            memReadValid := true.B
-            accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
-            when (accRdRsp.fire()) {
-              regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
-              regReadRequest.addr := regReadRequest.addr + (memUnitBytes)
+        regStateRead := sResp
+      }
 
-              // was this the last beat of burst transferred?
-              when(regReadRequest.numBytes === memUnitBytes) {
-                // prefetch the read request if possible to minimize waiting
-                accRdReq.ready := true.B
-                when (accRdReq.valid) {
-                  regReadRequest := accRdReq.bits
-                  // stay in this state and continue processing
-                }
-              }
-            }
+      is (sResp) {
+        val isLast = (regReadRequest.numBytes === memUnitBytes)
+        accRdRsp.bits.isLast := isLast
+        accRdRsp.valid := true.B
+        when(accRdRsp.fire()) {
+          when (isLast) {
+            regStateRead := sWaitRd
+          }.otherwise {
+            regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
+            regReadRequest.addr := regReadRequest.addr + (memUnitBytes)
           }
+        }
       }
     }
 
@@ -182,7 +171,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
                 wrRspQ.enq.valid := true.B
               }
               wrDatQ.deq.ready := true.B
-              mem(addrToWord(regWriteRequest.addr)) := wrDatQ.deq.bits
+              mainMemory.write(addrToWord(regWriteRequest.addr), wrDatQ.deq.bits)
               regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
               regWriteRequest.addr := regWriteRequest.addr + (memUnitBytes)
             }

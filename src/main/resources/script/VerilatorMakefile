@@ -12,7 +12,7 @@ endif
 PLATFORM := TesterWrapper
 
 $(EMULATOR_BIN):
-	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) --exe --build main.cpp platform-verilatedtester.cpp
+	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) $(CC_OPTIONS) --exe --build main.cpp platform-verilatedtester.cpp
 	@cp obj_dir/V$(PLATFORM) $(EMULATOR_BIN)
 
 build: $(EMULATOR_BIN)
