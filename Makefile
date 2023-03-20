@@ -29,12 +29,14 @@ driver:
 emulator:
 	$(SBT) $(SBT_FLAGS) "emulator $(ACCEL) $(PLATFORM)"
 
+# ----------------------------------------------------------------------------------------------------------------------
+#	Tests
+# ----------------------------------------------------------------------------------------------------------------------
+include integration-test.mk
+
 unit-test:
 	$(SBT) $(SBT_FLAGS) test
 
-integration-test:
-	./$(integration_test_script)
-
 test: unit-test integration-test
 
-.PHONY: all emulator verilog driver test unit-test integration-test
+.PHONY: all emulator verilog driver test unit-test
