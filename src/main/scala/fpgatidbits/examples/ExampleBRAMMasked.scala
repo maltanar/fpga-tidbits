@@ -10,8 +10,8 @@ import fpgatidbits.ocm._
 // here, e.g. it is possible to do a write to a BRAM address that modifies
 // only part of the data there, depending on the write enable signals
 
-class ExampleBRAMMaskedIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
-  val ports = Vec(2, new OCMMaskedSlaveIF(32, 32, 10))
+class ExampleBRAMMaskedIO(maskWidth: Int, n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+  val ports = Vec(2, new OCMMaskedSlaveIF(32, 32, maskWidth))
 }
 class ExampleBRAMMasked(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 0
@@ -19,7 +19,7 @@ class ExampleBRAMMasked(p: PlatformWrapperParams) extends GenericAccelerator(p) 
   val addrWidth = 10
   val maskUnit = 8
   val maskWidth = dataWidth/maskUnit
-  val io = IO(new ExampleBRAMMaskedIO(numMemPorts,p))
+  val io = IO(new ExampleBRAMMaskedIO(maskWidth, numMemPorts,p))
   io.signature := makeDefaultSignature()
 
   val mem = Module(new DualPortMaskedBRAM(addrWidth, dataWidth)).io

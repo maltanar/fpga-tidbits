@@ -17,8 +17,7 @@ all: verilog
 
 clean:
 	-rm -f *.h *.hex *.flo *.cpp *.o *.out *.v *.vcd $(executables)
-	sbt clean
-	-rm -rf project/target/ target/ verilator
+	-rm -rf project/target/ target/ verilator integration-tests
 
 verilog:
 	$(SBT) $(SBT_FLAGS) "verilog $(ACCEL) $(PLATFORM)"
