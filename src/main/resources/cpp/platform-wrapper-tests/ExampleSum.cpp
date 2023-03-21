@@ -1,11 +1,11 @@
 #include <iostream>
 using namespace std;
 
-#include "TestSum.hpp"
+#include "ExampleSum.hpp"
 #include "platform.h"
 
-bool Run_TestSum(WrapperRegDriver * platform) {
-	TestSum t(platform);
+bool Run_ExampleSum(WrapperRegDriver * platform) {
+	ExampleSum t(platform);
 
 	cout << "Signature: " << hex << t.get_signature() << dec << endl;
 	unsigned int ub = 0;
@@ -43,7 +43,7 @@ int main()
 {
 	WrapperRegDriver * platform = initPlatform();
 
-	Run_TestSum(platform);
+	Run_ExampleSum(platform);
 
 	deinitPlatform(platform);
 

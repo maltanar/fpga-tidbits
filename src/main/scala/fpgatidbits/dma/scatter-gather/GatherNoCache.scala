@@ -27,13 +27,9 @@ class GatherNoCache(
   // define types for internal requests and responses:
   class InternalReq extends CloakroomBundle(outstandingTxns) {
     val ind = UInt(indWidth.W)
-    override def cloneType: this.type =
-      new InternalReq().asInstanceOf[this.type]
   }
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
     val dat = UInt(datWidth.W)
-    override def cloneType: this.type =
-      new InternalRsp().asInstanceOf[this.type]
   }
   val ireq = new InternalReq()
   val irsp = new InternalRsp()

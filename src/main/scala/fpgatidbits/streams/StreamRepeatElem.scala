@@ -50,8 +50,8 @@ class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
   io.inRepCnt.TREADY := false.B
   io.out.TVALID := false.B
 
-  val regElem = RegInit(0.U(dataWidth))
-  val regRep = RegInit(0.U(repWidth))
+  val regElem = RegInit(0.U(dataWidth.W))
+  val regRep = RegInit(0.U(repWidth.W))
 
   io.out.TDATA := regElem
 

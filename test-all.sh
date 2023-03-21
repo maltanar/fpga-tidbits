@@ -8,7 +8,7 @@ set -e
 N_TESTS=100
 
 # The  run all the integration tests
-declare -a testArr=("TestMultiChanSum" "TestSum" "TestRegOps" "TestBRAM" "TestBRAMMasked")
+declare -a testArr=("ExampleMultiChanSum" "ExampleSum" "ExampleRegOps" "ExampleBRAM" "ExampleBRAMMasked")
 
 for t in "${testArr[@]}"
 do

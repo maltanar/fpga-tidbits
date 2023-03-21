@@ -1,11 +1,11 @@
 #include <iostream>
 using namespace std;
 
-#include "TestRegOps.hpp"
+#include "ExampleRegOps.hpp"
 #include "platform.h"
 
-bool Run_TestRegOps(WrapperRegDriver * platform) {
-  TestRegOps t(platform);
+bool Run_ExampleRegOps(WrapperRegDriver * platform) {
+  ExampleRegOps t(platform);
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   cout << "Enter two operands to sum: ";
@@ -24,7 +24,7 @@ int main()
 {
   WrapperRegDriver * platform = initPlatform();
 
-  Run_TestRegOps(platform);
+  Run_ExampleRegOps(platform);
 
   deinitPlatform(platform);
 

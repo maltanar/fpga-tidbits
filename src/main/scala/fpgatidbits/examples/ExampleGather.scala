@@ -1,30 +1,30 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
 import chisel3._
 import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
-import fpgatidbits.ocm._
 
-class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+class ExampleGatherIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+  val start = Input(Bool())
+  val finished = Output(Bool())
+  val indsBase = Input(UInt(64.W))
+  val valsBase = Input(UInt(64.W))
+  val count = Input(UInt(32.W))
+  val resultsOK = Output(UInt(32.W))
+  val resultsNotOK = Output(UInt(32.W))
+  val perf = new Bundle {
+    val cycles = Output(UInt(32.W))
+    val monInds = new StreamMonitorOutIF()
+    val monRdReq = new StreamMonitorOutIF()
+    val monRdRsp = new StreamMonitorOutIF()
+    val resultsOoO = Output(UInt(32.W))
+  }
+}
+class ExampleGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
-  val io = IO(new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Input(Bool())
-    val finished = Output(Bool())
-    val indsBase = Input(UInt(64.W))
-    val valsBase = Input(UInt(64.W))
-    val count = Input(UInt(32.W))
-    val resultsOK = Output(UInt(32.W))
-    val resultsNotOK = Output(UInt(32.W))
-    val perf = new Bundle {
-      val cycles = Output(UInt(32.W))
-      val monInds = new StreamMonitorOutIF()
-      val monRdReq = new StreamMonitorOutIF()
-      val monRdRsp = new StreamMonitorOutIF()
-      val resultsOoO = Output(UInt(32.W))
-    }
-  })
+  val io = IO(new ExampleGatherIO(numMemPorts, p))
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
   // plug unused ports (write ports)
@@ -52,7 +52,6 @@ class TestGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
       readOrderTxns = p.seqStreamTxns(),
       streamName = "inds"
   ))).io
-
 
   // Set initCount to readOrderTxns because that is passed in to roc to freeReqId
   inds.doInit := true.B

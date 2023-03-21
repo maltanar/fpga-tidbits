@@ -1,22 +1,23 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
 import chisel3._
-import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
+
+class ExampleSumIO(p: PlatformWrapperParams) extends GenericAcceleratorIF(1, p) {
+  val start = Input(Bool())
+  val finished = Output(Bool())
+  val baseAddr = Input(UInt(64.W))
+  val byteCount = Input(UInt(32.W))
+  val sum = Output(UInt(32.W))
+  val cycleCount = Output(UInt(32.W))
+}
 // read and sum a contiguous stream of 32-bit uints from main memory
-class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+class ExampleSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
-  val io = IO(new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Input(Bool())
-    val finished = Output(Bool())
-    val baseAddr = Input(UInt(64.W))
-    val byteCount = Input(UInt(32.W))
-    val sum = Output(UInt(32.W))
-    val cycleCount = Output(UInt(32.W))
-  })
+  val io = IO(new ExampleSumIO(p))
   io.signature := makeDefaultSignature()
   plugMemWritePort(0)
 
@@ -25,14 +26,12 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     maxBeats = 1, chanID = 0, disableThrottle = true
   )
 
-
   val reader = Module(new StreamReader(rdP)).io
   val red = Module(new StreamReducer(32, 0, {_+_})).io
 
   reader.start := io.start
   reader.baseAddr := io.baseAddr
   reader.byteCount := io.byteCount
-
 
   // Added by erlingrj because chisel3 complains they are not initialized
   //  when inspecting verilog output of chisel2 synthesis they are commented out of the

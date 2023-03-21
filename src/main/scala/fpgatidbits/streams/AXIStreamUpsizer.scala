@@ -9,8 +9,6 @@ class SerialInParallelOutIO(parWidth: Int, serWidth: Int) extends Bundle {
   val parOut = Output(UInt(parWidth.W))
   val shiftEn = Input(Bool())
 
-  override def cloneType: this.type =
-    new SerialInParallelOutIO(parWidth, serWidth).asInstanceOf[this.type]
 }
 
 class SerialInParallelOut(parWidth: Int, serWidth: Int) extends Module {

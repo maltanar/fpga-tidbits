@@ -94,7 +94,7 @@ object VivadoSynth {
 
   def characterizePoint[Tp <: PrintableParam, Tm <: RawModule](
     p: Tp, // printable parameters for instantiation of module
-    instFxn: Tp ⇒ Tm, // function that instantiates module from parameters
+    instFxn: Tp => Tm, // function that instantiates module from parameters
     path: String, // directory to create Vivado proj in
     fpgaPart: String, // FPGA part to run characterization for
     topModuleName: String
@@ -136,7 +136,7 @@ object VivadoSynth {
         bram = bram_fields(1).toInt,
         dsp = dsps_fields(1).toInt, target_ns = req_ns, fmax_mhz = fmax_mhz)
     } catch {
-      case error: Throwable ⇒ {
+      case error: Throwable => {
         println("Characterization ERROR: something went wrong. Synthesis failed, probably out of resources")
         println(error.getMessage)
         println(error.printStackTrace())
@@ -153,7 +153,7 @@ object VivadoSynth {
   // from parameters, and a space of parameters, return FPGA synth results
   def characterizeSpace[Tp <: PrintableParam, Tm <: Module](
     param_space: Seq[Tp], // space of parameters to explore
-    instFxn: Tp ⇒ Tm, // instantiation function as in characterizePoint
+    instFxn: Tp => Tm, // instantiation function as in characterizePoint
     path: String, // directory to create Vivado proj in
     log: String, // filename for log
     // FPGA part to run characterization for
@@ -165,7 +165,7 @@ object VivadoSynth {
     logfile.println("===================================")
     var headers_written = false
     var design_space = ArrayBuffer[(Tp, CharacterizeResult)]()
-    for (p ← param_space) {
+    for (p <- param_space) {
       val res = characterizePoint(p, instFxn, path, fpgaPart, topModuleName)
       // write headers (description of parameters)
       if (!headers_written) {
@@ -182,6 +182,6 @@ object VivadoSynth {
     }
 
     logfile.close()
-    return design_space
+    return design_space.toSeq
   }
 }

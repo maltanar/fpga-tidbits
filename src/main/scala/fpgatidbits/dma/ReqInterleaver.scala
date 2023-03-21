@@ -1,6 +1,5 @@
 package fpgatidbits.dma
 
-import chisel3.iotesters._
 import chisel3._
 import chisel3.util._
 
@@ -48,37 +47,37 @@ class TestReqInterleaverWrapper() extends Module {
 }
 
 
-class TestReqInterleaver(c: TestReqInterleaverWrapper) extends PeekPokeTester(c) {
-  poke(c.io.reqOut.ready, 0)
-  step(1)
-  expect(c.io.allActive, 1)
-  expect(c.io.allFinished, 0)
-  while(peek(c.io.allFinished) != 1) {
-    peek(c.reqQ.io.enq.valid)
-    peek(c.reqQ.io.enq.bits)
-    peek(c.reqQ.io.count)
-    step(1)
-  }
-  // verify number of requests in the interleaved queue
-  val bytesPerBurst = (c.burstBeats*c.p.dataWidth/8)
-  val expReqsPerPipe = c.bytesPerPipe / bytesPerBurst
-  val expTotalReqs = c.N * expReqsPerPipe
-  expect(c.reqQ.io.count, expTotalReqs)
-  // verify the request mix from different channels
-  var reqsFromChannel:Array[Int] = Array.fill[Int](c.N)(0)
-  val channelExpReq:Array[Int] = (0 to c.N-1).map({ i => c.bytesPerPipe*i }).toArray
-  while(peek(c.io.reqOut.valid) == 1) {
-    val chanID = peek(c.io.reqOut.bits.channelID).toInt
-    expect(c.io.reqOut.bits.addr, channelExpReq(chanID))
-    reqsFromChannel(chanID) += 1
-    channelExpReq(chanID) += bytesPerBurst
-    poke(c.io.reqOut.ready, 1)
-    step(1)
-  }
-  poke(c.io.reqOut.ready, 0)
-  expect(c.reqQ.io.count, 0)
-  for(i <- 0 until c.N) {
-    println("Channel " + i.toString + " #reqs= " + reqsFromChannel(i).toString)
-    expect(reqsFromChannel(i) == expReqsPerPipe, "Channel has correct #reqs")
-  }
-}
+//class TestReqInterleaver(c: TestReqInterleaverWrapper) extends PeekPokeTester(c) {
+//  poke(c.io.reqOut.ready, 0)
+//  step(1)
+//  expect(c.io.allActive, 1)
+//  expect(c.io.allFinished, 0)
+//  while(peek(c.io.allFinished) != 1) {
+//    peek(c.reqQ.io.enq.valid)
+//    peek(c.reqQ.io.enq.bits)
+//    peek(c.reqQ.io.count)
+//    step(1)
+//  }
+//  // verify number of requests in the interleaved queue
+//  val bytesPerBurst = (c.burstBeats*c.p.dataWidth/8)
+//  val expReqsPerPipe = c.bytesPerPipe / bytesPerBurst
+//  val expTotalReqs = c.N * expReqsPerPipe
+//  expect(c.reqQ.io.count, expTotalReqs)
+//  // verify the request mix from different channels
+//  var reqsFromChannel:Array[Int] = Array.fill[Int](c.N)(0)
+//  val channelExpReq:Array[Int] = (0 to c.N-1).map({ i => c.bytesPerPipe*i }).toArray
+//  while(peek(c.io.reqOut.valid) == 1) {
+//    val chanID = peek(c.io.reqOut.bits.channelID).toInt
+//    expect(c.io.reqOut.bits.addr, channelExpReq(chanID))
+//    reqsFromChannel(chanID) += 1
+//    channelExpReq(chanID) += bytesPerBurst
+//    poke(c.io.reqOut.ready, 1)
+//    step(1)
+//  }
+//  poke(c.io.reqOut.ready, 0)
+//  expect(c.reqQ.io.count, 0)
+//  for(i <- 0 until c.N) {
+//    println("Channel " + i.toString + " #reqs= " + reqsFromChannel(i).toString)
+//    expect(reqsFromChannel(i) == expReqsPerPipe, "Channel has correct #reqs")
+//  }
+//}

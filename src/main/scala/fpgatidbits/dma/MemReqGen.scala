@@ -1,7 +1,6 @@
 package fpgatidbits.dma
 import chisel3._
 import chisel3.util._
-import chisel3.iotesters._
 
 // control interface for (simple) request generators
 class ReqGenCtrl(addrWidth: Int) extends Bundle {
@@ -161,93 +160,93 @@ class TestReadReqGenWrapper() extends Module {
 }
 
 
-class TestReadReqGen(c: TestReadReqGenWrapper) extends PeekPokeTester(c) {
-  // TODO update test case to try non-burst-aligned size as well
-  c.io.reqQOut.ready := false.B
-
-  val byteCount = 1024
-  val baseAddr = 128
-
-  val expectedReqCount = byteCount / (c.dut.bytesPerBurst)
-
-  def waitUntilFinished(): Unit = {
-    while(peek(c.io.stat.finished) != 1) {
-      peek(c.reqQ.io.enq.valid)
-      peek(c.reqQ.io.enq.bits)
-      step(1)
-      peek(c.reqQ.io.count)
-    }
-  }
-
-  // Test 1: check request count and addresses, no throttling
-  // set up the reqgen
-  poke(c.io.ctrl.start, 0)
-  poke(c.io.ctrl.throttle, 0)
-  poke(c.io.ctrl.baseAddr, baseAddr)
-  poke(c.io.ctrl.byteCount, byteCount)
-  poke(c.io.reqQOut.ready, 0)
-  step(1)
-  expect(c.io.stat.finished, 0)
-  expect(c.io.stat.active, 0)
-  // activate and checki
-  poke(c.io.ctrl.start, 1)
-  step(1)
-  expect(c.io.stat.finished, 0)
-  expect(c.io.stat.active, 1)
-  waitUntilFinished()
-  // check number of emitted requests
-  expect(c.reqQ.io.count, expectedReqCount)
-  var expAddr = baseAddr
-  // pop requests and check addresses
-  while(peek(c.io.reqQOut.valid) == 1) {
-    expect(c.io.reqQOut.bits.isWrite, 0)
-    expect(c.io.reqQOut.bits.addr, expAddr)
-    expect(c.io.reqQOut.bits.numBytes, c.dut.bytesPerBurst)
-    poke(c.io.reqQOut.ready, 1)
-    step(1)
-    expAddr += c.dut.bytesPerBurst
-  }
-  // deinitialize and check
-  poke(c.io.ctrl.start, 0)
-  poke(c.io.reqQOut.ready, 0)
-  step(1)
-  expect(c.io.stat.finished, 0)
-  expect(c.io.stat.active, 0)
-  expect(c.reqQ.io.count, 0)
-
-  // Test 2: repeat Test 1 with throttling
-  poke(c.io.ctrl.start, 1)
-  poke(c.io.ctrl.throttle, 1)
-  step(1)
-  expect(c.io.stat.finished, 0)
-  expect(c.io.stat.active, 1)
-  step(10)
-  // verify that no requests appear
-  expect(c.reqQ.io.count, 0)
-  // remove throttling
-  poke(c.io.ctrl.throttle, 0)
-  waitUntilFinished()
-  // check number of emitted requests
-  expect(c.reqQ.io.count, expectedReqCount)
-  expAddr = baseAddr
-  // pop requests and check addresses
-  while(peek(c.io.reqQOut.valid) == 1) {
-    expect(c.io.reqQOut.bits.isWrite, 0)
-    expect(c.io.reqQOut.bits.addr, expAddr)
-    expect(c.io.reqQOut.bits.numBytes, c.dut.bytesPerBurst)
-    poke(c.io.reqQOut.ready, 1)
-    step(1)
-    expAddr += c.dut.bytesPerBurst
-  }
-  // deinitialize and check
-  poke(c.io.ctrl.start, 0)
-  poke(c.io.reqQOut.ready, 0)
-  step(1)
-  expect(c.io.stat.finished, 0)
-  expect(c.io.stat.active, 0)
-  expect(c.reqQ.io.count, 0)
-}
-
+//class TestReadReqGen(c: TestReadReqGenWrapper) extends PeekPokeTester(c) {
+//  // TODO update test case to try non-burst-aligned size as well
+//  c.io.reqQOut.ready := false.B
+//
+//  val byteCount = 1024
+//  val baseAddr = 128
+//
+//  val expectedReqCount = byteCount / (c.dut.bytesPerBurst)
+//
+//  def waitUntilFinished(): Unit = {
+//    while(peek(c.io.stat.finished) != 1) {
+//      peek(c.reqQ.io.enq.valid)
+//      peek(c.reqQ.io.enq.bits)
+//      step(1)
+//      peek(c.reqQ.io.count)
+//    }
+//  }
+//
+//  // Test 1: check request count and addresses, no throttling
+//  // set up the reqgen
+//  poke(c.io.ctrl.start, 0)
+//  poke(c.io.ctrl.throttle, 0)
+//  poke(c.io.ctrl.baseAddr, baseAddr)
+//  poke(c.io.ctrl.byteCount, byteCount)
+//  poke(c.io.reqQOut.ready, 0)
+//  step(1)
+//  expect(c.io.stat.finished, 0)
+//  expect(c.io.stat.active, 0)
+//  // activate and checki
+//  poke(c.io.ctrl.start, 1)
+//  step(1)
+//  expect(c.io.stat.finished, 0)
+//  expect(c.io.stat.active, 1)
+//  waitUntilFinished()
+//  // check number of emitted requests
+//  expect(c.reqQ.io.count, expectedReqCount)
+//  var expAddr = baseAddr
+//  // pop requests and check addresses
+//  while(peek(c.io.reqQOut.valid) == 1) {
+//    expect(c.io.reqQOut.bits.isWrite, 0)
+//    expect(c.io.reqQOut.bits.addr, expAddr)
+//    expect(c.io.reqQOut.bits.numBytes, c.dut.bytesPerBurst)
+//    poke(c.io.reqQOut.ready, 1)
+//    step(1)
+//    expAddr += c.dut.bytesPerBurst
+//  }
+//  // deinitialize and check
+//  poke(c.io.ctrl.start, 0)
+//  poke(c.io.reqQOut.ready, 0)
+//  step(1)
+//  expect(c.io.stat.finished, 0)
+//  expect(c.io.stat.active, 0)
+//  expect(c.reqQ.io.count, 0)
+//
+//  // Test 2: repeat Test 1 with throttling
+//  poke(c.io.ctrl.start, 1)
+//  poke(c.io.ctrl.throttle, 1)
+//  step(1)
+//  expect(c.io.stat.finished, 0)
+//  expect(c.io.stat.active, 1)
+//  step(10)
+//  // verify that no requests appear
+//  expect(c.reqQ.io.count, 0)
+//  // remove throttling
+//  poke(c.io.ctrl.throttle, 0)
+//  waitUntilFinished()
+//  // check number of emitted requests
+//  expect(c.reqQ.io.count, expectedReqCount)
+//  expAddr = baseAddr
+//  // pop requests and check addresses
+//  while(peek(c.io.reqQOut.valid) == 1) {
+//    expect(c.io.reqQOut.bits.isWrite, 0)
+//    expect(c.io.reqQOut.bits.addr, expAddr)
+//    expect(c.io.reqQOut.bits.numBytes, c.dut.bytesPerBurst)
+//    poke(c.io.reqQOut.ready, 1)
+//    step(1)
+//    expAddr += c.dut.bytesPerBurst
+//  }
+//  // deinitialize and check
+//  poke(c.io.ctrl.start, 0)
+//  poke(c.io.reqQOut.ready, 0)
+//  step(1)
+//  expect(c.io.stat.finished, 0)
+//  expect(c.io.stat.active, 0)
+//  expect(c.reqQ.io.count, 0)
+//}
+//
 class WriteReqGen(p: MemReqParams, chanID: Int, maxBeats: Int = 1) extends ReadReqGen(p, chanID, maxBeats) {
   // force single beat per burst for now
   // TODO support write bursts -- needs support in interleaver

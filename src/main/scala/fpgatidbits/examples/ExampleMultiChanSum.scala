@@ -1,22 +1,22 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
 import chisel3._
-import chisel3.util._
 import fpgatidbits.PlatformWrapper._
-import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+
+class ExampleMultiChanSumIO(n: Int, p: PlatformWrapperParams, numChans: Int) extends GenericAcceleratorIF(n,p) {
+  val start = Input(Bool())
+  val baseAddr = Vec(numChans, Input(UInt(64.W)))
+  val byteCount = Vec(numChans, Input(UInt(32.W)))
+  val sum = Vec(numChans, Output(UInt(32.W)))
+  val status = Output(Bool())
+}
+class ExampleMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val numChans = 2
-  val io = IO(new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Input(Bool())
-    val baseAddr = Vec(numChans,Input(UInt(64.W)))
-    val byteCount = Vec(numChans, Input(UInt(32.W)))
-    val sum = Vec(numChans,  Output(UInt(32.W)))
-    val status = Output(Bool())
-  })
+  val io = IO(new ExampleMultiChanSumIO(numMemPorts, p, numChans))
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
@@ -28,7 +28,6 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     ))).io
   }
 
-  //VecInit(Seq.tabulate(p.numMemPorts) {idx => IO(new AXIExternalIF(p.memAddrBits, p.memDataBits, p.memIDBits)).suggestName(s"mem${idx}")})
   val readers = VecInit(Seq.tabulate(numChans) {i:Int => makeReader(i)})
   val reducers = VecInit(Seq.fill(numChans) {
     Module(new StreamReducer(32, 0, {_+_})).io

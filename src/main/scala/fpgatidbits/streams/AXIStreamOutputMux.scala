@@ -30,7 +30,6 @@ class DecoupledOutputDemuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {
   val in = Flipped(Decoupled(gen))
   val out = Vec(numChans,Decoupled(gen))
 
-  override def cloneType: this.type = new DecoupledOutputDemuxIO(gen, numChans).asInstanceOf[this.type]
 }
 
 class DecoupledOutputDemux[T <: Data](gen: T, numChans: Int) extends Module {

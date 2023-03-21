@@ -1,6 +1,6 @@
 #include <iostream>
 #include "platform.h"
-#include "TestBRAMMasked.hpp"
+#include "ExampleBRAMMasked.hpp"
 #include <string>
 
 using namespace std;
@@ -13,11 +13,11 @@ int main(int argc, char **argv) {
      }
      int n_tests = atoi(argv[1]);
 
-  cout <<"Running TestBRAMMasked integration test with " <<n_tests <<" iterations .." <<endl;
+  cout <<"Running ExampleBRAMMasked integration test with " <<n_tests <<" iterations .." <<endl;
 
 
   WrapperRegDriver * platform = initPlatform();
-  TestBRAMMasked t(platform);
+  ExampleBRAMMasked t(platform);
   srand(time(NULL));
 
   int passed_tests = 0;
@@ -88,13 +88,13 @@ int main(int argc, char **argv) {
          t.set_ports_0_req_writeEn(0);
 
     } else {
-        cout <<"TestBRAM failed for addr=" <<addr <<" data=" <<data <<" writeMask=" <<writeMask;
+        cout <<"ExampleBRAM failed for addr=" <<addr <<" data=" <<data <<" writeMask=" <<writeMask;
         cout <<" expected="<<expected_read_data <<" got readData=" <<read_data <<" iteration " <<i <<endl;
         return -1;
     }
   }
 
-  cout <<"TestBRAM passed " <<passed_tests <<" tests" <<endl;
+  cout <<"ExampleBRAM passed " <<passed_tests <<" tests" <<endl;
 
   return 0;
 }

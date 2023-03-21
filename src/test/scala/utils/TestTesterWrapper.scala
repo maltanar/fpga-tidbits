@@ -1,18 +1,12 @@
 package PlatformWrapper
 
-import org.scalatest._
+import org.scalatest.flatspec.AnyFlatSpec
 import chiseltest._
 import chisel3._
-import chisel3.experimental.BundleLiterals._
-import chiseltest.experimental.TestOptionBuilder._
-import chiseltest.internal.VerilatorBackendAnnotation
 import fpgatidbits.PlatformWrapper._
-import fpgatidbits.Testbenches.TestSum
+import fpgatidbits.examples.ExampleSum
 
-
-class TestTesterWrapper extends FlatSpec with ChiselScalatestTester with Matchers {
-
-
+class TestTesterWrapper extends AnyFlatSpec with ChiselScalatestTester {
   def initClocks(c: TesterWrapper): Unit = {
     c.accio.memPort.map(mp => {
       mp.memRdRsp.initSink().setSinkClock(c.clock)
@@ -24,13 +18,12 @@ class TestTesterWrapper extends FlatSpec with ChiselScalatestTester with Matcher
     )
   }
 
-  type AccelInstFxn = PlatformWrapperParams ⇒ GenericAccelerator
+  type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
   type AccelMap = Map[String, AccelInstFxn]
 
   def makeInstFxn(): AccelInstFxn = {
-    return { (p: PlatformWrapperParams) => new TestSum(p) }
+    return { (p: PlatformWrapperParams) => new ExampleSum(p) }
   }
-
 
   behavior of "TesterWrapper"
 
@@ -41,5 +34,4 @@ class TestTesterWrapper extends FlatSpec with ChiselScalatestTester with Matcher
       c.accio.memPort(0).memRdRsp.valid.expect(false.B)
     })
   }
-
 }
