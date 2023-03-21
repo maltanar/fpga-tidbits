@@ -14,7 +14,7 @@ jobs:
         with:
           java-version: adopt@1.8
       - name: Install verilator
-        run: apt-get update && apt-get install verilator -y
+        run: sudo apt-get update && sudo apt-get install verilator -y
       - name: Cache Scala
         uses: coursier/cache-action@v5
       - name: Run tests
