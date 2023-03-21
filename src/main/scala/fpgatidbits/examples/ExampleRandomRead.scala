@@ -6,7 +6,7 @@ import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class ExampleRandomReadIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+class ExampleRandomReadIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap,p) {
   val start = Input(Bool())
   val finished = Output(Bool())
   val indsBase = Input(UInt(64.W))
@@ -15,8 +15,10 @@ class ExampleRandomReadIO(n: Int, p: PlatformWrapperParams) extends GenericAccel
   val sum = Output(UInt(32.W))
 }
 class ExampleRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 2
-  val io = IO(new ExampleRandomReadIO(numMemPorts, p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 2
+  )
+  val io = IO(new ExampleRandomReadIO(accelParams, p))
   io.signature := makeDefaultSignature()
   // plug unused ports
   plugMemWritePort(0)

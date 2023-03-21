@@ -6,7 +6,7 @@ import fpgatidbits.dma._
 import fpgatidbits.streams._
 
 
-class ExampleSumIO(p: PlatformWrapperParams) extends GenericAcceleratorIF(1, p) {
+class ExampleSumIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap, p) {
   val start = Input(Bool())
   val finished = Output(Bool())
   val baseAddr = Input(UInt(64.W))
@@ -16,8 +16,10 @@ class ExampleSumIO(p: PlatformWrapperParams) extends GenericAcceleratorIF(1, p) 
 }
 // read and sum a contiguous stream of 32-bit uints from main memory
 class ExampleSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 1
-  val io = IO(new ExampleSumIO(p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 1
+  )
+  val io = IO(new ExampleSumIO(accelParams,p))
   io.signature := makeDefaultSignature()
   plugMemWritePort(0)
 

@@ -20,8 +20,8 @@ class ExampleStreamPort(p: PlatformWrapperParams) extends GenericAccelerator(p) 
   val stream = io.streamInPort(0)
   val sum = RegInit(0.U(32.W))
   io.sum := sum
-  stream.data.ready := true.B
-  when(stream.data.fire) {
-    sum := sum + stream.data.bits
+  stream.ready := true.B
+  when(stream.fire) {
+    sum := sum + stream.bits
   }
 }

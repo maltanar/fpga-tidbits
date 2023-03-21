@@ -23,8 +23,8 @@ abstract class GenericAcceleratorIF(ap: AcceleratorParams,
   val memPort = Vec(ap.numMemPorts,new GenericMemoryMasterPort(p.toMemReqParams()))
 
   // Streaming ports
-  val streamInPort = Vec(ap.numStreamInPorts, new GenericStreamInPort(ap.streamWidth))
-  val streamOutPort = Vec(ap.numStreamOutPorts, new GenericStreamOutPort(ap.streamWidth))
+  val streamInPort = Vec(ap.numStreamInPorts, Flipped(Decoupled(UInt(ap.streamWidth.W))))
+  val streamOutPort = Vec(ap.numStreamOutPorts, Decoupled(UInt(ap.streamWidth.W)))
 
   // use the signature field for sanity and version checks
   val signature = Output(UInt(p.csrDataBits.W))

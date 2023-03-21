@@ -145,10 +145,9 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
     val bits = element
     val w = bits.getWidth
 
-    println(s"$name $bits")
-
+    // FIXME: Generate some tests that verify that this is robust.
+    // 1) What happens when we have multiple firings in a row. Does it work as expected?
     if(name.startsWith("streamOutPort")) {
-      println(s"Got port $name $bits")
       regFileMap(name) = Array(allocReg)
       if(name.endsWith("bits")) {
         require(w <= 32)
@@ -185,8 +184,8 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
           // Catch potential errors. We wanna make sure that this causes a firing.
           assert(!RegNext(regFile.regOut(streamPortReady)(0).asBool))
           assert(!RegNext(regFile.regOut(streamPortReady)(0).asBool))
-          assert(accel.io.streamOutPort(streamPortOutCnt).data.fire)
-          assert(!RegNext(accel.io.streamOutPort(streamPortOutCnt)).data.fire)
+          assert(accel.io.streamOutPort(streamPortOutCnt).fire)
+          assert(!RegNext(accel.io.streamOutPort(streamPortOutCnt)).fire)
         }
         streamPortFieldCnt = 0
         streamPortOutCnt += 1
@@ -194,7 +193,6 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
 
       allocReg += 1
     } else if (name.startsWith("streamInPort")) {
-      println(s"Got port $name $bits")
       regFileMap(name) = Array(allocReg)
       if (name.endsWith("bits")) {
         require(w <= 32)
@@ -222,7 +220,7 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
       }
       // Add additional control logic to enforce a stream interface
       if (streamPortFieldCnt == 3) {
-        when(accel.io.streamInPort(streamPortInCnt).data.ready && regFile.regOut(streamPortValid)(0).asBool) {
+        when(accel.io.streamInPort(streamPortInCnt).ready && regFile.regOut(streamPortValid)(0).asBool) {
           // We have firing, Then we overwrite valid and bits in the RegFile now that the value is consumed
           regFile.regIn(streamPortValid).valid := true.B
           regFile.regIn(streamPortValid).bits := 0.U
@@ -231,8 +229,8 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
 
           // Catch potential errors. We wanna make sure that this causes a firing.
           assert(!RegNext(regFile.regOut(streamPortValid)(0).asBool)) // Valid reg should be false next round
-          assert(accel.io.streamInPort(streamPortInCnt).data.fire) // We should have a firing this cycle
-          assert(!RegNext(accel.io.streamInPort(streamPortInCnt).data.fire)) // We should NOT have a firing next cycle
+          assert(accel.io.streamInPort(streamPortInCnt).fire) // We should have a firing this cycle
+          assert(!RegNext(accel.io.streamInPort(streamPortInCnt).fire)) // We should NOT have a firing next cycle
         }
         streamPortFieldCnt = 0
         streamPortInCnt += 1

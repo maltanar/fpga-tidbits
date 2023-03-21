@@ -6,15 +6,17 @@ import fpgatidbits.PlatformWrapper._
 // test for register reads and writes:
 // add two 64-bit values
 
-class ExampleRegOpsIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+class ExampleRegOpsIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap,p) {
   val op = Vec(2, Input(UInt(64.W)))
   val sum = Output(UInt(64.W))
   val cc = Output(UInt(32.W))
 }
 
 class ExampleRegOps(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 0
-  val io = IO(new ExampleRegOpsIO(numMemPorts, p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 0
+  )
+  val io = IO(new ExampleRegOpsIO(accelParams, p))
 
   io.signature := makeDefaultSignature()
   io.sum := io.op(0) + io.op(1)
