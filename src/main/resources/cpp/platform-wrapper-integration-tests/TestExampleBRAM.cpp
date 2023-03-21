@@ -1,6 +1,6 @@
 #include <iostream>
 #include "platform.h"
-#include "TestBRAM.hpp"
+#include "ExampleBRAM.hpp"
 #include <string>
 #include <time.h>
 
@@ -15,10 +15,10 @@ int main(int argc, char** argv) {
   int n_tests = atoi(argv[1]);
   srand(time(NULL));
 
-  cout << "Running TestBRAM integration test with " <<n_tests <<" tests ..." <<endl;
+  cout << "Running ExampleBRAM integration test with " <<n_tests <<" tests ..." <<endl;
 
   WrapperRegDriver * platform = initPlatform();
-  TestBRAM t(platform);
+  ExampleBRAM t(platform);
 
   int passed_tests = 0;
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
      }
   }
 
-  cout << "TestBRAM passed "<<passed_tests <<" tests" <<endl;
+  cout << "ExampleBRAM passed "<<passed_tests <<" tests" <<endl;
 
   return 0;
 }

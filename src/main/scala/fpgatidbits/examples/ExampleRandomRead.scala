@@ -1,4 +1,4 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
 import chisel3._
 import chisel3.util._
@@ -6,16 +6,17 @@ import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class TestRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+class ExampleRandomReadIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+  val start = Input(Bool())
+  val finished = Output(Bool())
+  val indsBase = Input(UInt(64.W))
+  val valsBase = Input(UInt(64.W))
+  val count = Input(UInt(32.W))
+  val sum = Output(UInt(32.W))
+}
+class ExampleRandomRead(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Input(Bool())
-    val finished = Output(Bool())
-    val indsBase = Input(UInt(64.W))
-    val valsBase = Input(UInt(64.W))
-    val count = Input(UInt(32.W))
-    val sum = Output(UInt(32.W))
-  }
+  val io = IO(new ExampleRandomReadIO(numMemPorts, p))
   io.signature := makeDefaultSignature()
   // plug unused ports
   plugMemWritePort(0)

@@ -1,16 +1,12 @@
 #include <iostream>
 using namespace std;
 
-#include "TestMultiChanSum.hpp"
+#include "ExampleMultiChanSum.hpp"
 #include "platform.h"
 
-bool Run_TestMultiChanSum(WrapperRegDriver * platform) {
-	TestMultiChanSum t(platform);
+bool Run_ExampleMultiChanSum(WrapperRegDriver * platform, uint ub, uint offs) {
+	ExampleMultiChanSum t(platform);
 
-	cout << "Signature: " << hex << t.get_signature() << dec << endl;
-	unsigned int ub = 0, offs = 0;
-	cout << "Enter upper bound of sum and channel 1 const offset: " << endl;
-	cin >> ub >> offs;
 
 	unsigned int * hostBuf0 = new unsigned int[ub];
 	unsigned int * hostBuf1 = new unsigned int[ub];
@@ -36,8 +32,6 @@ bool Run_TestMultiChanSum(WrapperRegDriver * platform) {
 
 	t.set_start(0);
 
-	cout << "Chan 0 sum = " << res0 << " expected = " << exp0 << endl;
-	cout << "Chan 1 sum = " << res1 << " expected = " << exp1 << endl;
 
 	platform->deallocAccelBuffer(accBuf0);
 	platform->deallocAccelBuffer(accBuf1);
@@ -48,13 +42,40 @@ bool Run_TestMultiChanSum(WrapperRegDriver * platform) {
 	return (res0 == exp0) && (res1 == exp1);
 }
 
-int main()
-{
-	WrapperRegDriver * platform = initPlatform();
 
-	Run_TestMultiChanSum(platform);
+int main(int argc, char **argv) {
 
+   if (argc != 2) {
+       cout << "Please pass the number of tests to run as the only command line argument" <<endl;
+       return -1;
+     }
+     int n_tests = atoi(argv[1]);
+
+  cout <<"Running ExampleMultiChanSum integration test with " <<n_tests <<" iterations ..." <<endl;
+
+
+  WrapperRegDriver * platform = initPlatform();
+  srand(time(NULL));
+
+  int passed_tests = 0;
+
+  uint32_t upper_bound, offset;
+
+  for(int i = 0; i<n_tests; i++) {
+    upper_bound = rand() % 100;
+    offset = (uint16_t) rand();
+
+
+	if(Run_ExampleMultiChanSum(platform, upper_bound, offset) != true) {
+	    cout <<"ExampleMultiChanSum failed with ub=" <<upper_bound <<" offset=" <<offset <<endl;
+	    return -1;
+	} else {
+	    passed_tests++;
+	}
+}
+
+    cout <<"ExampleMultiChanSum passed " <<passed_tests <<" tests" <<endl;
 	deinitPlatform(platform);
-
 	return 0;
+
 }

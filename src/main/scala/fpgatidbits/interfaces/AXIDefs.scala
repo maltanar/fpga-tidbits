@@ -108,7 +108,6 @@ class AXIExternalIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) extends 
     in.readData.bits.id := RID
   }
 
-  override def cloneType = { new AXIExternalIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
 }
 
 
@@ -158,7 +157,6 @@ class AXIReadOnlyExternalIF(addrWidthBits: Int, dataWidthBits:Int, idBits: Int) 
     in.readData.bits.last := RLAST
     in.readData.bits.id := RID
   }
-  override def cloneType = { new AXIReadOnlyExternalIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
 }
 
 // Part I: Definitions for the actual data carried over AXI channels
@@ -187,20 +185,17 @@ class AXIAddress(addrWidthBits: Int, idBits: Int) extends Bundle {
   val prot    = UInt(3.W)
   // not implemented, set to zeroes
   val qos     = UInt(4.W)
-  override def cloneType = { new AXIAddress(addrWidthBits, idBits).asInstanceOf[this.type] }
 }
 
 class AXIWriteData(dataWidthBits: Int) extends Bundle {
   val data    = UInt(dataWidthBits.W)
   val strb    = UInt((dataWidthBits/8).W)
   val last    = Bool()
-  override def cloneType = { new AXIWriteData(dataWidthBits).asInstanceOf[this.type] }
 }
 
 class AXIWriteResponse(idBits: Int) extends Bundle {
   val id      = UInt(idBits.W)
   val resp    = UInt(2.W)
-  override def cloneType = { new AXIWriteResponse(idBits).asInstanceOf[this.type] }
 }
 
 class AXIReadData(dataWidthBits: Int, idBits: Int) extends Bundle {
@@ -208,7 +203,6 @@ class AXIReadData(dataWidthBits: Int, idBits: Int) extends Bundle {
   val id      = UInt(idBits.W)
   val last    = Bool()
   val resp    = UInt(2.W)
-  override def cloneType = { new AXIReadData(dataWidthBits, idBits).asInstanceOf[this.type] }
 }
 
 
@@ -231,7 +225,7 @@ class AXIMasterIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) extends B
   val readData    = Flipped(Decoupled(new AXIReadData(dataWidthBits, idBits)))
 
   // drive default/"harmless" values to leave no output uninitialized
-  def driveDefaults() {
+  def driveDefaults(): Unit = {
     writeAddr.valid := false.B
     writeData.valid := false.B
     writeResp.ready := false.B
@@ -263,7 +257,6 @@ class AXIMasterIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) extends B
     readAddr.bits.id := 0.U
   }
 
-  override def cloneType = { new AXIMasterIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
 }
 
 
@@ -275,7 +268,7 @@ class AXIMasterReadOnlyIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) e
   val readData    = Flipped(Decoupled(new AXIReadData(dataWidthBits, idBits)))
 
   // rename signals to be compatible with those in the Xilinx template
-  def renameSignals(ifName: String) {
+  def renameSignals(ifName: String): Unit =  {
     // read address channel
     readAddr.bits.addr.suggestName(ifName + "_ARADDR")
     readAddr.bits.prot.suggestName(ifName + "_ARPROT")
@@ -296,6 +289,4 @@ class AXIMasterReadOnlyIF(addrWidthBits: Int, dataWidthBits: Int, idBits: Int) e
     readData.valid.suggestName(ifName + "_RVALID")
     readData.ready.suggestName(ifName + "_RREADY")
   }
-
-  override def cloneType = { new AXIMasterReadOnlyIF(addrWidthBits, dataWidthBits, idBits).asInstanceOf[this.type] }
 }

@@ -1,19 +1,17 @@
 // See README.md for license details.
 
-ThisBuild / scalaVersion     := "2.12.12"
+ThisBuild / scalaVersion     := "2.13.8"
 ThisBuild / version          := "0.1.0"
 ThisBuild / organization     := "com.github.erlingrj"
 
-lazy val root = (project in file("."))
+lazy val fpgatidbits = (project in file("."))
   .settings(
     name := "fpgatidbits",
     libraryDependencies ++= Seq(
-      "edu.berkeley.cs" %% "chisel3" % "3.4.2",
-      "edu.berkeley.cs" %% "chiseltest" % "0.3.1" % "test",
-      "edu.berkeley.cs" %% "chisel-iotesters" % "1.4.1+"
+      "edu.berkeley.cs" %% "chisel3" % "3.5.6",
+      "edu.berkeley.cs" %% "chiseltest" % "0.5.6" % "test",
     ),
     scalacOptions ++= Seq(
-      "-Xsource:2.11",
       "-language:reflectiveCalls",
       "-deprecation",
       "-feature",
@@ -22,7 +20,6 @@ lazy val root = (project in file("."))
     testOptions ++= Seq(
       //      Tests.Argument("-oF") // Dont truncate stack trace
     ),
-    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.4.1" cross CrossVersion.full),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full)
+    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.6" cross CrossVersion.full),
   )
 

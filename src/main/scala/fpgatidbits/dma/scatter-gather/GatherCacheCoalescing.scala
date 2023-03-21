@@ -79,8 +79,6 @@ class GatherNBCache_Coalescing(
     override val printfStr = "req: id = %d line = %d tag = %d ofs = %d\n"
     override val printfElems = {() => Seq(id, cacheLine, cacheTag, cacheOffset)}
 
-    override def cloneType: this.type =
-      new InternalReq().asInstanceOf[this.type]
   }
 
   object InternalReq {
@@ -99,10 +97,7 @@ class GatherNBCache_Coalescing(
     val dat = UInt(bitsPerLine.W)
 
     override val printfStr = "req: id = %d hit = %d linersp: %x\n"
-    override val printfElems = {() => Seq(id, isHit, dat)}
-
-    override def cloneType: this.type =
-      new InternalTagRsp().asInstanceOf[this.type]
+    override val printfElems = { () => Seq(id, isHit, dat) }
   }
 
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
@@ -110,10 +105,8 @@ class GatherNBCache_Coalescing(
 
     override val printfStr = "req: id = %d rsp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
-
-    override def cloneType: this.type =
-      new InternalRsp().asInstanceOf[this.type]
   }
+
   val ireq = new InternalReq()
   val itagrsp = new InternalTagRsp()
   val irsp = new InternalRsp()
@@ -285,8 +278,6 @@ class GatherNBCache_Coalescing(
     override val printfStr = "numMisses %d, missed line %d, missed tag %d, cacheline %x \n"
     override val printfElems = {() => Seq(numMisses, misses(0).cacheLine, misses(0).cacheTag, cacheline)}
 
-    override def cloneType: this.type =
-      new CoalescingMissHandlerRsp(maxMissPerLine).asInstanceOf[this.type]
   }
 
   // process a coalesced miss reply and spit out responses to the individual

@@ -29,7 +29,6 @@ class DecoupledInputMuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {
   val in = Vec(numChans, Flipped(Decoupled(gen)))
   val out = Decoupled(gen)
 
-  override def cloneType: this.type = new DecoupledInputMuxIO(gen, numChans).asInstanceOf[this.type]
 }
 
 class DecoupledInputMux[T <: Data](gen: T, numChans: Int) extends Module {

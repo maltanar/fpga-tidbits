@@ -24,14 +24,10 @@ class ReadOrderCacheIO(p: MemReqParams, maxBurst: Int) extends Bundle {
   val rspMem = Flipped(Decoupled(new GenericMemoryResponse(p)))
 
   // controls for ID queue reinit
-  val doInit = Input(Bool())                // re-initialize queue
-  val initCount = Input(UInt(8.W))  // # IDs to initializes
-
-  override def cloneType: this.type =
-    new ReadOrderCacheIO(p, maxBurst).asInstanceOf[this.type]
+  val doInit = Input(Bool()) // re-initialize queue
+  val initCount = Input(UInt(8.W)) // # IDs to initializes
 
 }
-
 class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val io = IO(new ReadOrderCacheIO(p.mrp, p.maxBurst))
   val beat = 0.U(p.mrp.dataWidth.W)

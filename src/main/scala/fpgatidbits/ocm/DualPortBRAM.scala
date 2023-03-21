@@ -17,9 +17,6 @@ class DualPortBRAMExternalIO(addrBits: Int, dataBits: Int) extends Bundle {
     val wr = Input(Bool())
     val dout = Output(UInt(dataBits.W))
 
-    override def cloneType: this.type =
-      new DualPortBRAMExternalIO(addrBits, dataBits).asInstanceOf[this.type]
-
   def connect(in: OCMSlaveIF): Unit  = {
     in.req.addr := addr
     in.req.writeData := din
@@ -39,17 +36,10 @@ class DualPortBRAMExternalIO(addrBits: Int, dataBits: Int) extends Bundle {
 // Create this wrapper bundle that is meant to connect to the externalIO
 class DualPortBRAMIOWrapper(addrBits: Int, dataBits: Int) extends Bundle {
   val ports = Vec(2, new OCMMasterIF(dataBits, dataBits, addrBits))
-
-  override def cloneType: this.type =
-    new DualPortBRAMIOWrapper(addrBits, dataBits).asInstanceOf[this.type]
 }
 
 class DualPortBRAMIO(addrBits: Int, dataBits: Int) extends Bundle {
   val ports = Vec(2, new OCMSlaveIF(dataBits, dataBits, addrBits))
-
-  override def cloneType: this.type =
-    new DualPortBRAMIO(addrBits, dataBits).asInstanceOf[this.type]
-
 }
 
 // variant of DualPortBRAM with the desired number of registers at input and

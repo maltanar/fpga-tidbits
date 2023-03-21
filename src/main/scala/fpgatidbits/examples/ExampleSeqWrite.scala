@@ -1,21 +1,22 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
 import chisel3._
-import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class TestSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+class ExampleSeqWriteIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+  val start = Input(Bool())
+  val finished = Output(Bool())
+  val baseAddr = Input(UInt(64.W))
+  val init = Input(UInt(32.W))
+  val step = Input(UInt(32.W))
+  val count = Input(UInt(32.W))
+}
+
+class ExampleSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Input(Bool())
-    val finished = Output(Bool())
-    val baseAddr = Input(UInt(64.W))
-    val init = Input(UInt(32.W))
-    val step = Input(UInt(32.W))
-    val count = Input(UInt(32.W))
-  }
+  val io = IO(new ExampleSeqWriteIO(numMemPorts, p))
   plugMemReadPort(0)  // read port not used
   io.signature := makeDefaultSignature()
 

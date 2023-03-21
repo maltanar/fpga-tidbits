@@ -1,23 +1,22 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
 import chisel3._
-import chisel3.util._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
+import fpgatidbits.ocm.OCMSlaveIF
 import fpgatidbits.streams._
 
-// TODO support non-word-aligned sizes in byteCount
-
-class TestCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+class ExampleCopyIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+  val start = Input(Bool())
+  val finished = Output(Bool())
+  val srcAddr = Input(UInt(64.W))
+  val dstAddr = Input(UInt(64.W))
+  val byteCount = Input(UInt(32.W))
+  val finBytes = Output(UInt(32.W))
+}
+class ExampleCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Input(Bool())
-    val finished = Output(Bool())
-    val srcAddr = Input(UInt(64.W))
-    val dstAddr = Input(UInt(64.W))
-    val byteCount = Input(UInt(32.W))
-    val finBytes = Output(UInt(32.W))
-  }
+  val io = IO(new ExampleCopyIO(numMemPorts,p))
   io.signature := makeDefaultSignature()
 
   val rrg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io

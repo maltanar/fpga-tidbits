@@ -10,8 +10,6 @@ class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
   val write     = Bool()
   val writeData = UInt(dataBits.W)
 
-  override def cloneType = { new RegCommand(idBits, dataBits).asInstanceOf[this.type] }
-
   def driveDefaults() = {
     regID := 0.U
     read := false.B
@@ -30,7 +28,6 @@ class RegFileSlaveIF(idBits: Int, dataBits: Int) extends Bundle {
   // number of registers
   val regCount    = Output(UInt(idBits.W))
 
-  override def cloneType = { new RegFileSlaveIF(idBits, dataBits).asInstanceOf[this.type] }
 }
 
 

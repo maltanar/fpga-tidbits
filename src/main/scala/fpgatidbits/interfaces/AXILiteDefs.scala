@@ -94,8 +94,6 @@ class AXILiteExternalIF(addrWidthBits: Int, dataWidthBits: Int) extends Bundle {
     RDATA := in.readData.bits.data
     RRESP := in.readData.bits.resp
   }
-
-  override def cloneType = { new AXILiteExternalIF(addrWidthBits, dataWidthBits).asInstanceOf[this.type] }
 }
 
 
@@ -138,9 +136,6 @@ class AXILiteWriteOnlyExternalIF(addrWidthBits: Int, dataWidthBits: Int) extends
     in.writeResp.bits := BRESP
 
   }
-
-
-  override def cloneType = { new AXILiteWriteOnlyExternalIF(addrWidthBits, dataWidthBits).asInstanceOf[this.type] }
 }
 
 
@@ -156,19 +151,16 @@ class AXILiteWriteOnlyExternalIF(addrWidthBits: Int, dataWidthBits: Int) extends
 class AXILiteAddress(addrWidthBits: Int) extends Bundle {
   val addr    = UInt(addrWidthBits.W)
   val prot    = UInt(3.W)
-  override def cloneType = { new AXILiteAddress(addrWidthBits).asInstanceOf[this.type] }
 }
 
 class AXILiteWriteData(dataWidthBits: Int) extends Bundle {
   val data    = UInt(dataWidthBits.W)
   val strb    = UInt((dataWidthBits/8).W)
-  override def cloneType = { new AXILiteWriteData(dataWidthBits).asInstanceOf[this.type] }
 }
 
 class AXILiteReadData(dataWidthBits: Int) extends Bundle {
   val data    = UInt(dataWidthBits.W)
   val resp    = UInt(2.W)
-  override def cloneType = { new AXILiteReadData(dataWidthBits).asInstanceOf[this.type] }
 }
 
 // Part II: Definitions for the actual AXI interfaces
@@ -185,9 +177,6 @@ class AXILiteSlaveIF(addrWidthBits: Int, dataWidthBits: Int) extends Bundle {
   val readAddr    = Flipped(Decoupled(new AXILiteAddress(addrWidthBits)))
   // read data channel
   val readData    = Decoupled(new AXILiteReadData(dataWidthBits))
-
-
-  override def cloneType = { new AXILiteSlaveIF(addrWidthBits, dataWidthBits).asInstanceOf[this.type] }
 }
 
 
@@ -204,9 +193,6 @@ class AXILiteMasterIF(addrWidthBits: Int, dataWidthBits: Int) extends Bundle {
   val readAddr    = Decoupled(new AXILiteAddress(addrWidthBits))
   // read data channel
   val readData    = Flipped(Decoupled(new AXILiteReadData(dataWidthBits)))
-
-
-  override def cloneType = { new AXILiteMasterIF(addrWidthBits, dataWidthBits).asInstanceOf[this.type] }
 }
 
 
@@ -217,8 +203,4 @@ class AXILiteMasterWriteOnlyIF(addrWidthBits: Int, dataWidthBits: Int) extends B
   val writeData   = Decoupled(new AXILiteWriteData(dataWidthBits))
   // write response channel (for memory consistency)
   val writeResp   = Flipped(Decoupled(UInt(2.W)))
-
-
-
-  override def cloneType = { new AXILiteMasterWriteOnlyIF(addrWidthBits, dataWidthBits).asInstanceOf[this.type] }
 }

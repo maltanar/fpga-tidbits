@@ -133,7 +133,7 @@ class WideReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val burstFinishedSet = UInt(p.outstandingReqs.W)
   burstFinishedSet := 0.U(p.outstandingReqs.W)
   val burstFinishedClr = UInt(p.outstandingReqs.W)
-  burstFinishedClr := 0.U(p.outstandingReqs)
+  burstFinishedClr := 0.U(p.outstandingReqs.W)
   regBurstFinished := (regBurstFinished & (~burstFinishedClr).asUInt) | burstFinishedSet
 
   // set finished flag on last beat received
