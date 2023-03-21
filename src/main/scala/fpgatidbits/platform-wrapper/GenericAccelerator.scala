@@ -3,6 +3,7 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import fpgatidbits.dma._
+import fpgatidbits.streams.{GenericStreamInPort, GenericStreamOutPort}
 
 
 // interface definition for GenericAccelerator-derived modules
@@ -11,7 +12,10 @@ case class AcceleratorParams(
                             numStreamOutPorts: Int = 0,
                             numStreamInPorts: Int = 0,
                             streamWidth: Int = 0
-                            )
+                            ) {
+  def numStreamPorts: Int = numStreamInPorts + numStreamOutPorts
+  def streamPortIdBits: Int = if (log2Ceil(numStreamPorts) > 0) log2Ceil(numStreamPorts) else 1
+}
 
 abstract class GenericAcceleratorIF(ap: AcceleratorParams,
                                      p: PlatformWrapperParams) extends Bundle {
@@ -20,7 +24,7 @@ abstract class GenericAcceleratorIF(ap: AcceleratorParams,
 
   // Streaming ports
   val streamInPort = Vec(ap.numStreamInPorts, new GenericStreamInPort(ap.streamWidth))
-  val streamOutPort = Vec(ap.numStreamInPorts, new GenericStreamOutPort(ap.streamWidth))
+  val streamOutPort = Vec(ap.numStreamOutPorts, new GenericStreamOutPort(ap.streamWidth))
 
   // use the signature field for sanity and version checks
   val signature = Output(UInt(p.csrDataBits.W))
@@ -29,8 +33,8 @@ abstract class GenericAcceleratorIF(ap: AcceleratorParams,
 // GenericAccelerator, serving as a base class for creating portable accelerators
 // support managing the accelerator I/O as control-status registers
 abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
-  def io: GenericAcceleratorIF
-  def numMemPorts: Int
+  val io: GenericAcceleratorIF
+  val accelParams: AcceleratorParams
 
   def hexcrc32(s: String): String = {
     import java.util.zip.CRC32

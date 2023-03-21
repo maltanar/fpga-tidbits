@@ -10,9 +10,10 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
-
+import chisel3.internal.ElementLitBinding
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
+
 import scala.collection.mutable.LinkedHashMap
 
 // TODO need cleaner separation of accel and platform parameters, also a way
@@ -51,7 +52,7 @@ trait PlatformWrapperParams {
 // - do reads/writes to the regfile from the platform memory-mapped interface
 abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
-val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule {
+val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
   type RegFileMap = LinkedHashMap[String, Array[Int]]
 
   // a list of files that will be needed for compiling drivers for platform
@@ -128,13 +129,117 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule
   println("Signal signature mapped to single reg " + allocReg.toString)
   allocReg += 1
 
-  for(element <- ownIO) {
+  // Variables for tracking the streamPort values to add extra control logic around them
+  // Count the ready,valid,bits field to know when a complete decoupled interface has finished
+  var streamPortFieldCnt: Int = 0
+  var streamPortBits: Int = 0
+  var streamPortValid: Int = 0
+  var streamPortReady: Int = 0
 
+  // Count the index into the streamPort vecs in the accel.io
+  var streamPortOutCnt: Int = 0
+  var streamPortInCnt: Int = 0
+
+  for(element <- ownIO) {
     val name = instanceNametoName(element.instanceName)
     val bits = element
+    val w = bits.getWidth
 
+    println(s"$name $bits")
 
-    if(name != "signature") {
+    if(name.startsWith("streamOutPort")) {
+      println(s"Got port $name $bits")
+      regFileMap(name) = Array(allocReg)
+      if(name.endsWith("bits")) {
+        require(w <= 32)
+        streamPortFieldCnt += 1
+        streamPortBits = allocReg
+        regFile.regIn(allocReg).valid := true.B
+        regFile.regIn(allocReg).bits := bits
+      } else if (name.endsWith("valid")) {
+        require(w == 1)
+        streamPortFieldCnt += 1
+        streamPortValid = allocReg
+        regFile.regIn(allocReg).valid := true.B
+        regFile.regIn(allocReg).bits := bits
+
+      } else if (name.endsWith("ready")) {
+        require(w == 1)
+        streamPortFieldCnt += 1
+        streamPortReady= allocReg
+        regFile.regIn(allocReg).valid := false.B
+        regFile.regIn(allocReg).bits := 0.U
+        bits := regFile.regOut(allocReg)
+
+      } else {
+        require(false)
+      }
+
+      // Add additional control logic to enforce a stream interface
+      if (streamPortFieldCnt == 3) {
+        when (regFile.regOut(streamPortReady)(0).asBool && regFile.regOut(streamPortValid)(0).asBool) {
+          // We have firing, in which case we de-assert the ready input
+          regFile.regIn(streamPortReady).valid := true.B
+          regFile.regIn(streamPortReady).bits := 0.U
+
+          // Catch potential errors. We wanna make sure that this causes a firing.
+          assert(!RegNext(regFile.regOut(streamPortReady)(0).asBool))
+          assert(!RegNext(regFile.regOut(streamPortReady)(0).asBool))
+          assert(accel.io.streamOutPort(streamPortOutCnt).data.fire)
+          assert(!RegNext(accel.io.streamOutPort(streamPortOutCnt)).data.fire)
+        }
+        streamPortFieldCnt = 0
+        streamPortOutCnt += 1
+      }
+
+      allocReg += 1
+    } else if (name.startsWith("streamInPort")) {
+      println(s"Got port $name $bits")
+      regFileMap(name) = Array(allocReg)
+      if (name.endsWith("bits")) {
+        require(w <= 32)
+        streamPortFieldCnt += 1
+        streamPortBits = allocReg
+        regFile.regIn(allocReg).valid := false.B
+        regFile.regIn(allocReg).bits := 0.U
+        bits := regFile.regOut(allocReg)
+      } else if (name.endsWith("valid")) {
+        require(w == 1)
+        streamPortFieldCnt += 1
+        streamPortValid = allocReg
+        regFile.regIn(allocReg).valid := false.B
+        regFile.regIn(allocReg).bits := 0.U
+        bits := regFile.regOut(allocReg)
+      } else if (name.endsWith("ready")) {
+        require(w == 1)
+        streamPortFieldCnt += 1
+        streamPortReady = allocReg
+        regFile.regIn(allocReg).valid := true.B
+        regFile.regIn(allocReg).bits := bits.asTypeOf(UInt())
+
+      } else {
+        require(false)
+      }
+      // Add additional control logic to enforce a stream interface
+      if (streamPortFieldCnt == 3) {
+        when(accel.io.streamInPort(streamPortInCnt).data.ready && regFile.regOut(streamPortValid)(0).asBool) {
+          // We have firing, Then we overwrite valid and bits in the RegFile now that the value is consumed
+          regFile.regIn(streamPortValid).valid := true.B
+          regFile.regIn(streamPortValid).bits := 0.U
+          regFile.regIn(streamPortBits).valid := true.B
+          regFile.regIn(streamPortBits).bits := 0.U
+
+          // Catch potential errors. We wanna make sure that this causes a firing.
+          assert(!RegNext(regFile.regOut(streamPortValid)(0).asBool)) // Valid reg should be false next round
+          assert(accel.io.streamInPort(streamPortInCnt).data.fire) // We should have a firing this cycle
+          assert(!RegNext(accel.io.streamInPort(streamPortInCnt).data.fire)) // We should NOT have a firing next cycle
+        }
+        streamPortFieldCnt = 0
+        streamPortInCnt += 1
+      }
+
+      allocReg += 1
+    } else if(name != "signature") {
       val w = bits.getWidth
       if(w > wCSR) {
         // signal is wide, maps to several registers

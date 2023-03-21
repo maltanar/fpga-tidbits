@@ -80,17 +80,18 @@ object MainObj {
 
 
   val accelMap: AccelMap = Map(
-    "ExampleRegOps" -> {p => new ExampleRegOps(p)},
-    "ExampleSum" -> { p => new ExampleSum(p) },
-    "ExampleMultiChanSum" -> {p => new ExampleMultiChanSum(p)},
-    "ExampleSeqWrite" -> {p => new ExampleSeqWrite(p)},
+//    "ExampleRegOps" -> {p => new ExampleRegOps(p)},
+//    "ExampleSum" -> { p => new ExampleSum(p) },
+//    "ExampleMultiChanSum" -> {p => new ExampleMultiChanSum(p)},
+//    "ExampleSeqWrite" -> {p => new ExampleSeqWrite(p)},
     "ExampleCopy" -> {p => new ExampleCopy(p)},
-    "ExampleRandomRead" -> {p => new ExampleRandomRead(p)},
+//    "ExampleRandomRead" -> {p => new ExampleRandomRead(p)},
     "ExampleBRAM" -> {p => new ExampleBRAM(p)},
+    "ExampleStreamPort" -> {p => new ExampleStreamPort(p)},
     "ExampleBRAMMasked" -> {p => new ExampleBRAMMasked(p)},
-    "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
+//    "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
     "ExampleGather" -> {p => new ExampleGather(p)},
-    "ExampleSinglePortBRAM" -> {p => new ExampleSinglePortBRAM(p)}
+//    "ExampleSinglePortBRAM" -> {p => new ExampleSinglePortBRAM(p)}
   )
 
   val platformMap = TidbitsMakeUtils.platformMap

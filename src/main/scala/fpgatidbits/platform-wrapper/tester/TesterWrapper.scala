@@ -13,6 +13,7 @@ import java.io.FileOutputStream
 import fpgatidbits.MainObj.{fileCopy, fileCopyBulk}
 import fpgatidbits.TidbitsMakeUtils
 import fpgatidbits.TidbitsMakeUtils._
+import fpgatidbits.streams.StreamPortCSRWrapper
 
 import scala.io.Source
 
@@ -83,7 +84,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
 
   // accelerator memory access ports
   // one FSM per port, rather simple, but supports bursts
-  for(i <- 0 until accel.numMemPorts) {
+  for(i <- 0 until accel.accelParams.numMemPorts) {
     // reads
     // FIXME: This is dumbed down alot to make it work.
     val sWaitRd :: sRead :: sResp :: Nil = Enum(3)
@@ -122,7 +123,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
         val isLast = (regReadRequest.numBytes === memUnitBytes)
         accRdRsp.bits.isLast := isLast
         accRdRsp.valid := true.B
-        when(accRdRsp.fire()) {
+        when(accRdRsp.fire) {
           when (isLast) {
             regStateRead := sWaitRd
           }.otherwise {
