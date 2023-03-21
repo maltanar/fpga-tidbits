@@ -7,6 +7,8 @@ using namespace std;
 #include "wrapperregdriver.h"
 #include "VTesterWrapper.h"
 
+double sc_time_stamp() { return 0; }
+
 #ifdef DEBUG
 #define __TESTERDRIVER_DEBUG_PRINT(x) (cout << x << endl)
 #define __TESTERDRIVER_DEBUG(x) (x)

@@ -1,5 +1,5 @@
 # The  run all the integration tests
-TESTS = ExampleMultiChanSum ExampleSum ExampleRegOps ExampleBRAM ExampleBRAMMasked
+TESTS = ExampleStreamPort ExampleMultiChanSum ExampleSum ExampleRegOps ExampleBRAM ExampleBRAMMasked
 
 Example%:
 	echo "Compiling chisel for $@"

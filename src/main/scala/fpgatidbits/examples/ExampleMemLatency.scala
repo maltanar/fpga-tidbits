@@ -11,7 +11,7 @@ import fpgatidbits.streams._
 // (the +TODO is due to inefficiencies in the ReadOrderCache -- needs 2 cycles
 // between bursts, so here we need x+2 cycles for x words)
 
-class ExampleMemLatencyIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+class ExampleMemLatencyIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap,p) {
   val start = Input(Bool())
   val finished = Output(Bool())
   val baseAddr = Input(UInt(64.W))
@@ -24,8 +24,10 @@ class ExampleMemLatencyIO(n: Int, p: PlatformWrapperParams) extends GenericAccel
 }
 
 class ExampleMemLatency(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 1
-  val io = IO(new ExampleMemLatencyIO(numMemPorts, p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 1
+  )
+  val io = IO(new ExampleMemLatencyIO(accelParams, p))
   io.signature := makeDefaultSignature()
   plugMemWritePort(0)
 

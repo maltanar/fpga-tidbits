@@ -5,7 +5,7 @@ import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class ExampleSeqWriteIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+class ExampleSeqWriteIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap,p) {
   val start = Input(Bool())
   val finished = Output(Bool())
   val baseAddr = Input(UInt(64.W))
@@ -15,8 +15,10 @@ class ExampleSeqWriteIO(n: Int, p: PlatformWrapperParams) extends GenericAcceler
 }
 
 class ExampleSeqWrite(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 1
-  val io = IO(new ExampleSeqWriteIO(numMemPorts, p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 1
+  )
+  val io = IO(new ExampleSeqWriteIO(accelParams, p))
   plugMemReadPort(0)  // read port not used
   io.signature := makeDefaultSignature()
 

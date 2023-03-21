@@ -27,11 +27,12 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   }
   extCsrIf.connect(csr)
 
+  require(accel.io.streamInPort.length == 0 && accel.io.streamOutPort.length == 0)
 
 
     // memory port adapters and connections
   // TODO use accel numMemPorts and plug unused
-  for(i <- 0 until accel.numMemPorts) {
+  for(i <- 0 until accel.accelParams.numMemPorts) {
     // instantiate AXI request and response adapters for the mem interface
     val mrp = p.toMemReqParams()
     // read requests
@@ -69,7 +70,7 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
 
   // the accelerator may be using fewer memory ports than what the platform
   // exposes; plug the unused ones
-  for(i <- accel.numMemPorts until p.numMemPorts) {
+  for(i <- accel.accelParams.numMemPorts until p.numMemPorts) {
     println("Plugging unused memory port " + i.toString)
     mem(i).driveDefaults()
   }

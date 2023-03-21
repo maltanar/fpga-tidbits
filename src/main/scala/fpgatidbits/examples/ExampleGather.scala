@@ -6,7 +6,7 @@ import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class ExampleGatherIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+class ExampleGatherIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap,p) {
   val start = Input(Bool())
   val finished = Output(Bool())
   val indsBase = Input(UInt(64.W))
@@ -23,8 +23,10 @@ class ExampleGatherIO(n: Int, p: PlatformWrapperParams) extends GenericAccelerat
   }
 }
 class ExampleGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 2
-  val io = IO(new ExampleGatherIO(numMemPorts, p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 2
+  )
+  val io = IO(new ExampleGatherIO(accelParams, p))
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
   // plug unused ports (write ports)

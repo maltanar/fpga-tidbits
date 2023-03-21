@@ -6,7 +6,7 @@ import fpgatidbits.dma._
 import fpgatidbits.streams._
 
 
-class ExampleMultiChanSumIO(n: Int, p: PlatformWrapperParams, numChans: Int) extends GenericAcceleratorIF(n,p) {
+class ExampleMultiChanSumIO(ap:AcceleratorParams, p: PlatformWrapperParams, numChans: Int) extends GenericAcceleratorIF(ap,p) {
   val start = Input(Bool())
   val baseAddr = Vec(numChans, Input(UInt(64.W)))
   val byteCount = Vec(numChans, Input(UInt(32.W)))
@@ -14,9 +14,11 @@ class ExampleMultiChanSumIO(n: Int, p: PlatformWrapperParams, numChans: Int) ext
   val status = Output(Bool())
 }
 class ExampleMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 1
+  val accelParams = AcceleratorParams(
+    numMemPorts = 1
+  )
   val numChans = 2
-  val io = IO(new ExampleMultiChanSumIO(numMemPorts, p, numChans))
+  val io = IO(new ExampleMultiChanSumIO(accelParams, p, numChans))
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()

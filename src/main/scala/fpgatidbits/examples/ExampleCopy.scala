@@ -6,7 +6,7 @@ import fpgatidbits.dma._
 import fpgatidbits.ocm.OCMSlaveIF
 import fpgatidbits.streams._
 
-class ExampleCopyIO(n: Int, p: PlatformWrapperParams) extends GenericAcceleratorIF(n,p) {
+class ExampleCopyIO(ap: AcceleratorParams, p: PlatformWrapperParams) extends GenericAcceleratorIF(ap,p) {
   val start = Input(Bool())
   val finished = Output(Bool())
   val srcAddr = Input(UInt(64.W))
@@ -15,8 +15,10 @@ class ExampleCopyIO(n: Int, p: PlatformWrapperParams) extends GenericAccelerator
   val finBytes = Output(UInt(32.W))
 }
 class ExampleCopy(p: PlatformWrapperParams) extends GenericAccelerator(p) {
-  val numMemPorts = 2
-  val io = IO(new ExampleCopyIO(numMemPorts,p))
+  val accelParams = AcceleratorParams(
+    numMemPorts = 2
+  )
+  val io = IO(new ExampleCopyIO(accelParams,p))
   io.signature := makeDefaultSignature()
 
   val rrg = Module(new ReadReqGen(p.toMemReqParams(), 0, 1)).io

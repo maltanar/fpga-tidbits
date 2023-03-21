@@ -87,6 +87,7 @@ object MainObj {
     "ExampleCopy" -> {p => new ExampleCopy(p)},
     "ExampleRandomRead" -> {p => new ExampleRandomRead(p)},
     "ExampleBRAM" -> {p => new ExampleBRAM(p)},
+    "ExampleStreamPort" -> {p => new ExampleStreamPort(p)},
     "ExampleBRAMMasked" -> {p => new ExampleBRAMMasked(p)},
     "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
     "ExampleGather" -> {p => new ExampleGather(p)},
