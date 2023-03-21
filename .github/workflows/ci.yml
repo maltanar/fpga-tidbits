@@ -17,4 +17,5 @@ jobs:
         run: apt-get update && apt-get install verilator -y
       - name: Cache Scala
         uses: coursier/cache-action@v5
-      - name: make test
+      - name: Run tests
+        run: make test
