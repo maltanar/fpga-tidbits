@@ -3,16 +3,25 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import fpgatidbits.dma._
-//import fpgatidbits.hlstools.TemplatedHLSBlackBox
-import scala.collection.mutable.ArrayBuffer
 
-// TODO should the parameters for GenericAccelerator be separated from the
-// parameters for PlatformWrapper?
 
 // interface definition for GenericAccelerator-derived modules
-abstract class GenericAcceleratorIF(numMemPorts: Int, p: PlatformWrapperParams) extends Bundle {
+case class AcceleratorParams(
+                            numMemPorts: Int,
+                            numStreamOutPorts: Int = 0,
+                            numStreamInPorts: Int = 0,
+                            streamWidth: Int = 0
+                            )
+
+abstract class GenericAcceleratorIF(ap: AcceleratorParams,
+                                     p: PlatformWrapperParams) extends Bundle {
   // memory ports
-  val memPort = Vec(numMemPorts,new GenericMemoryMasterPort(p.toMemReqParams()))
+  val memPort = Vec(ap.numMemPorts,new GenericMemoryMasterPort(p.toMemReqParams()))
+
+  // Streaming ports
+  val streamInPort = Vec(ap.numStreamInPorts, new GenericStreamInPort(ap.streamWidth))
+  val streamOutPort = Vec(ap.numStreamInPorts, new GenericStreamOutPort(ap.streamWidth))
+
   // use the signature field for sanity and version checks
   val signature = Output(UInt(p.csrDataBits.W))
 }
@@ -23,16 +32,6 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   def io: GenericAcceleratorIF
   def numMemPorts: Int
 
-  /*
-  val hlsBlackBoxes = ArrayBuffer[TemplatedHLSBlackBox]()
-
-  def HLSBlackBox[T <: TemplatedHLSBlackBox](blackBox: T): T = {
-    hlsBlackBoxes += blackBox
-    return blackBox
-  }
-  */
-
-
   def hexcrc32(s: String): String = {
     import java.util.zip.CRC32
     val crc=new CRC32
@@ -41,19 +40,12 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   }
 
   def hexSignature(): String = {
-    /*import java.util.Date
-    import java.text.SimpleDateFormat
-    val dateFormat = new SimpleDateFormat("yyyyMMdd");
-    val date = new Date();
-    val dateString = dateFormat.format(date);*/
-    // removing date from signature due to discrepancies that this causes
-    // when HW and driver are generated on different days
     val fullSignature = this.getClass.getSimpleName/* + "-" + dateString*/
-    return hexcrc32(fullSignature)
+    hexcrc32(fullSignature)
   }
 
   def makeDefaultSignature(): UInt = {
-    return ("h" + hexSignature()).U
+    ("h" + hexSignature()).U
   }
 
   // drive default values for memory read port i
