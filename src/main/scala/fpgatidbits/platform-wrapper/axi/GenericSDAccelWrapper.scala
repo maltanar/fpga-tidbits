@@ -19,6 +19,7 @@ object GenericSDAccelParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 128
   val burstBeats = 8
   val coherentMem = false
+  val hasStreamInterface = false
 }
 
 class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, val targetDir: String)
@@ -30,7 +31,7 @@ class GenericSDAccelWrapper(instFxn: PlatformWrapperParams => GenericAccelerator
   override def desiredName = "GenericSDAccelWrapper"
 
   // Generate the RegFile driver
-  generateRegDriver(targetDir)
+  generateCppRegDriver(targetDir)
 
   // Copy over the other needed files
   val resRoot = Paths.get("./src/main/resources")

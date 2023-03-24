@@ -27,7 +27,7 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
   }
   extCsrIf.connect(csr)
 
-  require(accel.io.streamInPort.length == 0 && accel.io.streamOutPort.length == 0)
+  require(accel.accelParams.numMemPorts == 0)
 
 
     // memory port adapters and connections
@@ -132,7 +132,6 @@ abstract class AXIPlatformWrapper(p: PlatformWrapperParams,
     }
 
     is(sReadRsp) {
-      println("sReadRsp")
       csr.readData.valid := regFile.extIF.readData.valid
       when (csr.readData.ready & regFile.extIF.readData.valid) {
         regState := sWrite

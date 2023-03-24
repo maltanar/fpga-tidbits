@@ -3,31 +3,50 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import fpgatidbits.dma._
-import fpgatidbits.streams.{GenericStreamInPort, GenericStreamOutPort}
 
 
-// interface definition for GenericAccelerator-derived modules
 case class AcceleratorParams(
                             numMemPorts: Int,
                             numStreamOutPorts: Int = 0,
                             numStreamInPorts: Int = 0,
-                            streamWidth: Int = 0
                             ) {
   def numStreamPorts: Int = numStreamInPorts + numStreamOutPorts
   def streamPortIdBits: Int = if (log2Ceil(numStreamPorts) > 0) log2Ceil(numStreamPorts) else 1
 }
 
+// interface definition for GenericAccelerator-derived modules
 abstract class GenericAcceleratorIF(ap: AcceleratorParams,
                                      p: PlatformWrapperParams) extends Bundle {
   // memory ports
   val memPort = Vec(ap.numMemPorts,new GenericMemoryMasterPort(p.toMemReqParams()))
 
   // Streaming ports
-  val streamInPort = Vec(ap.numStreamInPorts, Flipped(Decoupled(UInt(ap.streamWidth.W))))
-  val streamOutPort = Vec(ap.numStreamOutPorts, Decoupled(UInt(ap.streamWidth.W)))
+  val streamInPort = Vec(ap.numStreamInPorts, Flipped(Decoupled(StreamEntry(UInt(p.csrDataBits.W)))))
+  val streamOutPort = Vec(ap.numStreamOutPorts, Decoupled(StreamEntry(UInt(p.csrDataBits.W))))
 
   // use the signature field for sanity and version checks
   val signature = Output(UInt(p.csrDataBits.W))
+
+  // FIXME: I think we might want a default status register to catch runtime exceptions.
+
+  def driveDefault(): Unit = {
+    for (elem <- streamOutPort) {
+      elem.bits := 0.U.asTypeOf(StreamEntry(0.U))
+      elem.valid := false.B
+    }
+    for (elem <- streamInPort) {
+      elem.ready := false.B
+    }
+  }
+  def driveDefaultFlipped(): Unit = {
+    for (elem <- streamInPort) {
+      elem.bits := 0.U
+      elem.valid := false.B
+    }
+    for (elem <- streamOutPort) {
+      elem.ready := false.B
+    }
+  }
 }
 
 // GenericAccelerator, serving as a base class for creating portable accelerators

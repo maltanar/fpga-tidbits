@@ -119,7 +119,7 @@ class ExampleGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   orderCheckQ.enq.bits := gather.accel_io.in.bits
   orderCheckQ.deq.ready := gather.accel_io.out.ready & gather.accel_io.out.valid
 
-  when(gather.accel_io.in.fire() & !orderCheckQ.enq.ready) {
+  when(gather.accel_io.in.fire & !orderCheckQ.enq.ready) {
     printf("Error: No space left in orderCheckQ!\n")
   }
 

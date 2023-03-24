@@ -162,7 +162,7 @@ class AXIWriteBurstReqAdapter(
       io.in_writeAddr.ready := io.out_writeAddr.ready
       // register the burst count when we get a transaction
       // TODO can this handle non-bursts? is this something we need to consider?
-      when(io.out_writeAddr.fire()) {
+      when(io.out_writeAddr.fire) {
         regBeatsLeft := io.in_writeAddr.bits.len
         regState := sWaitData
       }
@@ -174,7 +174,7 @@ class AXIWriteBurstReqAdapter(
       io.out_writeData.valid := io.in_writeData.valid
       io.in_writeData.ready := io.out_writeData.ready
       io.out_writeData.bits.last := isLastBeat
-      when(io.out_writeData.fire()) {
+      when(io.out_writeData.fire) {
         // check if we have any more beats in this burst
         when(isLastBeat) { regState := sWaitReq }
         .otherwise { regBeatsLeft := regBeatsLeft - 1.U }

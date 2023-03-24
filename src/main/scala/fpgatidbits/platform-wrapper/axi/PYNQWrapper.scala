@@ -19,6 +19,7 @@ object PYNQZ1Params extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 32
   val burstBeats = 8  // TODO why cap bursts at 8? AXI can do more
   val coherentMem = false // TODO add CC version of PYNQZ1 as well
+  val hasStreamInterface = false
 }
 
 class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
@@ -29,7 +30,7 @@ class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
   suggestName("PYNQZ1Wrapper")
   override def desiredName = "PYNQZ1Wrapper"
   // Generate the RegFile driver
-  generateRegDriver(targetDir)
+  generateCppRegDriver(targetDir)
 
   // Copy over the other needed files
   val resRoot = Paths.get("./src/main/resources")

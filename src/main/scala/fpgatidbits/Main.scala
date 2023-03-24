@@ -24,7 +24,8 @@ object TidbitsMakeUtils {
     //    "ZC706" -> {f => new ZC706Wrapper(f)},
     //    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
     "VerilatedTester" -> { (f, targetDir) => new VerilatedTesterWrapper(f, targetDir) },
-    "Tester" -> { (f, targetDir) => new TesterWrapper(f, targetDir) }
+    "Tester" -> { (f, targetDir) => new TesterWrapper(f, targetDir) },
+    "S4NOC" -> { (f, targetDir) => new S4NOCWrapper(f, targetDir) }
   )
 
   // handy to have a few commonly available Xilinx FPGA boards here
@@ -78,7 +79,6 @@ object MainObj {
   type PlatformInstFxn = AccelInstFxn => PlatformWrapper
   type PlatformMap = Map[String, PlatformInstFxn]
 
-
   val accelMap: AccelMap = Map(
     "ExampleRegOps" -> {p => new ExampleRegOps(p)},
     "ExampleSum" -> { p => new ExampleSum(p) },
@@ -87,7 +87,8 @@ object MainObj {
     "ExampleCopy" -> {p => new ExampleCopy(p)},
     "ExampleRandomRead" -> {p => new ExampleRandomRead(p)},
     "ExampleBRAM" -> {p => new ExampleBRAM(p)},
-    "ExampleStreamPort" -> {p => new ExampleStreamPort(p)},
+    "ExampleStreamInPort" -> {p => new ExampleStreamInPort(p)},
+    "ExampleMultipleStreamPorts" -> {p => new ExampleMultipleStreamPorts(p)},
     "ExampleBRAMMasked" -> {p => new ExampleBRAMMasked(p)},
     "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
     "ExampleGather" -> {p => new ExampleGather(p)},
@@ -123,7 +124,7 @@ object MainObj {
     val targetDir = Paths.get(".").toString.dropRight(1) + s"$platformName-$accelName-driver/"
     val chiselArgs = Array("")
 
-    (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst, targetDir)))
+    (new chisel3.stage.ChiselStage).emitVerilog(platformInst(accInst, targetDir), chiselArgs)
 
     // Copy test application
     //    val resRoot = Paths.get("./src/main/resources").toAbsolutePath

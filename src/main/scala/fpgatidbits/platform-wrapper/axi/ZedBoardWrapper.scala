@@ -20,6 +20,7 @@ object ZedBoardParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 32
   val burstBeats = 8  // TODO why cap bursts at 8? AXI can do more
   val coherentMem = false // TODO add CC version
+  val hasStreamInterface = false
 }
 
 
@@ -32,7 +33,7 @@ class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targ
   if (generateRegDriver) {
     // Generate the RegFile driver
     println("Generating Register Driver at directory:" + targetDir)
-    generateRegDriver(targetDir)
+    generateCppRegDriver(targetDir)
     // Copy over the other needed files
     //val resRoot = getClass.getResource("").getPath
     val resRoot = new java.io.File(".").getCanonicalPath
@@ -50,7 +51,7 @@ extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   )
 
   // Generate the RegFile driver
-  generateRegDriver(targetDir)
+  generateCppRegDriver(targetDir)
 
   // Copy over the other needed files
   val resRoot = Paths.get("./src/main/resources")

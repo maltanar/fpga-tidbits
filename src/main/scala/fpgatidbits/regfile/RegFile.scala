@@ -28,6 +28,25 @@ class RegFileSlaveIF(idBits: Int, dataBits: Int) extends Bundle {
   // number of registers
   val regCount    = Output(UInt(idBits.W))
 
+  def write(addr: UInt, data: UInt): Unit = {
+    cmd.valid := true.B
+    cmd.bits.write := true.B
+    cmd.bits.regID := addr
+    cmd.bits.writeData := data
+  }
+
+  def read(addr: UInt): Unit = {
+    cmd.valid := true.B
+    cmd.bits.write := true.B
+    cmd.bits.regID := addr
+    cmd.bits.writeData := 0.U
+  }
+
+  def driveDefault(): Unit = {
+    cmd.valid := false.B
+    cmd.bits := 0.U.asTypeOf(new RegCommand(idBits, dataBits))
+  }
+
 }
 
 

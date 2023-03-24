@@ -13,7 +13,6 @@ import java.io.FileOutputStream
 import fpgatidbits.MainObj.{fileCopy, fileCopyBulk}
 import fpgatidbits.TidbitsMakeUtils
 import fpgatidbits.TidbitsMakeUtils._
-import fpgatidbits.streams.StreamPortCSRWrapper
 
 import scala.io.Source
 
@@ -36,6 +35,7 @@ object TesterWrapperParams extends PlatformWrapperParams {
   val typicalMemLatencyCycles = 16
   val burstBeats = 8
   val coherentMem = false
+  val hasStreamInterface = false
 }
 
 class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
@@ -312,7 +312,7 @@ class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerato
   )
 
   // Generate the RegFile driver
-  generateRegDriver(targetDir)
+  generateCppRegDriver(targetDir)
 
   // Copy over the other needed files
   val verilogBlackBoxFiles = Seq("Q_srl.v", "DualPortBRAM.v")

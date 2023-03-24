@@ -1,7 +1,7 @@
 #include <iostream>
 using namespace std;
 
-#include "ExampleStreamPort.hpp"
+#include "ExampleStreamInPort.hpp"
 #include "platform.h"
 #include <cstdlib>
 #include <time.h>
@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 
   srand(time(NULL));
   WrapperRegDriver * platform = initPlatform();
-  ExampleStreamPort *t = new ExampleStreamPort(platform);
+  ExampleStreamInPort *t = new ExampleStreamInPort(platform);
 
   cout << "Running ExampleRegOps integration test ..." <<endl;
   int passed_tests = 0;
