@@ -31,7 +31,7 @@ abstract class GenericAcceleratorIF(ap: AcceleratorParams,
 
   def driveDefault(): Unit = {
     for (elem <- streamOutPort) {
-      elem.bits := 0.U.asTypeOf(StreamEntry(0.U))
+      elem.bits := 0.U.asTypeOf(elem.bits)
       elem.valid := false.B
     }
     for (elem <- streamInPort) {
@@ -40,7 +40,7 @@ abstract class GenericAcceleratorIF(ap: AcceleratorParams,
   }
   def driveDefaultFlipped(): Unit = {
     for (elem <- streamInPort) {
-      elem.bits := 0.U
+      elem.bits := 0.U.asTypeOf(elem.bits)
       elem.valid := false.B
     }
     for (elem <- streamOutPort) {

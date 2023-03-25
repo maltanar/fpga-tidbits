@@ -362,19 +362,19 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
       val name = instanceNametoName(element.instanceName)
       val bits = element
       val w = bits.getWidth
+      println(s"$name")
 
-      if (DataMirror.directionOf(element) == ActualDirection.Input) {
-        println(s"$name")
-        assert(name.startsWith("streamInPort"))
-
+      // We only record the incoming streams. The outgoing are handled in the S4NOC wrapper
+      if (DataMirror.directionOf(element) == ActualDirection.Input &&
+        name.startsWith("streamInPort") &&
+        name.endsWith("bits_data")
+      ) {
         // We only want to store a single entry per stream port.
-        if (name.endsWith("bits")) {
           streamInMap(streamPortNameStripper(name)) = Array(allocInStream)
           allocInStream += 1
         }
       }
     }
-  }
 
   // -----------------------------------------------------------------------------------------------------------------
   //  CPP driver generation
@@ -607,7 +607,7 @@ protected:
         val fullName = instanceNametoName(element.instanceName)
         val name = streamPortNameStripper(fullName)
         val bits = element.asUInt()
-        if (DataMirror.directionOf(bits) == ActualDirection.Input && fullName.endsWith("bits")) {
+        if (DataMirror.directionOf(bits) == ActualDirection.Input && fullName.endsWith("data")) {
           readWriteFxns += makeCStreamWriteFxn(name) + "\n"
         }
       }

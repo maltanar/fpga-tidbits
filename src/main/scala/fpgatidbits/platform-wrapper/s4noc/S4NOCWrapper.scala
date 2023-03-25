@@ -95,10 +95,17 @@ class S4NOCWrapper (instFxn: PlatformWrapperParams => GenericAccelerator, target
   regFile.extIF.driveDefault()
   io.driveDefault()
 
+  val csrReadRsp = Wire(DecoupledIO(StreamEntry(UInt(p.csrDataBits.W))))
+  csrReadRsp.bits := 0.U.asTypeOf(csrReadRsp.bits)
+  csrReadRsp.valid := false.B
+
   // Connect txArbiter to the top-level TX output. If it exists. If it doesnt exist, this wire is driven
   //  from inside the state machine
   if (txArbiter.isDefined) {
     txArbiter.get.out <> io.tx
+    txArbiter.get.in(0) <> csrReadRsp
+  } else {
+    csrReadRsp <> io.tx
   }
 
 
@@ -180,17 +187,16 @@ class S4NOCWrapper (instFxn: PlatformWrapperParams => GenericAccelerator, target
     is (sReadReg2) {
       wStall := true.B
       regFile.extIF.read(regHeader.port)
-      val tx = Wire(DecoupledIO(StreamEntry(UInt(p.csrDataBits.W))))
-      tx.bits.data := regFile.extIF.readData.bits
-      tx.bits.addr := regOrigin
-      tx.valid := regFile.extIF.readData.valid
+      csrReadRsp.bits.data := regFile.extIF.readData.bits
+      csrReadRsp.bits.addr := regOrigin
+      csrReadRsp.valid := regFile.extIF.readData.valid
       if (txArbiter.isDefined) {
-        txArbiter.get <> tx
+        txArbiter.get.in(0) <> csrReadRsp
       } else {
-        io.tx <> tx
+        io.tx <> csrReadRsp
       }
       assert(regFile.extIF.readData.valid)
-      when(tx.fire) {
+      when(csrReadRsp.fire) {
         regState := sReadHeader
       }
     }
@@ -215,10 +221,11 @@ class S4NOCWrapper (instFxn: PlatformWrapperParams => GenericAccelerator, target
     }
     // Connect each streamOut port to this arbiter
     for (i <- 0 until accel.accelParams.numStreamOutPorts) {
+      val q = Queue(accel.io.streamOutPort(i))
       if (streamPortTxArbiter.isDefined) {
-        accel.io.streamOutPort(i) <> streamPortTxArbiter.get.in(i)
+        q <> streamPortTxArbiter.get.in(i)
       } else {
-        accel.io.streamOutPort(i) <> txArbiter.get.in(1)
+        q <> txArbiter.get.in(1)
       }
     }
   }
