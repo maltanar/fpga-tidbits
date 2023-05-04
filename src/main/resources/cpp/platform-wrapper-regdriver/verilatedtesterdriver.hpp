@@ -189,6 +189,7 @@ protected:
       m_inst->eval();
 #ifdef TRACE
       m_tfp->dump(m_time);
+      m_tfp->flush();
 #endif
       m_time++;
     }
