@@ -11,7 +11,7 @@ endif
 
 PLATFORM := TesterWrapper
 
-$(EMULATOR_BIN):
+$(EMULATOR_BIN): main.cpp platform-verilatedtester.cpp
 	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) $(CC_OPTIONS) --exe --build main.cpp platform-verilatedtester.cpp
 	@cp obj_dir/V$(PLATFORM) $(EMULATOR_BIN)
 
