@@ -5,7 +5,7 @@ import org.scalatest._
 
 import fpgatidbits.utils.BitExtraction
 
-class TestWrapper extends MultiIOModule {
+class TestWrapper extends Module {
   val io = IO( new Bundle {
     val word = Input(UInt(32.W))
     val high = Input(UInt(8.W))

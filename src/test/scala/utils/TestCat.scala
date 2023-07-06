@@ -4,7 +4,7 @@ import chisel3.util._
 import org.scalatest._
 import chiseltest._
 
-class CatExample extends MultiIOModule {
+class CatExample extends Module {
   val io = IO(new Bundle {
     val out = Vec(2, Output(UInt(32.W)))
     val in  = Vec(2, Vec(4, Input(UInt(8.W))))

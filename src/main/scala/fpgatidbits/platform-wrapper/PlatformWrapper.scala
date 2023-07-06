@@ -51,7 +51,7 @@ trait PlatformWrapperParams {
 // - do reads/writes to the regfile from the platform memory-mapped interface
 abstract class PlatformWrapper
 (val p: PlatformWrapperParams,
-val instFxn: PlatformWrapperParams => GenericAccelerator)  extends MultiIOModule {
+val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
   type RegFileMap = LinkedHashMap[String, Array[Int]]
 
   // a list of files that will be needed for compiling drivers for platform

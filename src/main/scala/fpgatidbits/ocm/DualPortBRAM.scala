@@ -114,7 +114,7 @@ class DualPortBRAM(addrBits: Int, dataBits: Int) extends BlackBox(Map("DATA"->da
 
 // no BlackBox (pure Chisel) version. won't synthesize to BRAM, but sometimes
 // (if the depth is small) this may be more desirable.
-class DualPortBRAM_NoBlackBox(addrBits: Int, dataBits: Int) extends MultiIOModule {
+class DualPortBRAM_NoBlackBox(addrBits: Int, dataBits: Int) extends Module {
 
   val io = IO(new Bundle {
     val a = Flipped(new DualPortBRAMExternalIO(addrBits, dataBits))

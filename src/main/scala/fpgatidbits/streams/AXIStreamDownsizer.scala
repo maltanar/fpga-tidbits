@@ -101,7 +101,7 @@ object StreamDownsizer {
   }
 }
 
-class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends MultiIOModule {
+class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
   val numShiftSteps = inWidth/outWidth
 
 

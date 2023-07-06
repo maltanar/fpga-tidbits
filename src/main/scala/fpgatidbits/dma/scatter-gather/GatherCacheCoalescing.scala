@@ -23,7 +23,7 @@ class GatherNBCache_Coalescing(
   tagWidth: Int,
   mrp: MemReqParams,
   orderRsps: Boolean = false
-) extends MultiIOModule {
+) extends Module {
   val accel_io = IO(new GatherIF(indWidth, datWidth, tagWidth, mrp))
   val mem_io = IO(new Bundle {
     // req - rsp interface for memory reads
