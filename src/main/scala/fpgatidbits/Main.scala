@@ -5,6 +5,7 @@ import fpgatidbits.PlatformWrapper._
 import fpgatidbits.examples._
 
 import java.io.{File, FileInputStream, FileOutputStream}
+import scala.language.postfixOps
 import sys.process._
 import java.nio.file.Paths
 
@@ -41,10 +42,7 @@ object TidbitsMakeUtils {
     "VerilatedTester" -> "xczu3eg-sbva484-1-i" // use Ultra96 part for tester
   )
 
-  import scala.language.postfixOps
-
   def fileCopy(from: String, to: String) = {
-
     s"cp -f $from $to" !
   }
 
@@ -52,7 +50,6 @@ object TidbitsMakeUtils {
     for (f <- fileNames)
       fileCopy(s"$fromDir/$f", s"$toDir/$f")
   }
-
 
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
     val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
@@ -69,7 +66,6 @@ object TidbitsMakeUtils {
     ) ++ fullFiles).!!
     println(s"Hardware driver library built as $fullDir/driver.a")
   }
-
 }
 
 object MainObj {
@@ -77,7 +73,6 @@ object MainObj {
   type AccelMap = Map[String, AccelInstFxn]
   type PlatformInstFxn = AccelInstFxn => PlatformWrapper
   type PlatformMap = Map[String, PlatformInstFxn]
-
 
   val accelMap: AccelMap = Map(
     "ExampleRegOps" -> {p => new ExampleRegOps(p)},
@@ -90,7 +85,8 @@ object MainObj {
     "ExampleBRAMMasked" -> {p => new ExampleBRAMMasked(p)},
     "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
     "ExampleGather" -> {p => new ExampleGather(p)},
-    "ExampleSinglePortBRAM" -> {p => new ExampleSinglePortBRAM(p)}
+    "ExampleSinglePortBRAM" -> {p => new ExampleSinglePortBRAM(p)},
+    "HelloAccel" -> {p => new HelloAccel(p)}
   )
 
   val platformMap = TidbitsMakeUtils.platformMap
