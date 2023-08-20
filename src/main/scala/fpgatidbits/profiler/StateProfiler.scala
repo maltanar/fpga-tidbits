@@ -1,6 +1,6 @@
 package fpgatidbits.profiler
 
-import Chisel._
+import chisel3._
 
 class StateProfiler(StateCount: Int) extends Module {
   val io = new Bundle {
@@ -29,13 +29,13 @@ class StateProfiler(StateCount: Int) extends Module {
           regState := sRun
           // reset all profiling registers
           for(i <- 0 until StateCount) {
-            regStateCount(i) := UInt(0)
+            regStateCount(i) := 0.U
           }
         }
       }
 
       is(sRun) {
-        regStateCount(regInState) := regStateCount(regInState) + UInt(1)
+        regStateCount(regInState) := regStateCount(regInState) + 1.U
         // finish profiling when start goes low
         when( !io.start ) {
           regState := sIdle

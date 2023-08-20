@@ -1,6 +1,6 @@
 package fpgatidbits.interconnect
 
-import Chisel._
+import chisel3._
 import fpgatidbits.axi._
 import fpgatidbits.streams._
 

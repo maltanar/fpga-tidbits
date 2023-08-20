@@ -58,8 +58,8 @@ class SystolicReg[TI <: Data, TO <: Data](val p: SystolicRegParams[TI, TO])
     val out = Decoupled(p.tOut.cloneType)
   }
   val regValid = RegInit(false.B)
-  val resetVal = 0.U(p.tOut.getWidth)
-  val regData: TO = RegInit[TO](resetVal)
+  val resetVal = 0.U(p.tOut.getWidth.W)
+  val regData: TO = RegInit[TO](resetVal.asInstanceOf[TO])
   val allowNewData = (!regValid || io.out.ready)
 
   io.out.bits := regData

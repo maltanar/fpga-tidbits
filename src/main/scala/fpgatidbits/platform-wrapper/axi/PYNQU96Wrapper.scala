@@ -1,6 +1,6 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
 
 // platform wrapper for PYNQ on Ultra-96
 
@@ -22,6 +22,5 @@ class PYNQU96Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-mpsoc-xlnk.cpp", "xlnkdriver.hpp"
   )
-  setName("PYNQU96Wrapper")
-  setModuleName("PYNQU96Wrapper")
+  suggestName("PYNQU96Wrapper")
 }

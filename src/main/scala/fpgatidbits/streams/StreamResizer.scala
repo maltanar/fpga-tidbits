@@ -1,12 +1,12 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
 import fpgatidbits.axi._
 
 class StreamResizer(inWidth: Int, outWidth: Int) extends Module {
   val io = new Bundle {
-    val in = new AXIStreamSlaveIF(UInt(width = inWidth))
-    val out = new AXIStreamMasterIF(UInt(width = outWidth))
+    val in = new AXIStreamSlaveIF(UInt(inWidth.W))
+    val out = new AXIStreamMasterIF(UInt(outWidth.W))
   }
   if(inWidth == outWidth) {
     // no need for any resizing, directly connect in/out

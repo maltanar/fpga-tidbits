@@ -1,6 +1,6 @@
 package fpgatidbits.profiler
 
-import Chisel._
+import chisel3._
 
 class OutstandingTxnProfilerOutput(w: Int) extends Bundle {
   val sum = UInt(OUTPUT, w)
@@ -30,14 +30,14 @@ class OutstandingTxnProfiler(w: Int) extends Module {
 
   when(!regActive & io.enable) {
     // reset all counters when first enabled
-    regCycles := UInt(0)
-    regTotalReq := UInt(0)
-    regTotalRsp := UInt(0)
-    regActiveTxns := UInt(0)
+    regCycles := 0.U
+    regTotalReq := 0.U
+    regTotalRsp := 0.U
+    regActiveTxns := 0.U
   } .elsewhen(regActive & io.enable) {
-    regCycles := regCycles + UInt(1)
-    when(reqTxn) { regTotalReq := regTotalReq + UInt(1) }
-    when(rspTxn) { regTotalRsp := regTotalRsp + UInt(1) }
+    regCycles := regCycles + 1.U
+    when(reqTxn) { regTotalReq := regTotalReq + 1.U }
+    when(rspTxn) { regTotalRsp := regTotalRsp + 1.U }
     regActiveTxns := regActiveTxns + (regTotalReq - regTotalRsp)
   }
 

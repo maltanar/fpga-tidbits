@@ -1,6 +1,6 @@
 package fpgatidbits.profiler
 
-import Chisel._
+import chisel3._
 
 class LevelProfilerOutput(ctrW: Int) extends Bundle {
   val sum = UInt(OUTPUT, ctrW)     // accumulated sum
@@ -22,10 +22,10 @@ class LevelProfiler(inpW: Int, ctrW: Int, name: String = "lvl") extends Module {
   val regProbeValue = Reg(next = io.probe)
 
   when(!regActive & io.enable) {
-    regSum := UInt(0)
-    regCycleCount := UInt(0)
+    regSum := 0.U
+    regCycleCount := 0.U
   } .elsewhen(regActive) {
-    regCycleCount := regCycleCount + UInt(1)
+    regCycleCount := regCycleCount + 1.U
     regSum := regSum + regProbeValue
   }
 

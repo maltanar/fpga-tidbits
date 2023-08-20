@@ -1,7 +1,4 @@
 package fpgatidbits.math
-
-package fpgatidbits.math
-
 import chisel3._
 
 // a simple counter incrementing by 1 every clock cycle when io.enable is set

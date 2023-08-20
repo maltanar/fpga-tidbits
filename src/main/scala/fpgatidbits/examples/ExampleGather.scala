@@ -33,6 +33,7 @@ class ExampleGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   // # bits per index, 32-bit integers are generally enough
   val indWidth = 32
+  val tagWidth = 32
   val datWidth = 64
   val bytesPerInd = (indWidth/8).U
   val numTxns = 32
@@ -71,7 +72,7 @@ class ExampleGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     chanBaseID = 0,
     indWidth = indWidth,
     datWidth = datWidth,
-    tagWidth = indWidth,
+    tagWidth = tagWidth,
     mrp = mrp,
     orderRsps = true,
     coalescePerLine = 8
@@ -112,7 +113,7 @@ class ExampleGather(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   // keep a copy of all gather requests in the order they arrive,
   // we'll compare them with the gather responses to determine the number of
   // out-of-order responses
-  val orderCheckQ = Module(new Queue(gather.accel_io.in.bits.cloneType, 2*numTxns)).io
+  val orderCheckQ = Module(new Queue(new GatherReq(indWidth, tagWidth),2*numTxns)).io
   orderCheckQ.enq.valid := gather.accel_io.in.valid & gather.accel_io.in.ready
   orderCheckQ.enq.bits := gather.accel_io.in.bits
   orderCheckQ.deq.ready := gather.accel_io.out.ready & gather.accel_io.out.valid

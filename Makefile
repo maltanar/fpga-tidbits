@@ -1,4 +1,3 @@
-
 SBT ?= sbt
 SBT_FLAGS ?= -Dsbt.log.noformat=true
 CC = gcc

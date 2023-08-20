@@ -1,5 +1,5 @@
 package fpgatidbits.streams
-import Chisel._
+import chisel3._
 
 // a hazard guard, useful for performing interleaved reductions
 // with high-latency operators
@@ -20,8 +20,8 @@ object OperandWithID {
 }
 
 class OperandWithID(wOp: Int, wId: Int) extends Bundle {
-  val data = UInt(width = wOp)
-  val id = UInt(width = wId)
+  val data = UInt(wOp.W)
+  val id = UInt(wId.W)
   override def clone = {
     new OperandWithID(wOp, wId).asInstanceOf[this.type]
   }
@@ -43,11 +43,11 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
   // - id values already in the queue not allowed to get in
   val dt = new OperandWithID(dataWidth, idWidth)
   val ram = Vec.fill(entries) { Reg(init = dt) }
-  val ramValid = Vec.fill(entries) { Reg(init = Bool(false)) }
+  val ramValid = Vec.fill(entries) { Reg(init = false.B) }
 
   val enq_ptr = Counter(entries)
   val deq_ptr = Counter(entries)
-  val maybe_full = Reg(init=Bool(false))
+  val maybe_full = Reg(init=false.B)
 
   val ptr_match = enq_ptr.value === deq_ptr.value
   val empty = ptr_match && !maybe_full
@@ -57,11 +57,11 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
   val do_deq = io.deq.ready && io.deq.valid
   when (do_enq) {
     ram(enq_ptr.value) := io.enq.bits
-    ramValid(enq_ptr.value) := Bool(true)
+    ramValid(enq_ptr.value) := true.B
     enq_ptr.inc()
   }
   when (do_deq) {
-    ramValid(deq_ptr.value) := Bool(false)
+    ramValid(deq_ptr.value) := false.B
     deq_ptr.inc()
   }
   when (do_enq != do_deq) {
@@ -84,7 +84,7 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
     io.count := Cat(maybe_full && ptr_match, ptr_diff)
   } else {
     io.count := Mux(ptr_match,
-                  Mux(maybe_full, UInt(entries), UInt(0)),
+                  Mux(maybe_full, UInt(entries), 0.U),
                   Mux(deq_ptr.value > enq_ptr.value,
                       UInt(entries) + ptr_diff, ptr_diff)
                     )
@@ -117,7 +117,7 @@ class HazardGuard(dataWidth: Int, idWidth: Int, hazardStages: Int) extends Modul
   io.streamOut.bits := io.streamIn.bits
 
   when(downstreamReady) {
-    stages(0) := Mux(hazardDetected, UInt(0), Cat(io.streamIn.bits.id, io.streamIn.valid))
+    stages(0) := Mux(hazardDetected, 0.U, Cat(io.streamIn.bits.id, io.streamIn.valid))
     for(i <- 1 until hazardStages) {
       stages(i) := stages(i-1)
     }
@@ -127,7 +127,7 @@ class HazardGuard(dataWidth: Int, idWidth: Int, hazardStages: Int) extends Modul
   val regHazardStalls = Reg(init = UInt(0, 32))
   io.hazardStalls := regHazardStalls
   when (downstreamReady & upstreamValid & hazardDetected) {
-    regHazardStalls := regHazardStalls + UInt(1)
+    regHazardStalls := regHazardStalls + 1.U
   }
 
 }

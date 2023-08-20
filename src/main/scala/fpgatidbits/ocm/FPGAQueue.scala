@@ -17,51 +17,7 @@ class Q_srl(depthElems: Int, widthBits: Int) extends BlackBox(Map( "depth" -> de
       val count = Output(UInt(log2Ceil(depthElems+1).W))
       val clock = Input(Clock())
       val reset = Input(Reset())
-
-      /*
-      val iValid = Input(Bool()).suggestName("i_v")
-      val iData = Input(UInt(widthBits.W)).suggestName("i_d")
-      val iBackPressure = Output(Bool()).suggestName("i_b")
-      val oValid = Output(Bool()).suggestName("o_v")
-      val oData = Output(UInt(widthBits.W)).suggestName("o_d")
-      val oBackPressure = Input(Bool()).suggestName("o_b")
-      val count = Output(UInt(log2Ceil(depthElems+1).W)).suggestName("count")
-      val clock = Input(Clock())
-      val reset = Input(Reset())
-
-      iValid.suggestName("i_v")
-      iData.suggestName("i_d")
-      iBackPressure.suggestName("i_b")
-      oValid.suggestName("o_v")
-      oData.suggestName("o_d")
-      oBackPressure.suggestName("o_b")
-      count.suggestName("count")
-    */
-
     })
-
-
-
-  // the clock/reset does not get added to the BlackBox interface by default
-  // add clock and reset, rename as needed
-  //addClock(Driver.implicitClock)
-  //renameClock(Driver.implicitClock, "clock")
-  //addResetPin(Driver.implicitReset)
-
-  // TODO add a proper simulation model -- for now we just instantiate a
-  // regular Chisel Queue as mock SRL queue "behavioral model"
-
-  /*
-  val mockQ = Module(new Queue(UInt(), depthElems)).io
-  io.count := mockQ.count
-  mockQ.enq.valid := io.iValid
-  mockQ.enq.bits := io.iData
-  io.oData := mockQ.deq.bits
-  io.oValid := mockQ.deq.valid
-  // ready signals connected to backpressure and vice versa
-  io.iBackPressure := !mockQ.enq.ready
-  mockQ.deq.ready := !io.oBackPressure
-*/
 }
 
 
@@ -182,10 +138,8 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
 object FPGAQueue
 {
   def apply[T <: Data](enq: DecoupledIO[T], entries: Int = 2): DecoupledIO[T]  = {
-    val q = Module(new FPGAQueue(enq.bits.cloneType, entries))
-    q.io.enq.valid := enq.valid // not using <> so that override is allowed
-    q.io.enq.bits := enq.bits
-    enq.ready := q.io.enq.ready
+    val q = Module(new FPGAQueue(enq.bits, entries))
+    q.io.enq <> enq
     q.io.deq
   }
 }

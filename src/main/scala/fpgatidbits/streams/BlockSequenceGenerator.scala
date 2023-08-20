@@ -1,6 +1,6 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
 
 // Generates a "blocked" sequence from a sequence descriptor
 // example: descriptor start = 100 count = 10 blockSize = 3
@@ -9,9 +9,9 @@ import Chisel._
 // count: 3     3     3     1
 
 class BlockSequenceDescriptor(w: Int) extends Bundle {
-  val start = UInt(width = w)     // starting element
-  val count = UInt(width = w)     // total elements
-  val blockSize = UInt(width = w) // preferred block size
+  val start = UInt(w.W)     // starting element
+  val count = UInt(w.W)     // total elements
+  val blockSize = UInt(w.W) // preferred block size
 
   override def clone = {
     new BlockSequenceDescriptor(w).asInstanceOf[this.type]
@@ -19,8 +19,8 @@ class BlockSequenceDescriptor(w: Int) extends Bundle {
 }
 
 class BlockSequenceOutput(w: Int) extends Bundle {
-  val start = UInt(width = w)
-  val count = UInt(width = w)
+  val count = UInt(w.W)
+  val start = UInt(w.W)
 
   override def clone = {
     new BlockSequenceOutput(w).asInstanceOf[this.type]
@@ -37,17 +37,17 @@ class BlockSequenceGenerator(w: Int) extends Module {
   val regBlockSize = Reg(init = UInt(0, w))
   val regElemsLeft = Reg(init = UInt(0, w))
 
-  io.cmd.ready := Bool(false)
-  io.out.valid := Bool(false)
-  io.out.bits.count := UInt(0)
+  io.cmd.ready := false.B
+  io.out.valid := false.B
+  io.out.bits.count := 0.U
   io.out.bits.start := regPtr
 
   val sIdle :: sRun :: sLast :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sIdle))
+  val regState = RegInit(sIdle)
 
   switch(regState) {
     is(sIdle) {
-      io.cmd.ready := Bool(true)
+      io.cmd.ready := true.B
       when(io.cmd.valid) {
         regPtr := io.cmd.bits.start
         regBlockSize := io.cmd.bits.blockSize
@@ -58,7 +58,7 @@ class BlockSequenceGenerator(w: Int) extends Module {
 
     is(sRun) {
       when(regElemsLeft > regBlockSize) {
-        io.out.valid := Bool(true)
+        io.out.valid := true.B
         io.out.bits.count := regBlockSize
         when(io.out.ready) {
           regElemsLeft := regElemsLeft - regBlockSize
@@ -70,7 +70,7 @@ class BlockSequenceGenerator(w: Int) extends Module {
     }
 
     is(sLast) {
-      io.out.valid := Bool(true)
+      io.out.valid := true.B
       io.out.bits.count := regElemsLeft
       when(io.out.ready) {
         regState := sIdle

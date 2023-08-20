@@ -1,6 +1,6 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
 
 // throttle the requests passing from a producer to a consumer, controlled
 // by an explicit signal

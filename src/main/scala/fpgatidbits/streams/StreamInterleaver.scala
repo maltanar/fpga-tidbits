@@ -1,6 +1,6 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
 
 // interleaves <numSources> input streams onto a single output stream,
 // currently just a wrapper for a round-robin arbiter, may eventually

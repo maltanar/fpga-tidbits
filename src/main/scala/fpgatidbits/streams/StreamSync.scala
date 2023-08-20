@@ -1,6 +1,6 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
 import fpgatidbits.ocm._
 
 // make two streams A and B go in lockstep, i.e. A is only popped when B is

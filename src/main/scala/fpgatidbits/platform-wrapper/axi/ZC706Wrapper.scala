@@ -1,6 +1,6 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
 
 // platform wrapper for the ZC706, not using the dedicated PL DDR
 
@@ -23,6 +23,5 @@ class ZC706Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zc706-linux.cpp", "linuxphysregdriver.hpp", "axiregdriver.hpp"
   )
-  setName("ZC706Wrapper")
-  setModuleName("ZC706Wrapper")
+  suggestName("ZC706Wrapper")
 }

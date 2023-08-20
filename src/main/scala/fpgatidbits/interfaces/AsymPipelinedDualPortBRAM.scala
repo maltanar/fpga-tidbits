@@ -1,6 +1,6 @@
 package fpgatidbits.ocm
 
-import Chisel._
+import chisel3._
 
 // Dual-port pipelined BRAM with asymmetric r/w widths
 class AsymPipelinedDualPortBRAM(

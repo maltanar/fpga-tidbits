@@ -30,7 +30,8 @@ class AXIStreamSlaveIF[T <: Data](gen: T) extends DecoupledIO(gen) {
 */
 
 
-class AXIStreamIF[T <: Data](private val gen: T) extends Bundle {
+// FIXME: Create an AXIStreamSlave and Master and make them
+class AXIStreamSlaveIF[T <: Data](private val gen: T) extends Bundle {
   val TREADY = Input(Bool())
   val TVALID = Output(Bool())
   val TDATA = Output(gen)

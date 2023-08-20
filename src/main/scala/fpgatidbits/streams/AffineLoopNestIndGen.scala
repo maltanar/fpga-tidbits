@@ -1,6 +1,8 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
+
 import fpgatidbits.math.Counter
 
 // bundle that describes the iteration space, or a single point
@@ -9,12 +11,8 @@ import fpgatidbits.math.Counter
 // w: bitwidth of iteration count of a level
 class AffineLoopNestDescriptor(n: Int, w: Int) extends Bundle {
   // element 0 is the innermost loop
-  val inds = Vec.fill(n) { UInt(width = w) }
-
-  override def cloneType: this.type =
-    new AffineLoopNestDescriptor(n, w).asInstanceOf[this.type]
+  val inds = Vec(n, UInt(w.W))
 }
-
 
 // given the number of iterations for a nested affine loop,
 // generate the iteration space
@@ -22,18 +20,17 @@ class AffineLoopNestDescriptor(n: Int, w: Int) extends Bundle {
 // w: bitwidth of iteration count of a level
 class AffineLoopNestIndGen(val n: Int, val w: Int) extends Module {
   val io = new Bundle {
-    val in = Decoupled(new AffineLoopNestDescriptor(n, w)).flip
+    val in = Flipped(Decoupled(new AffineLoopNestDescriptor(n, w)))
     val out = Decoupled(new AffineLoopNestDescriptor(n, w))
   }
-  val doStep = Bool()
-  doStep := Bool(false)
+  val doStep = WireDefault(false.B)
   // register to keep current descriptor with bounds
-  val regBounds = Reg(outType = io.in.bits)
+  val regBounds = RegInit(io.in.bits)
   // instantiate counters, one for each loop level
-  val cntrs = Vec.fill(n) { Module(new Counter(w)).io }
+  val cntrs = VecInit(Seq.fill(n)(Module(new Counter(w).io)))
   // default values for signals
-  io.in.ready := Bool(false)
-  io.out.valid := Bool(false)
+  io.in.ready := false.B
+  io.out.valid := false.B
   // wire up counters
   for(i <- 0 until n) {
     io.out.bits.inds(i) := cntrs(i).current
@@ -45,11 +42,11 @@ class AffineLoopNestIndGen(val n: Int, val w: Int) extends Module {
     }
   }
   // finite state machine for decoupled logic
-  val sIdle :: sWaitCounterInit :: sRun :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sIdle))
+  val sIdle :: sWaitCounterInit :: sRun :: Nil = Enum(3)
+  val regState = RegInit(sIdle)
   switch(regState) {
     is(sIdle) {
-      io.in.ready := Bool(true)
+      io.in.ready := true.B
       when(io.in.valid) {
         regBounds := io.in.bits
         regState := sWaitCounterInit
@@ -61,10 +58,10 @@ class AffineLoopNestIndGen(val n: Int, val w: Int) extends Module {
       // the sWaitCounterInit state
     }
     is(sRun) {
-      io.out.valid := Bool(true)
+      io.out.valid := true.B
       when(io.out.ready) {
         // note: we send doStep to make all ctrs go back to 0 also at the end
-        doStep := Bool(true)
+        doStep := true.B
         // finished when the outermost loop level is finished
         when(cntrs(n-1).full && cntrs(n-1).enable) {
           regState := sIdle

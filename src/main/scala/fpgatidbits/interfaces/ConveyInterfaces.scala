@@ -1,6 +1,6 @@
 package ConveyInterfaces
 
-import Chisel._
+import chisel3._
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
 
@@ -12,7 +12,7 @@ class DispatchSlaveIF() extends Bundle {
   // instruction opcode
   // note that this interface is defined as stall-valid instead of ready-valid
   // by Convey, so the ready signal should be inverted from stall
-  val instr       = Decoupled(UInt(width = 5)).flip
+  val instr       = Decoupled(UInt(5.W)).flip
   // register file access
   val aeg         = new RegFileSlaveIF(18, 64)
   // output for signalling instruction exceptions
@@ -23,12 +23,12 @@ class DispatchSlaveIF() extends Bundle {
 
 // command (request) bundle for memory read/writes
 class ConveyMemRequest(rtnCtlBits: Int, addrBits: Int, dataBits: Int) extends Bundle {
-  val rtnCtl      = UInt(width = rtnCtlBits)
-  val writeData   = UInt(width = dataBits)
-  val addr        = UInt(width = addrBits)
-  val size        = UInt(width = 2)
-  val cmd         = UInt(width = 3)
-  val scmd        = UInt(width = 4)
+  val rtnCtl      = UInt(rtnCtlBits.W)
+  val writeData   = UInt(dataBits.W)
+  val addr        = UInt(addrBits.W)
+  val size        = UInt(2.W)
+  val cmd         = UInt(3.W)
+  val scmd        = UInt(4.W)
 
   override def clone = {
     new ConveyMemRequest(rtnCtlBits, addrBits, dataBits).asInstanceOf[this.type] }
@@ -36,10 +36,10 @@ class ConveyMemRequest(rtnCtlBits: Int, addrBits: Int, dataBits: Int) extends Bu
 
 // response bundle for return read data or write completes (?)
 class ConveyMemResponse(rtnCtlBits: Int, dataBits: Int) extends Bundle {
-  val rtnCtl      = UInt(width = rtnCtlBits)
-  val readData    = UInt(width = dataBits)
-  val cmd         = UInt(width = 3)
-  val scmd        = UInt(width = 4)
+  val readData    = UInt(dataBits.W)
+  val rtnCtl      = UInt(rtnCtlBits.W)
+  val cmd         = UInt(3.W)
+  val scmd        = UInt(4.W)
 
   override def clone = {
     new ConveyMemResponse(rtnCtlBits, dataBits).asInstanceOf[this.type] }
@@ -119,41 +119,41 @@ class ConveyPersonalityVerilogIF(numMemPorts: Int, rtnctl: Int) extends Bundle {
     new ConveyPersonalityVerilogIF(numMemPorts, rtnctl).asInstanceOf[this.type] }
 
   // rename signals to remain compatible with Verilog template
-  def renameSignals() {
-    dispInstValid.setName("disp_inst_vld")
-    dispInstData.setName("disp_inst")
-    dispRegID.setName("disp_aeg_idx")
-    dispRegRead.setName("disp_aeg_rd")
-    dispRegWrite.setName("disp_aeg_wr")
-    dispRegWrData.setName("disp_aeg_wr_data")
-    dispAegCnt.setName("disp_aeg_cnt")
-    dispException.setName("disp_exception")
-    dispIdle.setName("disp_idle")
-    dispRtnValid.setName("disp_rtn_data_vld")
-    dispRtnData.setName("disp_rtn_data")
-    dispStall.setName("disp_stall")
-    mcReqValid.setName("mc_rq_vld")
-    mcReqRtnCtl.setName("mc_rq_rtnctl")
-    mcReqData.setName("mc_rq_data")
-    mcReqAddr.setName("mc_rq_vadr")
-    mcReqSize.setName("mc_rq_size")
-    mcReqCmd.setName("mc_rq_cmd")
-    mcReqSCmd.setName("mc_rq_scmd")
-    mcReqStall.setName("mc_rq_stall")
-    mcResValid.setName("mc_rs_vld")
-    mcResCmd.setName("mc_rs_cmd")
-    mcResSCmd.setName("mc_rs_scmd")
-    mcResData.setName("mc_rs_data")
-    mcResRtnCtl.setName("mc_rs_rtnctl")
-    mcResStall.setName("mc_rs_stall")
-    mcReqFlush.setName("mc_rq_flush")
-    mcResFlushOK.setName("mc_rs_flush_cmplt")
-    csrWrValid.setName("csr_wr_vld")
-    csrRdValid.setName("csr_rd_vld")
-    csrAddr.setName("csr_address")
-    csrWrData.setName("csr_wr_data")
-    csrReadAck.setName("csr_rd_ack")
-    csrReadData.setName("csr_rd_data")
-    aeid.setName("i_aeid")
+  def renameSignals(): Unit =  {
+    dispInstValid.suggestName("disp_inst_vld")
+    dispInstData.suggestName("disp_inst")
+    dispRegID.suggestName("disp_aeg_idx")
+    dispRegRead.suggestName("disp_aeg_rd")
+    dispRegWrite.suggestName("disp_aeg_wr")
+    dispRegWrData.suggestName("disp_aeg_wr_data")
+    dispAegCnt.suggestName("disp_aeg_cnt")
+    dispException.suggestName("disp_exception")
+    dispIdle.suggestName("disp_idle")
+    dispRtnValid.suggestName("disp_rtn_data_vld")
+    dispRtnData.suggestName("disp_rtn_data")
+    dispStall.suggestName("disp_stall")
+    mcReqValid.suggestName("mc_rq_vld")
+    mcReqRtnCtl.suggestName("mc_rq_rtnctl")
+    mcReqData.suggestName("mc_rq_data")
+    mcReqAddr.suggestName("mc_rq_vadr")
+    mcReqSize.suggestName("mc_rq_size")
+    mcReqCmd.suggestName("mc_rq_cmd")
+    mcReqSCmd.suggestName("mc_rq_scmd")
+    mcReqStall.suggestName("mc_rq_stall")
+    mcResValid.suggestName("mc_rs_vld")
+    mcResCmd.suggestName("mc_rs_cmd")
+    mcResSCmd.suggestName("mc_rs_scmd")
+    mcResData.suggestName("mc_rs_data")
+    mcResRtnCtl.suggestName("mc_rs_rtnctl")
+    mcResStall.suggestName("mc_rs_stall")
+    mcReqFlush.suggestName("mc_rq_flush")
+    mcResFlushOK.suggestName("mc_rs_flush_cmplt")
+    csrWrValid.suggestName("csr_wr_vld")
+    csrRdValid.suggestName("csr_rd_vld")
+    csrAddr.suggestName("csr_address")
+    csrWrData.suggestName("csr_wr_data")
+    csrReadAck.suggestName("csr_rd_ack")
+    csrReadData.suggestName("csr_rd_data")
+    aeid.suggestName("i_aeid")
   }
 }
