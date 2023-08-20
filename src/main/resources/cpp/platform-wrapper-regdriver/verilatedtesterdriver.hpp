@@ -7,6 +7,8 @@ using namespace std;
 #include "wrapperregdriver.h"
 #include "VTesterWrapper.h"
 
+double sc_time_stamp() { return 0; }
+
 #ifdef DEBUG
 #define __TESTERDRIVER_DEBUG_PRINT(x) (cout << x << endl)
 #define __TESTERDRIVER_DEBUG(x) (x)
@@ -193,7 +195,11 @@ protected:
       m_inst->clock = 0;
       m_inst->eval();
 #ifdef TRACE
-      if (m_tracing) m_tfp->dump(m_time);
+      if (m_tracing) {
+        m_tfp->dump(m_time);
+        m_tfp->flush(); // FIXME: Flushing each CC is probably inefficient, but this solved situations where some of the
+                        //  trace was not written to file before termination.
+      }
 #endif
       m_time++;
     }
