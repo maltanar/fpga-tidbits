@@ -1,15 +1,16 @@
 package fpgatidbits.streams
 
 import chisel3._
+import chisel3.util._
 
 // throttle the requests passing from a producer to a consumer, controlled
 // by an explicit signal
 
 class StreamThrottle[T <: Data](gen: T) extends Module {
   val io = new Bundle {
-    val in = Decoupled(gen).flip    // input stream
+    val in = Flipped(Decoupled(gen))   // input stream
     val out = Decoupled(gen)        // output stream
-    val throttle = Bool(INPUT)      // stop input to output when this is high
+    val throttle = Input(Bool())      // stop input to output when this is high
   }
   io.out.bits := io.in.bits
   io.out.valid := io.in.valid & !io.throttle

@@ -1,6 +1,7 @@
 package ConveyInterfaces
 
 import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
 
@@ -12,11 +13,11 @@ class DispatchSlaveIF() extends Bundle {
   // instruction opcode
   // note that this interface is defined as stall-valid instead of ready-valid
   // by Convey, so the ready signal should be inverted from stall
-  val instr       = Decoupled(UInt(5.W)).flip
+  val instr       = Flipped(Decoupled(UInt(5.W)))
   // register file access
   val aeg         = new RegFileSlaveIF(18, 64)
   // output for signalling instruction exceptions
-  val exception   = UInt(OUTPUT, width = 16)
+  val exception   = Output(UInt(16.W))
 
   override def clone = { new DispatchSlaveIF().asInstanceOf[this.type] }
 }
@@ -50,9 +51,9 @@ class ConveyMemMasterIF(rtnCtlBits: Int) extends Bundle {
   // note that req and rsp are defined by Convey as stall/valid interfaces
   // (instead of ready/valid as defined here) -- needs adapter
   val req         = Decoupled(new ConveyMemRequest(rtnCtlBits, 48, 64))
-  val rsp         = Decoupled(new ConveyMemResponse(rtnCtlBits, 64)).flip
-  val flushReq    = Bool(OUTPUT)
-  val flushOK     = Bool(INPUT)
+  val rsp         = Flipped(Decoupled(new ConveyMemResponse(rtnCtlBits, 64)))
+  val flushReq    = Output(Bool())
+  val flushOK     = Input(Bool())
 
   override def clone = {
     new ConveyMemMasterIF(rtnCtlBits).asInstanceOf[this.type] }
@@ -62,7 +63,7 @@ class ConveyMemMasterIF(rtnCtlBits: Int) extends Bundle {
 class ConveyPersonalityIF(numMemPorts: Int, rtnCtlBits: Int) extends Bundle {
   val disp = new DispatchSlaveIF()
   val csr  = new RegFileSlaveIF(16, 64)
-  val mem  = Vec.fill(numMemPorts) { new ConveyMemMasterIF(rtnCtlBits) }
+  val mem  = VecInit(Seq.fill(numMemPorts)(new ConveyMemMasterIF(rtnCtlBits)))
 
   override def clone = {
     new ConveyPersonalityIF(numMemPorts, rtnCtlBits).asInstanceOf[this.type] }
@@ -73,50 +74,47 @@ class ConveyPersonalityIF(numMemPorts: Int, rtnCtlBits: Int) extends Bundle {
 // correct number of memory ports and RTNCTL_WIDTH in the cae_pers.v)
 class ConveyPersonalityVerilogIF(numMemPorts: Int, rtnctl: Int) extends Bundle {
   // dispatch interface
-  val dispInstValid = Bool(INPUT)
-  val dispInstData  = UInt(INPUT, width = 5)
-  val dispRegID     = UInt(INPUT, width = 18)
-  val dispRegRead   = Bool(INPUT)
-  val dispRegWrite  = Bool(INPUT)
-  val dispRegWrData = UInt(INPUT, width = 64)
-  val dispAegCnt    = UInt(OUTPUT, width = 18)
-  val dispException = UInt(OUTPUT, width = 16)
-  val dispIdle      = Bool(OUTPUT)
-  val dispRtnValid  = Bool(OUTPUT)
-  val dispRtnData   = UInt(OUTPUT, width = 64)
-  val dispStall     = Bool(OUTPUT)
+  val dispInstValid = Input(Bool())
+  val dispInstData  = Input(UInt(5.W))
+  val dispRegID     = Input(UInt(18.W))
+  val dispRegRead   = Input(Bool())
+  val dispRegWrite  = Input(Bool())
+  val dispRegWrData = Input(UInt(64.W))
+  val dispAegCnt    = Output(UInt(18.W))
+  val dispException = Output(UInt(16.W))
+  val dispIdle      = Output(Bool())
+  val dispRtnValid  = Output(Bool())
+  val dispRtnData   = Output(UInt(64.W))
+  val dispStall     = Output(Bool())
   // memory controller interface
   // request
-  val mcReqValid    = UInt(OUTPUT, width = numMemPorts)
-  val mcReqRtnCtl   = UInt(OUTPUT, width = rtnctl*numMemPorts)
-  val mcReqData     = UInt(OUTPUT, width = 64*numMemPorts)
-  val mcReqAddr     = UInt(OUTPUT, width = 48*numMemPorts)
-  val mcReqSize     = UInt(OUTPUT, width = 2*numMemPorts)
-  val mcReqCmd      = UInt(OUTPUT, width = 3*numMemPorts)
-  val mcReqSCmd     = UInt(OUTPUT, width = 4*numMemPorts)
-  val mcReqStall    = UInt(INPUT, width = numMemPorts)
+  val mcReqValid    = Output(UInt(numMemPorts.W))
+  val mcReqRtnCtl   = Output(UInt((rtnctl*numMemPorts).W))
+  val mcReqData     = Output(UInt((64*numMemPorts).W))
+  val mcReqAddr     = Output(UInt((48*numMemPorts).W))
+  val mcReqSize     = Output(UInt((2*numMemPorts).W))
+  val mcReqCmd      = Output(UInt((3*numMemPorts).W))
+  val mcReqSCmd     = Output(UInt((4*numMemPorts).W))
+  val mcReqStall    = Input(UInt(numMemPorts.W))
   // response
-  val mcResValid    = UInt(INPUT, width = numMemPorts)
-  val mcResCmd      = UInt(INPUT, width = 3*numMemPorts)
-  val mcResSCmd     = UInt(INPUT, width = 4*numMemPorts)
-  val mcResData     = UInt(INPUT, width = 64*numMemPorts)
-  val mcResRtnCtl   = UInt(INPUT, width = rtnctl*numMemPorts)
-  val mcResStall    = UInt(OUTPUT, width = numMemPorts)
+  val mcResValid    = Input(UInt(numMemPorts.W))
+  val mcResCmd      = Input(UInt((3*numMemPorts).W))
+  val mcResSCmd     = Input(UInt((4*numMemPorts).W))
+  val mcResData     = Input(UInt((64*numMemPorts).W))
+  val mcResRtnCtl   = Input(UInt((rtnctl*numMemPorts).W))
+  val mcResStall    = Output(UInt(numMemPorts.W))
   // flush
-  val mcReqFlush    = UInt(OUTPUT, width = numMemPorts)
-  val mcResFlushOK  = UInt(INPUT, width = numMemPorts)
+  val mcReqFlush    = Output(UInt(numMemPorts.W))
+  val mcResFlushOK  = Input(UInt(numMemPorts.W))
   // control-status register interface
-  val csrWrValid      = Bool(INPUT)
-  val csrRdValid      = Bool(INPUT)
-  val csrAddr         = UInt(INPUT, 16)
-  val csrWrData       = UInt(INPUT, 64)
-  val csrReadAck      = Bool(OUTPUT)
-  val csrReadData     = UInt(OUTPUT, 64)
+  val csrWrValid      = Input(Bool())
+  val csrRdValid      = Input(Bool())
+  val csrAddr         = Input(UInt(16.W))
+  val csrWrData       = Input(UInt(64.W))
+  val csrReadAck      = Output(Bool())
+  val csrReadData     = Output(UInt(64.W))
   // misc -- IDs for each AE
-  val aeid            = UInt(INPUT, 4)
-
-  override def clone = {
-    new ConveyPersonalityVerilogIF(numMemPorts, rtnctl).asInstanceOf[this.type] }
+  val aeid            = Input(UInt(4.W))
 
   // rename signals to remain compatible with Verilog template
   def renameSignals(): Unit =  {

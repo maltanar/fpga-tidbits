@@ -1,13 +1,14 @@
 package fpgatidbits.streams
 import chisel3._
+import chisel3.util._
 
 // a content-searchable queue
 // mostly a straightforward copy from ChiselUtils Queue; with modifications
 // to permit making the content searchable
 
 class SearchableQueueIO[T <: Data](gen: T, n: Int) extends QueueIO(gen, n) {
-  val searchVal = gen.cloneType.asInput
-  val foundVal = Bool(OUTPUT)
+  val searchVal = Input(gen)
+  val foundVal = Output(Bool())
 
   override def cloneType: this.type = new SearchableQueueIO(gen, n).asInstanceOf[this.type]
 }
@@ -19,12 +20,12 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
   // - simplified to pipe = false flow = false
   // - vector of registers instead of Mem, to expose all outputs
 
-  val ram = Vec.fill(entries) { Reg(init = UInt(0, gen.getWidth())) }
-  val ramValid = Vec.fill(entries) { Reg(init = false.B) }
+  val ram = RegInit(VecInit(Seq.fill(entries)(0.U(gen.getWidth))))
+  val ramValid = RegInit(VecInit(Seq.fill(entries)(false.B)))
 
   val enq_ptr = Counter(entries)
   val deq_ptr = Counter(entries)
-  val maybe_full = Reg(init=false.B)
+  val maybe_full = RegInit(false.B)
 
   val ptr_match = enq_ptr.value === deq_ptr.value
   val empty = ptr_match && !maybe_full
@@ -41,13 +42,14 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
     ramValid(deq_ptr.value) := false.B
     deq_ptr.inc()
   }
-  when (do_enq != do_deq) {
+  when (do_enq =/= do_deq) {
     maybe_full := do_enq
   }
 
   // <content search logic>
   val newData = io.searchVal
-  val hits = Vec.tabulate(entries) {i: Int => ram(i) === newData & ramValid(i)}
+//  val hits = VecInit(Seq.tabulate(entries)(i => ram(i) === newData && ramValid(i)))
+  val hits = ram zip ramValid foreach {case (r, v) => (r === newData) && v}
   io.foundVal := hits.exists({x:Bool => x})
   // </content search logic>
 

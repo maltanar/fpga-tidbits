@@ -1,23 +1,25 @@
 package fpgatidbits.profiler
 
 import chisel3._
+import chisel3.util._
 
 class StateProfiler(StateCount: Int) extends Module {
   val io = new Bundle {
-    val start = Bool(INPUT)
-    val probe = UInt(INPUT, 32)
-    val count = UInt(OUTPUT, 32)
-    val sel = UInt(INPUT, log2Up(StateCount))
+    val start = Input(Bool())
+    val probe = Input(UInt(32.W))
+    val count = Output(UInt(32.W))
+    val sel = Input(UInt(log2Ceil(StateCount).W))
   }
 
   // create profiling registers for keeping state counts
-  val regStateCount = Vec.fill(StateCount) { Reg(init = UInt(0, 32)) }
+  val regStateCount = RegInit(VecInit(Seq.fill(StateCount)(0.U(32.W))))
   // register input state before treatment
-  val regInState = Reg(init = UInt(0, 32), next = io.probe)
+  val regInState = RegInit(0.U(32.W))
+  regInState := io.probe
 
   // finite state machine for control
-  val sIdle :: sRun :: sFinished :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sIdle))
+  val sIdle :: sRun :: sFinished :: Nil = Enum(3)
+  val regState = RegInit(sIdle)
 
   // default outputs
   io.count := regStateCount(io.sel)

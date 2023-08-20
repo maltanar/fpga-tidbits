@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
 import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm._
 
 // make two streams A and B go in lockstep, i.e. A is only popped when B is
@@ -34,8 +35,8 @@ class StreamSync[TA <: Data, TB <: Data](
   queueOutput: Boolean = false  // whether the outputs should be queued
 ) extends Module {
   val io = new Bundle {
-    val inA = Decoupled(genA).flip
-    val inB = Decoupled(genB).flip
+    val inA = Flipped(Decoupled(genA))
+    val inB = Flipped(Decoupled(genB))
     val outA = Decoupled(genA)
     val outB = Decoupled(genB)
   }

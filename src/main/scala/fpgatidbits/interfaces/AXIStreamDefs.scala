@@ -1,5 +1,6 @@
 package fpgatidbits.axi
 
+import chisel3.SpecifiedDirection.Flip
 import chisel3._
 import chisel3.util._
 
@@ -31,8 +32,16 @@ class AXIStreamSlaveIF[T <: Data](gen: T) extends DecoupledIO(gen) {
 
 
 // FIXME: Create an AXIStreamSlave and Master and make them
-class AXIStreamSlaveIF[T <: Data](private val gen: T) extends Bundle {
-  val TREADY = Input(Bool())
-  val TVALID = Output(Bool())
-  val TDATA = Output(gen)
+class AXIStreamMasterIF[T <: Data](private val gen: T) extends DecoupledIO(gen){
+  ready.suggestName("TREADY")
+  valid.suggestName("TVALID")
+  bits.suggestName("TDATA")
+}
+
+class AXIStreamSlaveIF[T <: Data](private val gen: T) extends DecoupledIO(gen){
+  SpecifiedDirection.flip(Flip)
+
+  ready.suggestName("TREADY")
+  valid.suggestName("TVALID")
+  bits.suggestName("TDATA")
 }

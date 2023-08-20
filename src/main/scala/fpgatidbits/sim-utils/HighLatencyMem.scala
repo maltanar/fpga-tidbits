@@ -30,7 +30,7 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
   val io = new Bundle {
     // dedicated port for testbench reads/writes
     val memAddr = UInt(INPUT, p.addrWidth)
-    val memWriteEn = Bool(INPUT)
+    val memWriteEn = Input(Bool())
     val memWriteData = UInt(INPUT, p.dataWidth)
     val memReadData = UInt(OUTPUT, p.dataWidth)
     // ports for accelerator accesss

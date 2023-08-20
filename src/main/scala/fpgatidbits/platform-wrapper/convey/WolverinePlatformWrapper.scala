@@ -1,6 +1,7 @@
 package fpgatidbits.PlatformWrapper
 
 import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
 import fpgatidbits.ocm._
@@ -60,7 +61,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   // for now, our Convey wrapper accepts a single instructions, then never
   // returns (just keeps idle low and stall high)
   // TODO add a platform-level register to control this
-  val regBusy = Reg(init = false.B)
+  val regBusy = RegInit(false.B)
   when (!regBusy) {regBusy := io.dispInstValid}
   io.dispIdle := !regBusy
   io.dispStall := regBusy
@@ -265,25 +266,25 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   io.writeData.ready := false.B
 
   // TODO only 64byte bursts for now
-  val isBurst = (io.genericReqIn.bits.numBytes === UInt(64))
+  val isBurst = (io.genericReqIn.bits.numBytes === 64.U)
   val isWriteBurst = io.genericReqIn.bits.isWrite & isBurst
 
   // regular write must have both request and data ready
   val isWriteReadyToGo = io.genericReqIn.valid & io.writeData.valid
   val isWriteRegular = io.genericReqIn.bits.isWrite & !isBurst
 
-  val sRegular :: sWriteBurst :: Nil = Enum(UInt(), 2)
-  val regState = Reg(init = UInt(sRegular))
+  val sRegular :: sWriteBurst :: Nil = Enum(2)
+  val regState = RegInit(sRegular)
   // register to keep write burst state
-  val regWriteBurst = Reg(init = GenericMemoryRequest(p))
-  val regWriteBeatsLeft = Reg(init = UInt(0, width = 32))
+  val regWriteBurst = RegInit(GenericMemoryRequest(p))
+  val regWriteBeatsLeft = RegInit(0.U(32.W))
 
   switch(regState) {
     is(sRegular) {
       // "regular" state for the adapter, burst reads and non-burst writes
       when(isWriteRegular & isWriteReadyToGo) {
         // non-burst write request
-        io.conveyReqOut.bits.cmd := UInt(2)
+        io.conveyReqOut.bits.cmd := 2.U
         // both request and associated channel data are valid
         io.conveyReqOut.valid := true.B
         // both request and associated channel data must be ready
@@ -291,7 +292,7 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
         io.writeData.ready := io.conveyReqOut.ready
       } .elsewhen (io.genericReqIn.valid && !io.genericReqIn.bits.isWrite) {
         // read request, burst or regular
-        io.conveyReqOut.bits.cmd := Mux(isBurst, UInt(7), 1.U)
+        io.conveyReqOut.bits.cmd := Mux(isBurst, 7.U, 1.U)
         io.conveyReqOut.valid := true.B
         io.genericReqIn.ready := io.conveyReqOut.ready
       } .elsewhen(io.genericReqIn.valid & isWriteBurst) {
@@ -301,12 +302,12 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
         io.genericReqIn.ready := true.B
         // register the write request and # of beats needed
         regWriteBurst := io.genericReqIn.bits
-        regWriteBeatsLeft := io.genericReqIn.bits.numBytes / UInt(8)
+        regWriteBeatsLeft := io.genericReqIn.bits.numBytes / 8.U
       }
     }
     is(sWriteBurst) {
       // use registers to generate the next request of the write burst
-      io.conveyReqOut.bits.cmd := UInt(6)
+      io.conveyReqOut.bits.cmd := 6.U
       io.conveyReqOut.bits.rtnCtl := regWriteBurst.channelID
       io.conveyReqOut.bits.addr := regWriteBurst.addr
 
@@ -316,7 +317,7 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
       when(io.conveyReqOut.valid & io.conveyReqOut.ready) {
         // update registered request and decrement counter
         regWriteBeatsLeft := regWriteBeatsLeft - 1.U
-        regWriteBurst.addr := regWriteBurst.addr + UInt(8)
+        regWriteBurst.addr := regWriteBurst.addr + 8.U
         // back to sRegular when no more write burst beats
         when(regWriteBeatsLeft <= 1.U) {
           regState := sRegular
@@ -329,7 +330,7 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
 // Convey memory response adapter
 class ConveyMemRspAdp(p: MemReqParams) extends Module {
   val io = new Bundle {
-    val conveyRspIn = Decoupled(new ConveyMemResponse(32, 64)).flip
+    val conveyRspIn = Flipped(Decoupled(new ConveyMemResponse(32, 64)))
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
   }
 
@@ -340,14 +341,14 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
   io.genericRspOut.bits.readData := io.conveyRspIn.bits.readData
   // TODO handle Convey atomics correctly?
   // this works for reads, writes and bursts, but not atomics
-  io.genericRspOut.bits.isWrite := (io.conveyRspIn.bits.cmd === UInt(3))
+  io.genericRspOut.bits.isWrite := (io.conveyRspIn.bits.cmd === 3.U)
   // mark the last beat in a read with the isLast flag
   // a single read's response is always last
-  val isSingleReadRsp = (io.conveyRspIn.bits.cmd === UInt(2))
+  val isSingleReadRsp = (io.conveyRspIn.bits.cmd === 2.U)
   // only supports 8-beat bursts, so a isLast response is always nr 7
   // (first response is #0) TODO Convey atomics won't work with this!
-  val isBurstReadRsp = (io.conveyRspIn.bits.cmd === UInt(7))
-  val isLastInRdBurst = isBurstReadRsp & (io.conveyRspIn.bits.scmd === UInt(7))
+  val isBurstReadRsp = (io.conveyRspIn.bits.cmd === 7.U)
+  val isLastInRdBurst = isBurstReadRsp & (io.conveyRspIn.bits.scmd === 7.U)
   io.genericRspOut.bits.isLast := isLastInRdBurst | isSingleReadRsp
 
   // TODO carry cmd and scmd here

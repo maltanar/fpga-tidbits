@@ -1,29 +1,31 @@
 package fpgatidbits.profiler
 
 import chisel3._
+import chisel3.util._
 
 class OutstandingTxnProfilerOutput(w: Int) extends Bundle {
-  val sum = UInt(OUTPUT, w)
-  val cycles = UInt(OUTPUT, w)
+  val sum = Output(UInt(w.W))
+  val cycles = Output(UInt(w.W))
 }
 
 class OutstandingTxnProfiler(w: Int) extends Module {
   val io = new Bundle {
-    val enable = Bool(INPUT)
-    val probeReqValid = Bool(INPUT)
-    val probeReqReady = Bool(INPUT)
-    val probeRspValid = Bool(INPUT)
-    val probeRspReady = Bool(INPUT)
+    val enable = Input(Bool())
+    val probeReqValid = Input(Bool())
+    val probeReqReady = Input(Bool())
+    val probeRspValid = Input(Bool())
+    val probeRspReady = Input(Bool())
 
     val out = new OutstandingTxnProfilerOutput(w)
   }
 
-  val regCycles = Reg(init = UInt(0, w))
-  val regTotalReq = Reg(init = UInt(0, w))
-  val regTotalRsp = Reg(init = UInt(0, w))
-  val regActiveTxns = Reg(init = UInt(0, w))
+  val regCycles = RegInit(0.U(32.W))
+  val regTotalReq = RegInit(0.U(32.W))
+  val regTotalRsp = RegInit(0.U(32.W))
+  val regActiveTxns = RegInit(0.U(32.W))
 
-  val regActive = Reg(next = io.enable)
+  val regActive = RegInit(false.B)
+  regActive := io.enable
 
   val reqTxn = io.probeReqReady & io.probeReqValid
   val rspTxn = io.probeRspValid & io.probeRspReady

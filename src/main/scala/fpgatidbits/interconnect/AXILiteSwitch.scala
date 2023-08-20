@@ -14,7 +14,7 @@ class AXILiteSwitch(
 ) extends Module {
   val io = new Bundle {
     val in = new AXILiteSlaveIF(addrBits, dataBits)
-    val out = Vec.fill(numSlaves) { new AXILiteMasterIF(addrBits, dataBits) }
+    val out = Vec(numSlaves, new AXILiteMasterIF(addrBits, dataBits))
   }
 
   // route incoming read commands to appropriate slave, based on the output
@@ -39,10 +39,10 @@ class AXILiteSwitch(
   // to ensure lockstep on the output, we need a number of StreamSync comps,
   // this time with output queueing so that the slaves can pop the write addr
   // and data separately if they want to:
-  val syncWrOut = Vec.fill (numSlaves) { Module(new StreamSync(
+  val syncWrOut = VecInit(Seq.fill(numSlaves)(Module(new StreamSync(
     genA = io.in.writeAddr.bits, genB = io.in.writeData.bits,
     queueOutput = true
-  )).io }
+  )).io))
 
   for(i <- 0 until numSlaves) {
     syncWrOut(i).outA <> io.out(i).writeAddr

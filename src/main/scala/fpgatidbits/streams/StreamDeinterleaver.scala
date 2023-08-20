@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
 import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm.FPGAQueue
 
 // deinterleavers a input stream with identifiers onto one of the output
@@ -11,16 +12,16 @@ import fpgatidbits.ocm.FPGAQueue
 // - to avoid combinational paths, pipeline the deinterleaver
 
 class StreamDeinterleaverIF[T <: Data](numDests: Int, gen: T) extends Bundle {
-  val in = Decoupled(gen).flip
-  val out = Vec.fill(numDests) {Decoupled(gen)}
-  val decodeErrors = UInt(OUTPUT, 32)
+  val in = Flipped(Decoupled(gen))
+  val out = Vec(numDests, Decoupled(gen))
+  val decodeErrors = Output(UInt(32.W))
 }
 
 class StreamDeinterleaver[T <: Data](numDests: Int, gen: T, route: T => UInt)
 extends Module {
   val io = new StreamDeinterleaverIF(numDests, gen)
 
-  val regDecodeErrors = Reg(init = UInt(0, 32))
+  val regDecodeErrors = RegInit(0.U(32.W))
 
   for(i <- 0 until numDests) {
     io.out(i).bits := io.in.bits
@@ -31,7 +32,7 @@ extends Module {
   io.decodeErrors := regDecodeErrors
 
   val destPipe = route(io.in.bits)
-  val invalidChannel = (destPipe >= UInt(numDests))
+  val invalidChannel = (destPipe >= (numDests.U))
   val canProceed = io.in.valid && io.out(destPipe).ready
 
   when (invalidChannel) {

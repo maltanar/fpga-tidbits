@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
 import chisel3._
+import chisel3.util._
 
 // Generates a "blocked" sequence from a sequence descriptor
 // example: descriptor start = 100 count = 10 blockSize = 3
@@ -29,20 +30,20 @@ class BlockSequenceOutput(w: Int) extends Bundle {
 
 class BlockSequenceGenerator(w: Int) extends Module {
   val io = new Bundle {
-    val cmd = Decoupled(new BlockSequenceDescriptor(w)).flip
+    val cmd = Flipped(Decoupled(new BlockSequenceDescriptor(w)))
     val out = Decoupled(new BlockSequenceOutput(w))
   }
 
-  val regPtr = Reg(init = UInt(0, w))
-  val regBlockSize = Reg(init = UInt(0, w))
-  val regElemsLeft = Reg(init = UInt(0, w))
+  val regPtr = RegInit(0.U(w.W))
+  val regBlockSize = RegInit(0.U(32.W))
+  val regElemsLeft = RegInit(0.U(32.W))
 
   io.cmd.ready := false.B
   io.out.valid := false.B
   io.out.bits.count := 0.U
   io.out.bits.start := regPtr
 
-  val sIdle :: sRun :: sLast :: Nil = Enum(UInt(), 3)
+  val sIdle :: sRun :: sLast :: Nil = Enum(3)
   val regState = RegInit(sIdle)
 
   switch(regState) {
