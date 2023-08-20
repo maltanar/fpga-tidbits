@@ -10,8 +10,6 @@ import fpgatidbits.regfile._
 import java.nio.file.{Files, Paths}
 import java.nio.ByteBuffer
 import java.io.FileOutputStream
-import fpgatidbits.MainObj.{fileCopy, fileCopyBulk}
-import fpgatidbits.TidbitsMakeUtils
 import fpgatidbits.TidbitsMakeUtils._
 
 import scala.io.Source
@@ -319,10 +317,10 @@ class VerilatedTesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerato
     "platform.h", "verilatedtesterdriver.hpp")
   val resRoot = Paths.get("src/main/resources").toAbsolutePath
   // copy blackbox verilog, scripts, driver and SW support files
-  fileCopyBulk(s"$resRoot/verilog/", targetDir, verilogBlackBoxFiles)
-  fileCopyBulk(s"$resRoot/cpp/platform-wrapper-regdriver/", targetDir,
+  resourceCopyBulk("verilog", targetDir, verilogBlackBoxFiles)
+  resourceCopyBulk("cpp/platform-wrapper-regdriver", targetDir,
     driverFiles)
-  fileCopy(s"$resRoot/script/VerilatorMakefile", s"$targetDir/Makefile")
+  resourceCopy("script/VerilatorMakefile", s"$targetDir/Makefile")
 
 }
 

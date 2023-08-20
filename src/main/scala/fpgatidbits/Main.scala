@@ -7,7 +7,7 @@ import fpgatidbits.examples._
 import java.io.{File, FileInputStream, FileOutputStream}
 import scala.language.postfixOps
 import sys.process._
-import java.nio.file.Paths
+import java.nio.file.{Files, Paths, StandardCopyOption}
 
 object TidbitsMakeUtils {
   type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
@@ -42,13 +42,27 @@ object TidbitsMakeUtils {
     "VerilatedTester" -> "xczu3eg-sbva484-1-i" // use Ultra96 part for tester
   )
 
+  def resourceCopy(res: String, to: String) = {
+    val resourceStream = Option(getClass.getClassLoader.getResourceAsStream(res))
+      .getOrElse(throw new IllegalArgumentException(s"Resource not found: $res"))
+    Files.copy(resourceStream, Paths.get(to), StandardCopyOption.REPLACE_EXISTING)
+  }
+
+  def resourceCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
+    for (f <- fileNames) {
+        resourceCopy(Paths.get(fromDir).resolve(f).toString, Paths.get(toDir).resolve(f).toString)
+      }
+  }
+
   def fileCopy(from: String, to: String) = {
-    s"cp -f $from $to" !
+    s"cp -f $from $to".!!
   }
 
   def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
-    for (f <- fileNames)
-      fileCopy(s"$fromDir/$f", s"$toDir/$f")
+    println(s"copy from ${fromDir} to ${toDir}")
+    for (f <- fileNames) {
+      fileCopy(Paths.get(fromDir).resolve(f).toString, Paths.get(toDir).resolve(f).toString)
+    }
   }
 
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
@@ -91,20 +105,6 @@ object MainObj {
 
   val platformMap = TidbitsMakeUtils.platformMap
 
-  def fileCopy(from: String, to: String) = {
-    s"cp -f $from $to".!!
-  }
-
-  def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
-    println(s"copy from ${fromDir} to ${toDir}")
-    for (f <- fileNames) {
-      if (f(0) != "/" && toDir.last != "/") {
-        fileCopy(fromDir + f, toDir + "/" + f)
-      } else {
-        fileCopy(fromDir + f, toDir + f)
-      }
-    }
-  }
 
   def directoryDelete(dir: String): Unit = {
     s"rm -rf ${dir}".!!
@@ -138,7 +138,7 @@ object MainObj {
     // copy test application
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
-    fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
+    TidbitsMakeUtils.fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
   }
 
   def makeIntegrationTest(args: Array[String]) = {
@@ -152,9 +152,8 @@ object MainObj {
     // copy test application
     val resRoot = Paths.get("./src/main/resources").toAbsolutePath
     val testRoot = s"$resRoot/cpp/platform-wrapper-integration-tests/"
-    fileCopy(testRoot + "Test" + accelName + ".cpp", s"$targetDir/main.cpp")
+    TidbitsMakeUtils.fileCopy(testRoot + "Test" + accelName + ".cpp", s"$targetDir/main.cpp")
   }
-
 
   def makeDriver(args: Array[String]) = {
     val accelName = args(0)

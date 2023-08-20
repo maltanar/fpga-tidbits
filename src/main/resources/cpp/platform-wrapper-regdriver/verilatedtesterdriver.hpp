@@ -28,14 +28,17 @@ using namespace std;
 
 class VerilatedTesterRegDriver : public WrapperRegDriver {
 public:
-  VerilatedTesterRegDriver() {m_freePtr = 0; m_time = 0; Verilated::traceEverOn(true);}
+  VerilatedTesterRegDriver(bool tracing) {m_tracing=tracing; m_freePtr = 0; m_time = 0; Verilated::traceEverOn(true);}
 
   virtual void attach(const char * name) {
     m_inst = new VTesterWrapper();
 #ifdef TRACE
-    m_tfp = new VerilatedVcdC;
-    m_inst->trace(m_tfp, 4);
-    m_tfp->open("trace.vcd");
+    if (m_tracing) {
+      m_tfp = new VerilatedVcdC;
+      m_inst->trace(m_tfp, 4);
+      m_tfp->open("trace.vcd");
+      std::cout <<"Verilator writing trace to `trace.vcd`" <<std::endl;
+    }
 #endif
 
     // get # words in the memory -- TODO get from verilator?
@@ -47,8 +50,12 @@ public:
 
   virtual void detach() {
 #ifdef TRACE
-    m_tfp->close();
-    delete m_tfp;
+    if(m_tracing) {
+      m_tfp->dump(m_time);
+      m_tfp->flush();
+      m_tfp->close();
+      delete m_tfp;
+    }
 #endif
     delete m_inst;
   }
@@ -166,7 +173,7 @@ protected:
   uint64_t m_freePtr;
   unsigned int m_time;
   VerilatedVcdC * m_tfp;
-
+  bool m_tracing;
 
   void reset() {
     m_inst->reset = 1;
@@ -180,13 +187,13 @@ protected:
       m_inst->clock = 1;
       m_inst->eval();
 #ifdef TRACE
-      m_tfp->dump(m_time);
+      if (m_tracing) m_tfp->dump(m_time);
 #endif
       m_time++;
       m_inst->clock = 0;
       m_inst->eval();
 #ifdef TRACE
-      m_tfp->dump(m_time);
+      if (m_tracing) m_tfp->dump(m_time);
 #endif
       m_time++;
     }
