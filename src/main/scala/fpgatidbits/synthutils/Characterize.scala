@@ -113,6 +113,11 @@ object VivadoSynth {
     var ret: CharacterizeResult = new CharacterizeResult(
       lut = 0, reg = 0, bram = 0, lutram=0, dsp = 0, target_ns = 0, fmax_mhz = 0)
     try {
+      // Verify that we have OHMYXILINX environment variable set.
+      if (System.getenv("OHMYXILINX") == null) {
+        throw new Exception("Environmental variable `OHMYXILINX` is missing. add `export OHMYXILINX=/path/to/oh-my-xilinx` to ~/.bashrc")
+      }
+
       val cmd = s"bash -c \"$$OHMYXILINX/vivadocompile.sh ${topModuleName} clock ${fpgaPart}\""
       println(s"Executing `$cmd")
       val proc = Process(cmd, new File(path)).!
