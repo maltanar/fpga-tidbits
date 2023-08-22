@@ -281,7 +281,7 @@ class GatherNBCache_InOrderMissHandling(
   tagWr.req.writeData := Cat(true.B, pendingQ.deq.bits.cacheTag)
   datWr.req.addr := pendingQ.deq.bits.cacheLine
 
-  when(handledQ.enq.fire()) {
+  when(handledQ.enq.fire) {
     tagWr.req.writeEn := true.B
     datWr.req.writeEn := true.B
   }
@@ -297,7 +297,7 @@ class GatherNBCache_InOrderMissHandling(
   // debug
   /*
   val regCnt = Reg(init = UInt(0, 32))
-  when(readyReqs.fire()) { regCnt := regCnt + 1.U}
+  when(readyReqs.fire) { regCnt := regCnt + 1.U}
   val doMon = (regCnt > 0.U) && (regCnt < UInt(5882))
   val doVerboseDebug = false
 

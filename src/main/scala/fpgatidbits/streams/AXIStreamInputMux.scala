@@ -16,11 +16,11 @@ class AXIStreamInputMux(dataWidth: Int) extends Module {
   io.in0.suggestName("in0")
   io.in1.suggestName("in1")
 
-  io.strm.TDATA := Mux(io.sel === 0.U, io.in0.TDATA, io.in1.TDATA)
-  io.strm.TVALID := Mux(io.sel === 0.U, io.in0.TVALID, io.in1.TVALID)
+  io.strm.bits := Mux(io.sel === 0.U, io.in0.bits, io.in1.bits)
+  io.strm.valid := Mux(io.sel === 0.U, io.in0.valid, io.in1.valid)
 
-  io.in0.TREADY := (io.sel === 0.U) & io.strm.TREADY
-  io.in1.TREADY := (io.sel === 1.U) & io.strm.TREADY
+  io.in0.ready := (io.sel === 0.U) & io.strm.ready
+  io.in1.ready := (io.sel === 1.U) & io.strm.ready
 }
 
 

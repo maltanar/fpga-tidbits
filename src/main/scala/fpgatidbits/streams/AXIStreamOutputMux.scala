@@ -16,13 +16,13 @@ class AXIStreamOutputMux(dataWidth: Int) extends Module {
   io.out0.suggestName("out0")
   io.out1.suggestName("out1")
 
-  io.out0.TDATA := io.strm.TDATA
-  io.out1.TDATA := io.strm.TDATA
+  io.out0.bits := io.strm.bits
+  io.out1.bits := io.strm.bits
 
-  io.out0.TVALID := (io.sel === 0.U) & io.strm.TVALID
-  io.out1.TVALID := (io.sel === 1.U) & io.strm.TVALID
+  io.out0.valid := (io.sel === 0.U) & io.strm.valid
+  io.out1.valid := (io.sel === 1.U) & io.strm.valid
 
-  io.strm.TREADY := Mux(io.sel === 0.U, io.out0.TREADY, io.out1.TREADY)
+  io.strm.ready := Mux(io.sel === 0.U, io.out0.ready, io.out1.ready)
 }
 
 class DecoupledOutputDemuxIO[T <: Data](gen: T, numChans: Int) extends Bundle {

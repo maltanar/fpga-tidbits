@@ -20,7 +20,7 @@ extern "C" {
 
 LinuxPhysRegDriver * platform = 0;
 
-WrapperRegDriver * initPlatform() {
+WrapperRegDriver * initPlatform(bool tracing) {
   if(!platform) {
     /* TODO correct the slave reg addresses */
     platform = new LinuxPhysRegDriver((void *) 0x50000000, (void *) 0x40000000, 1024 * 1024 * 1024);

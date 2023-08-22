@@ -6,9 +6,9 @@
 
 VerilatedTesterRegDriver * platform = 0;
 
-WrapperRegDriver * initPlatform() {
+WrapperRegDriver * initPlatform(bool tracing) {
   if(!platform) {
-    platform = new VerilatedTesterRegDriver(); // real setup done inside attach()
+    platform = new VerilatedTesterRegDriver(tracing); // real setup done inside attach()
   }
   return (WrapperRegDriver *) platform;
 }

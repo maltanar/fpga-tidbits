@@ -6,7 +6,7 @@
 
 ZedBoardRegDriver * platform = 0;
 
-WrapperRegDriver * initPlatform() {
+WrapperRegDriver * initPlatform(bool tracing) {
   if(!platform) {
     platform = new ZedBoardRegDriver((void *) 0x43c00000);
   }

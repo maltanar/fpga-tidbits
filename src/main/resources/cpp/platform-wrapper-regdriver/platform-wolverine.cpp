@@ -5,7 +5,7 @@
 
 WolverineRegDriver * platform = 0;
 
-WrapperRegDriver * initPlatform() {
+WrapperRegDriver * initPlatform(bool tracing) {
   if(!platform) {
     platform = new WolverineRegDriver();
   }

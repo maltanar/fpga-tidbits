@@ -7,7 +7,7 @@
 #define PLATFORM_H_
 #include "wrapperregdriver.h"
 
-WrapperRegDriver * initPlatform();
+WrapperRegDriver * initPlatform(bool tracing=false);
 void deinitPlatform(WrapperRegDriver * driver);
 
 

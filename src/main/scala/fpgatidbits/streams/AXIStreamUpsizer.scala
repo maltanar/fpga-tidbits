@@ -42,12 +42,12 @@ class AXIStreamUpsizer(inWidth: Int, outWidth: Int) extends Module {
   }
   val numShiftSteps = outWidth/inWidth
   val shiftReg = Module(new SerialInParallelOut(outWidth, inWidth)).io
-  shiftReg.serIn := io.in.TDATA
+  shiftReg.serIn := io.in.bits
   shiftReg.shiftEn := false.B
 
-  io.in.TREADY := false.B
-  io.out.TVALID := false.B
-  io.out.TDATA := shiftReg.parOut
+  io.in.ready := false.B
+  io.out.valid := false.B
+  io.out.bits := shiftReg.parOut
 
   val sWaitInput :: sWaitOutput :: Nil = Enum(2)
   val regState = RegInit(sWaitInput)
@@ -57,16 +57,16 @@ class AXIStreamUpsizer(inWidth: Int, outWidth: Int) extends Module {
 
   switch(regState) {
       is(sWaitInput) {
-        io.in.TREADY := true.B
-        when (io.in.TVALID) {
+        io.in.ready := true.B
+        when (io.in.valid) {
           shiftReg.shiftEn := true.B
           regAcquiredStages := regAcquiredStages + 1.U
           regState := Mux(readyForOutput, sWaitOutput, sWaitInput)
         }
       }
       is(sWaitOutput) {
-        io.out.TVALID := true.B
-        when (io.out.TREADY) {
+        io.out.valid := true.B
+        when (io.out.ready) {
           regAcquiredStages := 0.U
           regState := sWaitInput
         }
@@ -75,43 +75,9 @@ class AXIStreamUpsizer(inWidth: Int, outWidth: Int) extends Module {
 }
 
 object StreamUpsizer {
-  def apply(in: AXIStreamIF[UInt], outW: Int, outGen: AXIStreamIF[UInt]): AXIStreamIF[UInt] = {
-    val ds = Module(new AXIStreamUpsizer(in.TDATA.getWidth, outW)).io
-    ds.in <> in
-    ds.out
-  }
-
-  def apply(in: DecoupledIO[UInt], outW: Int, outGen: DecoupledIO[UInt]): DecoupledIO[UInt] = {
+  def apply(in: DecoupledIO[UInt], outW: Int): DecoupledIO[UInt] = {
     val ds = Module(new AXIStreamUpsizer(in.bits.getWidth, outW)).io
-    ds.in.TDATA := in.bits
-    ds.in.TVALID := in.valid
-    in.ready := ds.in.TREADY
-
-    val decoupled_out = Wire(Decoupled(UInt(outW.W)))
-    ds.out.TREADY := decoupled_out.ready
-    decoupled_out.bits := ds.out.TDATA
-    decoupled_out.valid := ds.out.TVALID
-
-    decoupled_out
-  }
-
-  def apply(in: AXIStreamIF[UInt], outW: Int, outGen: DecoupledIO[UInt]): DecoupledIO[UInt] = {
-    val ds = Module(new AXIStreamUpsizer(in.TDATA.getWidth, outW)).io
     ds.in <> in
-
-    val decoupled_out = Decoupled(UInt(outW.W))
-    ds.out.TREADY := decoupled_out.ready
-    decoupled_out.bits := ds.out.TDATA
-    decoupled_out.valid := ds.out.TVALID
-
-    decoupled_out
-  }
-
-  def apply(in: DecoupledIO[UInt], outW: Int, outGen: AXIStreamIF[UInt] ): AXIStreamIF[UInt] = {
-    val ds = Module(new AXIStreamUpsizer(in.bits.getWidth, outW)).io
-    ds.in.TDATA := in.bits
-    ds.in.TVALID := in.valid
-    in.ready := ds.in.TREADY
     ds.out
   }
 }
