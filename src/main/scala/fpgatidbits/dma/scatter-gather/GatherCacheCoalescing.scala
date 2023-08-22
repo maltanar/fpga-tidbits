@@ -421,7 +421,7 @@ class GatherNBCache_Coalescing(
     //printf("## R: %d EN: %d EE: %d B: %d \n", io.in.ready, enterAsNew, enterAsExisting, !pendingLines.clear_hit)
     //printf("%x \n", pendingLines.valid_bits)
 
-    when(io.in.fire()) {
+    when(io.in.fire) {
       when(!pendingLines.hit) {
         // new entry
         pendingLines.write := true.B
@@ -449,7 +449,7 @@ class GatherNBCache_Coalescing(
     io.out.bits.cacheline := ups.out.bits.readData
     io.out.valid := ups.out.valid
 
-    when(ups.out.fire()) {
+    when(ups.out.fire) {
       //printf("ups fired, usedID size: %d\n", usedID.count)
       // clear pending line entry
       pendingLines.clear_hit := true.B
@@ -474,7 +474,7 @@ class GatherNBCache_Coalescing(
   datWr.req.addr := cmh.out.bits.misses(0).cacheLine
   datWr.req.writeData := cmh.out.bits.cacheline
 
-  when(cmh.out.fire()) {
+  when(cmh.out.fire) {
     tagWr.req.writeEn := true.B
     datWr.req.writeEn := true.B
   }
@@ -490,7 +490,7 @@ class GatherNBCache_Coalescing(
   // debug
 
   //val regCnt = Reg(init = UInt(0, 32))
-  //when(readyReqs.fire()) { regCnt := regCnt + 1.U}
+  //when(readyReqs.fire) { regCnt := regCnt + 1.U}
   //val doMon = (regCnt > 0.U) && (regCnt < UInt(5882))
 
   /*
