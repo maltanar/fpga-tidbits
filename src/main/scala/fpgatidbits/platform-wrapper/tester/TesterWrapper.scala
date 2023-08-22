@@ -120,7 +120,7 @@ class TesterWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
         val isLast = (regReadRequest.numBytes === memUnitBytes)
         accRdRsp.bits.isLast := isLast
         accRdRsp.valid := true.B
-        when(accRdRsp.fire()) {
+        when(accRdRsp.fire) {
           when (isLast) {
             regStateRead := sWaitRd
           }.otherwise {

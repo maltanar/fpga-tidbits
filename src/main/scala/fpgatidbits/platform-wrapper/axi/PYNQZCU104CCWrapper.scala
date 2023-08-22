@@ -17,7 +17,7 @@ object PYNQZCU104CCParams extends PlatformWrapperParams {
   val coherentMem = true
 }
 
-class PYNQZCU104CCWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class PYNQZCU104CCWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
   extends AXIPlatformWrapper(PYNQZCU104Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-mpsoc-cc-xlnk.cpp", "xlnkdriver.hpp"

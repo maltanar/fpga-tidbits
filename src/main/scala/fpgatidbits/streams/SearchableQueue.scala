@@ -10,7 +10,6 @@ class SearchableQueueIO[T <: Data](gen: T, n: Int) extends QueueIO(gen, n) {
   val searchVal = Input(gen)
   val foundVal = Output(Bool())
 
-  override def cloneType: this.type = new SearchableQueueIO(gen, n).asInstanceOf[this.type]
 }
 
 class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
@@ -20,7 +19,7 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
   // - simplified to pipe = false flow = false
   // - vector of registers instead of Mem, to expose all outputs
 
-  val ram = RegInit(VecInit(Seq.fill(entries)(0.U(gen.getWidth))))
+  val ram: Vec[UInt] = RegInit(VecInit(Seq.fill(entries)(0.U(gen.getWidth.W))))
   val ramValid = RegInit(VecInit(Seq.fill(entries)(false.B)))
 
   val enq_ptr = Counter(entries)
@@ -48,9 +47,8 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
 
   // <content search logic>
   val newData = io.searchVal
-//  val hits = VecInit(Seq.tabulate(entries)(i => ram(i) === newData && ramValid(i)))
-  val hits = ram zip ramValid foreach {case (r, v) => (r === newData) && v}
-  io.foundVal := hits.exists({x:Bool => x})
+  val hits = VecInit(Seq.tabulate(entries)(i => ram(i) === newData.asUInt && ramValid(i)))
+  io.foundVal := hits.asUInt.orR
   // </content search logic>
 
   io.deq.valid := !empty
@@ -62,9 +60,9 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
     io.count := Cat(maybe_full && ptr_match, ptr_diff)
   } else {
     io.count := Mux(ptr_match,
-                  Mux(maybe_full, UInt(entries), 0.U),
+                  Mux(maybe_full, entries.U, 0.U),
                   Mux(deq_ptr.value > enq_ptr.value,
-                      UInt(entries) + ptr_diff, ptr_diff)
+                      entries.U + ptr_diff, ptr_diff)
                     )
   }
 }

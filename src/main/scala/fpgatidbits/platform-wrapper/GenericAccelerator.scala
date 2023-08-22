@@ -3,6 +3,7 @@ package fpgatidbits.PlatformWrapper
 import chisel3._
 import chisel3.util._
 import fpgatidbits.dma._
+import fpgatidbits.hlstools.TemplatedHLSBlackBox
 //import fpgatidbits.hlstools.TemplatedHLSBlackBox
 import scala.collection.mutable.ArrayBuffer
 
@@ -20,15 +21,12 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   def io: GenericAcceleratorIF
   def numMemPorts: Int
 
-  /*
   val hlsBlackBoxes = ArrayBuffer[TemplatedHLSBlackBox]()
 
   def HLSBlackBox[T <: TemplatedHLSBlackBox](blackBox: T): T = {
     hlsBlackBoxes += blackBox
-    return blackBox
+    blackBox
   }
-  */
-
 
   def hexcrc32(s: String): String = {
     import java.util.zip.CRC32
@@ -40,11 +38,11 @@ abstract class GenericAccelerator(val p: PlatformWrapperParams) extends Module {
   // Generate an unique ID for the accelerator which is placed in CSR 0.
   def hexSignature(): String = {
     val fullSignature = this.getClass.getSimpleName/* + "-" + dateString*/
-    return hexcrc32(fullSignature)
+    hexcrc32(fullSignature)
   }
 
   def makeDefaultSignature(): UInt = {
-    return ("h" + hexSignature()).U
+    ("h" + hexSignature()).U
   }
 
   // Drive default values for memory read port i

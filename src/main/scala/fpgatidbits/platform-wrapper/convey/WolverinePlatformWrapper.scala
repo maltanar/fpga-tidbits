@@ -26,7 +26,7 @@ object WX690TParams extends PlatformWrapperParams {
 
 // TODO plug unused platform ports if accel has less mem ports
 
-class WolverinePlatformWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class WolverinePlatformWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
 extends PlatformWrapper(WX690TParams, instFxn) {
   val useAEGforRegFile = false
 
@@ -70,7 +70,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // use the Convey AEG interface for controlling the register file
     // useful mostly for debugging in simulation, since the Convey simulation
     // infrastructure does not seem to support CSR r/w
-    io.dispAegCnt := UInt(numRegs)
+    io.dispAegCnt := numRegs.U
     io.dispRtnValid := regFile.extIF.readData.valid
     io.dispRtnData := regFile.extIF.readData.bits
     regFile.extIF.cmd.bits.regID := io.dispRegID
@@ -87,8 +87,22 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // TODO add platform-level start-active-finished signals
     if(regFileMap.contains("start")) {
       println("====> Rewiring start to Convey instruction dispatch")
-      accel("start") := regBusy
-      when (regBusy) {regBusy := !(accel("finished").toBool())}
+      var foundStart = false
+      var foundFinished = false
+      for (elt <- accel.io.elements) {
+        if (elt._1.equals("start")) {
+          elt._2 := regBusy
+          foundStart = true
+        }
+        if (elt._1.equals("finished")) {
+          elt._2 := regBusy
+          foundFinished = true
+          when(regBusy) {
+            regBusy := !(elt._2.asTypeOf(Bool()))
+          }
+        }
+      }
+      require(foundStart && foundFinished)
     }
     println("====> RegFile is using the Convey AEG interface")
   } else {
@@ -96,15 +110,15 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // why 2? does not overlap with the reset controls in PlatformWrapper
     // this allows a clear detach (don't need to reload same bitfile next time)
     // TODO find a cleaner way to do all this!
-    val magicDMatch = io.csrWrData === UInt(2)
+    val magicDMatch = io.csrWrData === 2.U
     val clearBusyMagic = (io.csrAddr === 0.U) & io.csrWrValid & magicDMatch
     when (regBusy & clearBusyMagic) { regBusy := false.B}
 
     // use the Convey CSR interface for controlling the register file
     // use a single, constant register for the AEGs
     io.dispAegCnt := 1.U
-    io.dispRtnValid := Reg(next = io.dispRegRead)
-    io.dispRtnData := UInt("hdeadbeef")
+    io.dispRtnValid := RegNext(io.dispRegRead)
+    io.dispRtnData := "hdeadbeef".U
 
     // use Convey CSR interface to talk to our regfile
     regFile.extIF.cmd.bits.regID := io.csrAddr
@@ -134,7 +148,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
       throw new Exception("Too many mem ports in accelerator")
     }
 
-    val adps = Vec.fill(nmp) {
+    val adps = for (i <- 0 until nmp) yield {
       Module(new ConveyGenericMemAdapter(p.toMemReqParams())).io
     }
 
@@ -165,7 +179,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // - Convey mem.port's stall is driven by "almost full" from queue
     // TODO generalize this idea into an interface adapter + use for reqs too
     val respQueElems = 8
-    val respQueues = Vec.fill(nmp) {
+    val respQueues = for(i <- 0 until nmp) yield {
       Module(
           new FPGAQueue(new ConveyMemResponse(p.memIDBits, p.memDataBits), respQueElems)
         ).io
@@ -175,7 +189,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // to drive the Convey mem resp port's stall input
     // this is quite conservative (stall when FIFO is half full) but
     // it seems to work (there may be a deeper problem here)
-    val respStall = Cat(respQueues.map(x => (x.count >= UInt(respQueElems/2))))
+    val respStall = Cat(respQueues.map(x => (x.count >= (respQueElems/2).U)))
     // Cat concatenation order needs to be reversed
     io.mcResStall := Reverse(respStall)
 
@@ -226,7 +240,7 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   io.conveyReqOut.bits.addr := io.genericReqIn.bits.addr
   // can actually be smaller for subword writes/reads but those are not
   // supported (so UInt( log2Up(p.dataWidth/8)))
-  io.conveyReqOut.bits.size := UInt(3)
+  io.conveyReqOut.bits.size := 3.U
   // see Convey PDK Guide 8.3.x for more details on the memreq signals
   // values for cmd:
   // 1 for regular load

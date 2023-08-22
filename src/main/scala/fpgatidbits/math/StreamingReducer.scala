@@ -23,9 +23,6 @@ class ReducerWorkUnit(valWidth: Int, indWidth: Int) extends PrintableBundle {
 
   val printfStr = "group %d (%d items) value %d \n"
   val printfElems = {() => Seq(groupID, groupLen, value)}
-
-  override def cloneType: this.type =
-    new ReducerWorkUnit(valWidth, indWidth).asInstanceOf[this.type]
 }
 
 class ReducerOutput(valWidth: Int, indWidth: Int) extends PrintableBundle {
@@ -34,9 +31,6 @@ class ReducerOutput(valWidth: Int, indWidth: Int) extends PrintableBundle {
 
   val printfStr = "group %d value %d \n"
   val printfElems = {() => Seq(groupID, value)}
-
-  override def cloneType: this.type =
-    new ReducerOutput(valWidth, indWidth).asInstanceOf[this.type]
 }
 
 class StreamingReducer(valWidth: Int, indWidth: Int,
@@ -62,8 +56,6 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
     val printfStr = "internalID %d value %d opsDone %d needZeroPad %d \n"
     val printfElems = {() => Seq(internalID, value, opsDone, needZeroPad)}
 
-    override def cloneType: this.type =
-      new InternalWU().asInstanceOf[this.type]
   }
 
   class InternalWUPair extends PrintableBundle {
@@ -75,8 +67,6 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
     val printfStr = "internalID %d valueA %d valueB %d opsDone %d \n"
     val printfElems = {() => Seq(internalID, valueA, valueB, opsDone)}
 
-    override def cloneType: this.type =
-      new InternalWUPair().asInstanceOf[this.type]
   }
 
   val wu = new InternalWU()
@@ -93,8 +83,8 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       val out = Decoupled(wup)
     }
     val regPendingUpsize = RegInit(false.B)
-    val regPendingIndex = RegInit(0.U(indWidth))
-    val regPendingData = RegInit(0.U(valWidth))
+    val regPendingIndex = RegInit(0.U(indWidth.W))
+    val regPendingData = RegInit(0.U(valWidth.W))
 
     io.in.ready := false.B
     io.out.valid := false.B
@@ -114,7 +104,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       } .otherwise {
         // fill up register buffers
         io.in.ready := true.B
-        when(io.in.fire()) {
+        when(io.in.fire) {
           regPendingUpsize := true.B
           regPendingIndex := io.in.bits.internalID
           regPendingData := io.in.bits.value
@@ -124,7 +114,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
       // data valid in register buffers, pair with incoming stream
       io.out.valid := io.in.valid
       io.in.ready := io.out.ready
-      when(io.in.fire()) {
+      when(io.in.fire) {
         regPendingUpsize := false.B
         assert(io.in.bits.internalID === regPendingIndex, "Unmatched IDs in upsizer")
       }
@@ -253,7 +243,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
     sel = newGroupIsSingle, chans = Seq(newQ.enq, oneQ.enq)
   )
   // ensure id pool is available before accepting a new row
-  val stallIn = io.in.valid && (regGroupID =/= newGroupID) && !idPool.idOut.valid
+  val stallIn = io.in.valid && (regGroupID.asUInt =/= newGroupID) && !idPool.idOut.valid
 
   inTargets.valid := io.in.valid && !stallIn
   inTargets.bits <> io.in.bits
@@ -266,7 +256,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   oneQ.enq.bits.needZeroPad := false.B
   newQ.enq.bits.needZeroPad := false.B
 
-  when(regGroupID =/= newGroupID) {
+  when(regGroupID.asUInt =/= newGroupID) {
     when(io.in.valid & io.in.ready) {
       // first element of new group
       // get ID directly from pool
@@ -303,7 +293,7 @@ class StreamingReducer(valWidth: Int, indWidth: Int,
   idPool.idIn.bits := retQArb.out.bits.internalID
   retQ.enq.bits.groupID := memGroupID(retQArb.out.bits.internalID)
 
-  when(retQ.enq.fire()) {
+  when(retQ.enq.fire) {
     assert(idPool.idIn.ready, "idPool input not ready")
     idPool.idIn.valid := true.B
   }

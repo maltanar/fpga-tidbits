@@ -123,7 +123,7 @@ class StreamReader(val p: StreamReaderParams) extends Module {
   // TODO add a StreamResizer to handle all 3 cases
   if (p.mem.dataWidth == p.streamWidth) { lim(rsp) <> fifo.enq }
   else if (p.mem.dataWidth > p.streamWidth) {
-    lim(StreamDownsizer(rsp, p.streamWidth, fifo.enq)) <> fifo.enq
+    lim(StreamDownsizer(rsp, p.streamWidth)) <> fifo.enq
   } else if (p.mem.dataWidth < p.streamWidth) {
     // TODO implement upsizing
     throw new Exception("StreamUpsizer not yet implemented")

@@ -17,7 +17,7 @@ object PYNQU96Params extends PlatformWrapperParams {
   val coherentMem = false
 }
 
-class PYNQU96Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class PYNQU96Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
   extends AXIPlatformWrapper(PYNQU96Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-mpsoc-xlnk.cpp", "xlnkdriver.hpp"

@@ -27,7 +27,7 @@ class AffineLoopNestIndGen(val n: Int, val w: Int) extends Module {
   // register to keep current descriptor with bounds
   val regBounds = RegInit(io.in.bits)
   // instantiate counters, one for each loop level
-  val cntrs = VecInit(Seq.fill(n)(Module(new Counter(w).io)))
+  val cntrs = for (i <- 0 until n) yield Module(new Counter(w)).io
   // default values for signals
   io.in.ready := false.B
   io.out.valid := false.B

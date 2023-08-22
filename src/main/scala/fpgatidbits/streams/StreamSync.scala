@@ -44,8 +44,6 @@ class StreamSync[TA <: Data, TB <: Data](
   class SyncPacket extends Bundle {
     val compA = genA.cloneType
     val compB = genB.cloneType
-    override def cloneType: this.type =
-      new SyncPacket().asInstanceOf[this.type]
   }
   val syncedData = new SyncPacket()
 

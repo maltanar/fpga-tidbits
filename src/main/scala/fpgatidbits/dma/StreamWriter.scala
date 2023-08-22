@@ -71,8 +71,8 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   // add a resizer between input data and write data
   if(p.streamWidth == p.mem.dataWidth) {io.in <> io.wdat}
   else if(p.streamWidth > p.mem.dataWidth) {
-    StreamDownsizer(io.in, p.mem.dataWidth, io.wdat) <> io.wdat
+    StreamDownsizer(io.in, p.mem.dataWidth) <> io.wdat
   } else {
-    StreamUpsizer(io.in, p.mem.dataWidth, io.wdat) <> io.wdat
+    StreamUpsizer(io.in, p.mem.dataWidth) <> io.wdat
   }
 }

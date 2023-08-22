@@ -18,8 +18,6 @@ class DispatchSlaveIF() extends Bundle {
   val aeg         = new RegFileSlaveIF(18, 64)
   // output for signalling instruction exceptions
   val exception   = Output(UInt(16.W))
-
-  override def clone = { new DispatchSlaveIF().asInstanceOf[this.type] }
 }
 
 // command (request) bundle for memory read/writes
@@ -31,8 +29,6 @@ class ConveyMemRequest(rtnCtlBits: Int, addrBits: Int, dataBits: Int) extends Bu
   val cmd         = UInt(3.W)
   val scmd        = UInt(4.W)
 
-  override def clone = {
-    new ConveyMemRequest(rtnCtlBits, addrBits, dataBits).asInstanceOf[this.type] }
 }
 
 // response bundle for return read data or write completes (?)
@@ -41,9 +37,6 @@ class ConveyMemResponse(rtnCtlBits: Int, dataBits: Int) extends Bundle {
   val rtnCtl      = UInt(rtnCtlBits.W)
   val cmd         = UInt(3.W)
   val scmd        = UInt(4.W)
-
-  override def clone = {
-    new ConveyMemResponse(rtnCtlBits, dataBits).asInstanceOf[this.type] }
 }
 
 // memory port master interface
@@ -54,9 +47,6 @@ class ConveyMemMasterIF(rtnCtlBits: Int) extends Bundle {
   val rsp         = Flipped(Decoupled(new ConveyMemResponse(rtnCtlBits, 64)))
   val flushReq    = Output(Bool())
   val flushOK     = Input(Bool())
-
-  override def clone = {
-    new ConveyMemMasterIF(rtnCtlBits).asInstanceOf[this.type] }
 }
 
 // interface for a Convey personality (for use in Chisel)
@@ -64,9 +54,6 @@ class ConveyPersonalityIF(numMemPorts: Int, rtnCtlBits: Int) extends Bundle {
   val disp = new DispatchSlaveIF()
   val csr  = new RegFileSlaveIF(16, 64)
   val mem  = VecInit(Seq.fill(numMemPorts)(new ConveyMemMasterIF(rtnCtlBits)))
-
-  override def clone = {
-    new ConveyPersonalityIF(numMemPorts, rtnCtlBits).asInstanceOf[this.type] }
 }
 
 // interface definition for the Convey WX690T (Verilog) personality IF

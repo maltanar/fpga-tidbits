@@ -23,9 +23,6 @@ object OperandWithID {
 class OperandWithID(wOp: Int, wId: Int) extends Bundle {
   val data = UInt(wOp.W)
   val id = UInt(wId.W)
-  override def clone = {
-    new OperandWithID(wOp, wId).asInstanceOf[this.type]
-  }
 }
 
 

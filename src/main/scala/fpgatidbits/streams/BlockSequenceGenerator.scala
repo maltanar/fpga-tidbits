@@ -13,19 +13,12 @@ class BlockSequenceDescriptor(w: Int) extends Bundle {
   val start = UInt(w.W)     // starting element
   val count = UInt(w.W)     // total elements
   val blockSize = UInt(w.W) // preferred block size
-
-  override def clone = {
-    new BlockSequenceDescriptor(w).asInstanceOf[this.type]
-  }
 }
 
 class BlockSequenceOutput(w: Int) extends Bundle {
   val count = UInt(w.W)
   val start = UInt(w.W)
 
-  override def clone = {
-    new BlockSequenceOutput(w).asInstanceOf[this.type]
-  }
 }
 
 class BlockSequenceGenerator(w: Int) extends Module {

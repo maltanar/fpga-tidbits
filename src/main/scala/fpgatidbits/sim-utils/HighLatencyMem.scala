@@ -1,6 +1,7 @@
 package fpgatidbits.SimUtils
 
 import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
 
 class HighLatencyMemParams(
@@ -11,11 +12,6 @@ class HighLatencyMemParams(
   val idWidth: Int,
   val latency: Int
 ) {
-
-  override def clone = {
-    new HighLatencyMemParams( depth, numPorts, dataWidth, addrWidth,
-                              idWidth, latency).asInstanceOf[this.type]
-  }
 
   def toMemReqParams() = {
     new MemReqParams(addrWidth, dataWidth, idWidth, 1)
@@ -29,24 +25,24 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
 
   val io = new Bundle {
     // dedicated port for testbench reads/writes
-    val memAddr = UInt(INPUT, p.addrWidth)
+    val memAddr = Input(UInt(p.addrWidth.W))
     val memWriteEn = Input(Bool())
-    val memWriteData = UInt(INPUT, p.dataWidth)
-    val memReadData = UInt(OUTPUT, p.dataWidth)
+    val memWriteData = Input(UInt(p.dataWidth.W))
+    val memReadData = Output(UInt(p.dataWidth.W))
     // ports for accelerator accesss
-    val memPort = Vec.fill(p.numPorts) {new GenericMemorySlavePort(pReq)}
+    val memPort = Vec(p.numPorts, new GenericMemorySlavePort(pReq))
   }
 
   // the memory
   val mem = Mem(p.depth, UInt(p.dataWidth.W))
-  val memUnitBytes = UInt(p.dataWidth/8)
+  val memUnitBytes = (p.dataWidth/8).U
 
   // testbench memory access
-  def addrToWord(x: UInt) = {x >> UInt(log2Up(p.dataWidth/8))}
+  def addrToWord(x: UInt) = {x >> (log2Up(p.dataWidth/8)).U}
   val memWord = addrToWord(io.memAddr)
-  io.memReadData := mem(memWord)
+  io.memReadData := mem.read(memWord)
 
-  when (io.memWriteEn) {mem(memWord) := io.memWriteData}
+  when (io.memWriteEn) {mem.read(memWord) := io.memWriteData}
 
   // add lateny between a producer-consumer pair using 2-deep queues
   def addLatency[T <: Data](n: Int, prod: DecoupledIO[T]): DecoupledIO[T] = {
@@ -61,9 +57,9 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
   // one FSM per port, rather simple, but supports bursts
   for(i <- 0 until p.numPorts) {
     // reads
-    val sWaitRd :: sRead :: Nil = Enum(UInt(), 2)
-    val regStateRead = Reg(init = UInt(sWaitRd))
-    val regReadRequest = Reg(init = GenericMemoryRequest(pReq))
+    val sWaitRd :: sRead :: Nil = Enum(2)
+    val regStateRead = RegInit(sWaitRd)
+    val regReadRequest = RegInit(GenericMemoryRequest(pReq))
 
     val accmp = io.memPort(i)
     val accRdReq = addLatency(p.latency, accmp.memRdReq)
@@ -75,7 +71,7 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
     accRdRsp.bits.metaData := 0.U
     accRdRsp.bits.isWrite := false.B
     accRdRsp.bits.isLast := false.B
-    accRdRsp.bits.readData := mem(addrToWord(regReadRequest.addr))
+    accRdRsp.bits.readData := mem.read(addrToWord(regReadRequest.addr))
 
     switch(regStateRead) {
       is(sWaitRd) {
@@ -100,7 +96,7 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
           accRdRsp.bits.isLast := (regReadRequest.numBytes === memUnitBytes)
           when (accRdRsp.ready) {
             regReadRequest.numBytes := regReadRequest.numBytes - memUnitBytes
-            regReadRequest.addr := regReadRequest.addr + UInt(memUnitBytes)
+            regReadRequest.addr := regReadRequest.addr + memUnitBytes
 
             // was this the last beat of burst transferred?
             when(regReadRequest.numBytes === memUnitBytes) {
@@ -117,7 +113,7 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
     }
 
     // writes
-    val sWaitWr :: sWrite :: Nil = Enum(UInt(), 2)
+    val sWaitWr :: sWrite :: Nil = Enum(2)
     val regStateWrite = RegInit(sWaitWr)
     val regWriteRequest = RegInit(GenericMemoryRequest(pReq))
     // write data queue to avoid deadlocks (state machine expects rspQ and data
@@ -154,9 +150,9 @@ class HighLatencyMem(val p: HighLatencyMemParams) extends Module {
               wrRspQ.enq.valid := true.B
             }
             wrDatQ.deq.ready := true.B
-            mem(addrToWord(regWriteRequest.addr)) := wrDatQ.deq.bits
+            mem.write(addrToWord(regWriteRequest.addr), wrDatQ.deq.bits)
             regWriteRequest.numBytes := regWriteRequest.numBytes - memUnitBytes
-            regWriteRequest.addr := regWriteRequest.addr + UInt(memUnitBytes)
+            regWriteRequest.addr := regWriteRequest.addr + memUnitBytes
           }
         }
       }

@@ -7,9 +7,6 @@ class BinaryMathOperands(val w: Int) extends Bundle {
   val first = UInt(w.W)
   val second = UInt(w.W)
 
-  override def clone = {
-    new BinaryMathOperands(w).asInstanceOf[this.type]
-  }
 }
 
 object BinaryMathOperands {
