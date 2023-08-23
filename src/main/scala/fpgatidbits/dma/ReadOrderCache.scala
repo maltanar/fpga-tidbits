@@ -96,19 +96,19 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   val repBitWidth = 1 + log2Up(p.maxBurst)
   val busyRep = Module(new StreamRepeatElem(mreq.getWidth, repBitWidth)).io
   val bytesInBeat = (p.mrp.dataWidth/8).U // TODO correct for sub-word reads?
-  busyRep.inElem.TVALID := busyReqs.deq.valid
-  busyRep.inRepCnt.TVALID := busyReqs.deq.valid
-  busyRep.inElem.TDATA := busyReqs.deq.bits.asUInt
-  busyRep.inRepCnt.TDATA := busyReqs.deq.bits.numBytes / bytesInBeat
-  busyReqs.deq.ready := busyRep.inElem.TREADY
+  busyRep.inElem.valid := busyReqs.deq.valid
+  busyRep.inRepCnt.valid := busyReqs.deq.valid
+  busyRep.inElem.bits := busyReqs.deq.bits.asUInt
+  busyRep.inRepCnt.bits := busyReqs.deq.bits.numBytes / bytesInBeat
+  busyReqs.deq.ready := busyRep.inElem.ready
 
-  val busyRepHead = busyRep.out.TDATA.asTypeOf(mreq)
+  val busyRepHead = busyRep.out.bits.asTypeOf(mreq)
   storage.outSel := busyRepHead.channelID - (p.chanIDBase).U
 
   // join the storage.out and busyRep.out streams
-  io.rspOrdered.valid := storage.out.valid & busyRep.out.TVALID
-  storage.out.ready := io.rspOrdered.ready & busyRep.out.TVALID
-  busyRep.out.TREADY := io.rspOrdered.ready & storage.out.valid
+  io.rspOrdered.valid := storage.out.valid & busyRep.out.valid
+  storage.out.ready := io.rspOrdered.ready & busyRep.out.valid
+  busyRep.out.ready := io.rspOrdered.ready & storage.out.valid
 
   // the head-of-line ID will be recycled when we are done with it
   freeReqID.idIn.valid := false.B
@@ -118,7 +118,7 @@ class ReadOrderCache(p: ReadOrderCacheParams) extends Module {
   io.rspOrdered.bits.channelID := origReqID(busyRepHead.channelID)
 
   val regBeatCounter = RegInit(0.U(repBitWidth.W))
-  when(busyRep.out.TVALID & busyRep.out.TVALID) {
+  when(busyRep.out.valid & busyRep.out.valid) {
     regBeatCounter := regBeatCounter + 1.U
     when(regBeatCounter === (busyRepHead.numBytes / bytesInBeat) - 1.U) {
       regBeatCounter := 0.U

@@ -15,11 +15,6 @@ class MemReqParams(
   val sameIDInOrder: Boolean = true // whether requests with the same
                                     // ID return in-order, like in AXI
 ) {
-  override def clone = {
-    new MemReqParams(
-      addrWidth, dataWidth, idWidth, metaDataWidth, sameIDInOrder
-    ).asInstanceOf[this.type]
-  }
 }
 
 // a generic memory request structure, inspired by AXI with some diffs

@@ -35,8 +35,7 @@ class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targ
     generateRegDriver(targetDir)
     // Copy over the other needed files
     //val resRoot = getClass.getResource("").getPath
-    val resRoot = new java.io.File(".").getCanonicalPath
-    fileCopyBulk(s"${resRoot}/fpga-tidbits/src/main/resources/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+    resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
     println(s"=======> Driver files copied to ${targetDir}")
 
   }
@@ -53,7 +52,6 @@ extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   generateRegDriver(targetDir)
 
   // Copy over the other needed files
-  val resRoot = Paths.get("./src/main/resources")
-  fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
   println(s"=======> Driver files copied to ${targetDir}")
 }

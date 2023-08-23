@@ -1,8 +1,8 @@
 package utils
 import chisel3._
 import chisel3.util._
-import org.scalatest._
 import chiseltest._
+import org.scalatest.flatspec.AnyFlatSpec
 
 class CatExample extends Module {
   val io = IO(new Bundle {
@@ -24,7 +24,7 @@ class CatExample extends Module {
 }
 
 
-class TestCat extends FlatSpec with ChiselScalatestTester with Matchers {
+class TestCat extends AnyFlatSpec with ChiselScalatestTester {
 
   behavior of "SubWordAssignment"
   it should "work" in {

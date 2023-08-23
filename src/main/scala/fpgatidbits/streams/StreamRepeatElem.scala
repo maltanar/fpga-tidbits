@@ -26,14 +26,14 @@ object StreamRepeatElem {
     val repgen = Module(new StreamRepeatElem(gen.getWidth,
                         inRepCnt.bits.getWidth)).io
     val ret = Decoupled(gen)
-    repgen.inElem.TDATA := inElem.bits
-    repgen.inElem.TVALID := inElem.valid
-    inElem.ready := repgen.inElem.TREADY
+    repgen.inElem.bits := inElem.bits
+    repgen.inElem.valid := inElem.valid
+    inElem.ready := repgen.inElem.ready
 
     repgen.inRepCnt <> inRepCnt
-    ret.valid := repgen.out.TVALID
-    ret.bits := repgen.out.TDATA
-    repgen.out.TREADY := ret.ready
+    ret.valid := repgen.out.valid
+    ret.bits := repgen.out.bits
+    repgen.out.ready := ret.ready
 
     ret
   }
@@ -46,37 +46,37 @@ class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
     val out = new AXIStreamIF(UInt(dataWidth.W))
   })
 
-  io.inElem.TREADY := false.B
-  io.inRepCnt.TREADY := false.B
-  io.out.TVALID := false.B
+  io.inElem.ready := false.B
+  io.inRepCnt.ready := false.B
+  io.out.valid := false.B
 
   val regElem = RegInit(0.U(dataWidth.W))
   val regRep = RegInit(0.U(repWidth.W))
 
-  io.out.TDATA := regElem
+  io.out.bits := regElem
 
-  val bothValid = io.inElem.TVALID & io.inRepCnt.TVALID
+  val bothValid = io.inElem.valid & io.inRepCnt.valid
 
   when(regRep === 0.U) {
     when (bothValid) {
-      regElem := io.inElem.TDATA
-      regRep := io.inRepCnt.TDATA
-      io.inElem.TREADY := true.B
-      io.inRepCnt.TREADY := true.B
+      regElem := io.inElem.bits
+      regRep := io.inRepCnt.bits
+      io.inElem.ready := true.B
+      io.inRepCnt.ready := true.B
     }
   }
   .otherwise {
-    io.out.TVALID := true.B
-    when(io.out.TREADY) {
+    io.out.valid := true.B
+    when(io.out.ready) {
       regRep := regRep - 1.U
       // last repetition? prefetch in read
       when(regRep === 1.U) {
         // prefetch elem and repcount, if possible
         when (bothValid) {
-          regElem := io.inElem.TDATA
-          regRep := io.inRepCnt.TDATA
-          io.inElem.TREADY := true.B
-          io.inRepCnt.TREADY := true.B
+          regElem := io.inElem.bits
+          regRep := io.inRepCnt.bits
+          io.inElem.ready := true.B
+          io.inRepCnt.ready := true.B
         }
       }
     }

@@ -17,13 +17,13 @@ object TidbitsMakeUtils {
   val platformMap: PlatformMap = Map(
     "ZedBoard" -> { (f, targetDir) => new ZedBoardWrapper(f, targetDir) },
     "PYNQZ1" -> { (f, targetDir) => new PYNQZ1Wrapper(f, targetDir) },
-    //    "PYNQU96" -> {f => new PYNQU96Wrapper(f)},
-    //    "PYNQU96CC" -> {f => new PYNQU96CCWrapper(f)},
-    //    "PYNQZCU104" -> {f => new PYNQZCU104Wrapper(f)},
-    //    "PYNQZCU104CC" -> {f => new PYNQZCU104CCWrapper(f)},
-    //    "GenericSDAccel" -> {f => new GenericSDAccelWrapper(f)},
-    //    "ZC706" -> {f => new ZC706Wrapper(f)},
-    //    "WX690T" -> {f => new WolverinePlatformWrapper(f)},
+    "PYNQU96" -> {(f, targetDir) => new PYNQU96Wrapper(f, targetDir)},
+    "PYNQU96CC" -> {(f, targetDir) => new PYNQU96CCWrapper(f, targetDir)},
+    "PYNQZCU104" -> {(f, targetDir) => new PYNQZCU104Wrapper(f, targetDir)},
+    "PYNQZCU104CC" -> {(f, targetDir) => new PYNQZCU104CCWrapper(f, targetDir)},
+    "GenericSDAccel" -> {(f, targetDir) => new GenericSDAccelWrapper(f, targetDir)},
+    "ZC706" -> {(f, targetDir) => new ZC706Wrapper(f, targetDir)},
+    "WX690T" -> {(f, targetDir) => new WolverinePlatformWrapper(f, targetDir)},
     "VerilatedTester" -> { (f, targetDir) => new VerilatedTesterWrapper(f, targetDir) },
     "Tester" -> { (f, targetDir) => new TesterWrapper(f, targetDir) }
   )
@@ -54,23 +54,12 @@ object TidbitsMakeUtils {
       }
   }
 
-  def fileCopy(from: String, to: String) = {
-    s"cp -f $from $to".!!
-  }
-
-  def fileCopyBulk(fromDir: String, toDir: String, fileNames: Seq[String]) = {
-    println(s"copy from ${fromDir} to ${toDir}")
-    for (f <- fileNames) {
-      fileCopy(Paths.get(fromDir).resolve(f).toString, Paths.get(toDir).resolve(f).toString)
-    }
-  }
-
   def makeDriverLibrary(p: PlatformWrapper, outDir: String) = {
     val fullDir = s"realpath $outDir".!!.filter(_ >= ' ')
-    val drvDir = getClass.getResource("/cpp/platform-wrapper-regdriver").getPath
+    val drvDir = "/cpp/platform-wrapper-regdriver"
     val mkd = s"mkdir -p $fullDir".!!
     // copy necessary files to build the driver
-    fileCopyBulk(drvDir, fullDir, p.platformDriverFiles)
+    resourceCopyBulk(drvDir, fullDir, p.platformDriverFiles)
     val fullFiles = p.platformDriverFiles.map(x => fullDir + "/" + x)
     // call g++ to produce a shared library
     println("Compiling driver as library...")
@@ -136,9 +125,7 @@ object MainObj {
     (new chisel3.stage.ChiselStage).emitVerilog(new VerilatedTesterWrapper(accInst, targetDir), chiselArgs)
 
     // copy test application
-    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
-    val testRoot = s"$resRoot/cpp/platform-wrapper-tests/"
-    TidbitsMakeUtils.fileCopy(testRoot + accelName + ".cpp", s"$targetDir/main.cpp")
+    TidbitsMakeUtils.resourceCopy(s"cpp/platform-wrapper-tests/${accelName}.cpp", s"$targetDir/main.cpp")
   }
 
   def makeIntegrationTest(args: Array[String]) = {
@@ -150,9 +137,7 @@ object MainObj {
     (new chisel3.stage.ChiselStage).emitVerilog(new VerilatedTesterWrapper(accInst, targetDir), chiselArgs)
 
     // copy test application
-    val resRoot = Paths.get("./src/main/resources").toAbsolutePath
-    val testRoot = s"$resRoot/cpp/platform-wrapper-integration-tests/"
-    TidbitsMakeUtils.fileCopy(testRoot + "Test" + accelName + ".cpp", s"$targetDir/main.cpp")
+    TidbitsMakeUtils.resourceCopy( s"cpp/platform-wrapper-integration-tests/Test${accelName}.cpp", s"$targetDir/main.cpp")
   }
 
   def makeDriver(args: Array[String]) = {

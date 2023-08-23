@@ -55,10 +55,10 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
   type RegFileMap = LinkedHashMap[String, Array[Int]]
 
   // a list of files that will be needed for compiling drivers for platform
-  val baseDriverFiles: Array[String] = Array[String](
+  val baseDriverFiles: Seq[String] = Seq(
     "platform.h", "wrapperregdriver.h"
   )
-  def platformDriverFiles: Array[String]  // additional files
+  def platformDriverFiles: Seq[String]  // additional files
 
   // Rename clock -> clk
   clock.suggestName("clk")
@@ -117,7 +117,6 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
   }
 
   println("Generating register file mappings...")
-  println(ownIO)
   // traverse the accel I/Os and connect to the register file
   var regFileMap = new RegFileMap
   var allocReg = 0
@@ -253,21 +252,16 @@ val instFxn: PlatformWrapperParams => GenericAccelerator)  extends Module {
       val inds = regFileMap(regName).map(_.toString).reduce(_ + ", " + _)
       return s""" {"$regName", {$inds}} """
     }
-    //val statRegs = ownIO.filter(x => x._2.dir == OUTPUT).map(_._1)
     val statRegs = ownIO.filter(x => DataMirror.directionOf(x) == ActualDirection.Output)
                         .map({
                           (el: Element) => instanceNametoName(el.instanceName)
                         })
     val statRegMap = statRegs.map(statRegToCPPMapEntry).reduce(_ + ", " + _)
 
-
-    println(statRegMap)
-    println(statRegs)
-    println(regFileMap)
     var hlsBlackBoxTemplateDefines = ""
-  //  if(accel.hlsBlackBoxes.size != 0) {
-  //    hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
-  //  }
+    if(accel.hlsBlackBoxes.size != 0) {
+      hlsBlackBoxTemplateDefines = accel.hlsBlackBoxes.map(_.generateTemplateDefines()).reduce(_ + "\n" + _)
+    }
 
     driverStr += s"""
 #ifndef ${driverName}_H
@@ -320,8 +314,6 @@ protected:
     import java.io._
     // Create file
     val filename = targetDir+"/" + driverName+".hpp"
-    println("Writing to "+filename )
-    println(filename)
     val file = new File(filename)
     if (!file.exists()) {
       file.getParentFile.mkdirs

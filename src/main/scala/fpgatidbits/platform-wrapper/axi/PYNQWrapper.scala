@@ -1,10 +1,9 @@
 package fpgatidbits.PlatformWrapper
 
 import java.nio.file.Paths
-
 import chisel3._
 import chisel3.util._
-import fpgatidbits.TidbitsMakeUtils.fileCopyBulk
+import fpgatidbits.TidbitsMakeUtils.{resourceCopyBulk}
 
 // platform wrapper for PYNQ
 
@@ -32,7 +31,6 @@ class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
   generateRegDriver(targetDir)
 
   // Copy over the other needed files
-  val resRoot = Paths.get("./src/main/resources")
-  fileCopyBulk(s"${resRoot}/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
   println(s"=======> Driver files copied to ${targetDir}")
 }
