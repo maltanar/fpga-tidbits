@@ -13,18 +13,18 @@ class WrapperRegDriver
 public:
   virtual ~WrapperRegDriver() {}
   // (optional) functions for host-accelerator buffer management
-  virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {}
-  virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {}
-  virtual void * allocAccelBuffer(unsigned int numBytes) { throw "allocAccelBuffer not supported"; }
-  virtual void deallocAccelBuffer(void * buffer) {}
+  virtual void copyBufferHostToAccel(const void * hostBuffer, void * accelBuffer, unsigned int numBytes) {(void) hostBuffer; (void) accelBuffer; (void) numBytes;}
+  virtual void copyBufferAccelToHost(const void * accelBuffer, void * hostBuffer, unsigned int numBytes) {(void) hostBuffer; (void) accelBuffer; (void) numBytes;}
+  virtual void * allocAccelBuffer(unsigned int numBytes) { (void)numBytes; throw "allocAccelBuffer not supported"; }
+  virtual void deallocAccelBuffer(void * buffer) {(void) buffer;}
   // return CPU-accessible address for a buffer returned from allocAccelBuffer
   // only makes sense for some (shared-memory) platforms
   // facilitates SW that takes advantage of cache coherency
-  virtual void * phys2virt(void * accelBuffer) { throw "phys2virt not supported"; }
+  virtual void * phys2virt(void * accelBuffer) {(void) accelBuffer; throw "phys2virt not supported"; }
   virtual bool is_coherent() { return false; }
 
   // (optional) functions for accelerator attach-detach handling
-  virtual void attach(const char * name) {}
+  virtual void attach(const char * name) {(void)name; }
   virtual void detach() {}
 
   // (mandatory) register access methods for the platform wrapper
