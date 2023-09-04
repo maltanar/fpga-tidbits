@@ -3,6 +3,8 @@ TRACE ?= false
 VERILATOR_SRC_DIR=/usr/share/verilator/include
 VERIlATOR_SRC_GEN_DIR=verilated
 VERILATOR_OPTIONS=-Iother-verilog -Wno-assignin -Wno-fatal -Wno-lint -Wno-style -Wno-COMBDLY -Wno-STMTDLY
+TARGET_LIB=tidbits.a
+VER_BUILD_DIR=obj_dir
 
 ifeq ($(TRACE),true)
   VERILATOR_OPTIONS += --trace
@@ -10,6 +12,12 @@ ifeq ($(TRACE),true)
 endif
 
 PLATFORM := TesterWrapper
+SRCS=main.cpp platform-verilatedtester.cpp
+
+lib: $(SRCS)
+	verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) $(CC_OPTIONS) --exe --build $^
+	@rm $(VER_BUILD_DIR)/main.o
+	ar -rcs $(TARGET_LIB) $(VER_BUILD_DIR)/*.o
 
 $(EMULATOR_BIN): main.cpp platform-verilatedtester.cpp
 	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) $(CC_OPTIONS) --exe --build main.cpp platform-verilatedtester.cpp

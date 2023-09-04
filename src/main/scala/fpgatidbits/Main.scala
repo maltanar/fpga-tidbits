@@ -89,6 +89,7 @@ object MainObj {
     "ExampleMemLatency" -> {p => new ExampleMemLatency(p)},
     "ExampleGather" -> {p => new ExampleGather(p)},
     "ExampleSinglePortBRAM" -> {p => new ExampleSinglePortBRAM(p)},
+    "ExampleGrayScale" -> {p => new ExampleGrayScale(p)},
     "HelloAccel" -> {p => new HelloAccel(p)}
   )
 
