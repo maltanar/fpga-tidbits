@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm.FPGAQueue
 
 // deinterleavers a input stream with identifiers onto one of the output
@@ -11,38 +12,38 @@ import fpgatidbits.ocm.FPGAQueue
 // - to avoid combinational paths, pipeline the deinterleaver
 
 class StreamDeinterleaverIF[T <: Data](numDests: Int, gen: T) extends Bundle {
-  val in = Decoupled(gen).flip
-  val out = Vec.fill(numDests) {Decoupled(gen)}
-  val decodeErrors = UInt(OUTPUT, 32)
+  val in = Flipped(Decoupled(gen))
+  val out = Vec(numDests, Decoupled(gen))
+  val decodeErrors = Output(UInt(32.W))
 }
 
 class StreamDeinterleaver[T <: Data](numDests: Int, gen: T, route: T => UInt)
 extends Module {
   val io = new StreamDeinterleaverIF(numDests, gen)
 
-  val regDecodeErrors = Reg(init = UInt(0, 32))
+  val regDecodeErrors = RegInit(0.U(32.W))
 
   for(i <- 0 until numDests) {
     io.out(i).bits := io.in.bits
-    io.out(i).valid := Bool(false)
+    io.out(i).valid := false.B
   }
 
-  io.in.ready := Bool(false)
+  io.in.ready := false.B
   io.decodeErrors := regDecodeErrors
 
   val destPipe = route(io.in.bits)
-  val invalidChannel = (destPipe >= UInt(numDests))
+  val invalidChannel = (destPipe >= (numDests.U))
   val canProceed = io.in.valid && io.out(destPipe).ready
 
   when (invalidChannel) {
     // do not let the entire pipe stall because head of line has invalid dest
     // increment error counter and move on
-    regDecodeErrors := regDecodeErrors + UInt(1)
-    io.in.ready := Bool(true)
+    regDecodeErrors := regDecodeErrors + 1.U
+    io.in.ready := true.B
   }
   .elsewhen (canProceed) {
-    io.in.ready := Bool(true)
-    io.out(destPipe).valid := Bool(true)
+    io.in.ready := true.B
+    io.out(destPipe).valid := true.B
   }
 }
 

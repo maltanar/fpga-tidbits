@@ -1,6 +1,7 @@
 package fpgatidbits.ocm
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // Dual-port pipelined BRAM with asymmetric r/w widths
 class AsymPipelinedDualPortBRAM(
@@ -8,7 +9,7 @@ class AsymPipelinedDualPortBRAM(
 ) extends Module {
   val ocmParams = p
   val io = new Bundle {
-    val ports = Vec.fill(2) {new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+    val ports = Vec(2, new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth))
   }
   // note that we assume the user left-shifts the address as necessary
   // (this is what Xilinx BRAMs assume as well -- not sure about Altera)
@@ -20,8 +21,8 @@ class AsymPipelinedDualPortBRAM(
   val maxWidth = math.max(p.writeWidth, p.readWidth)
   val asymRatio = maxWidth / minWidth
   val memBits = p.writeDepth * p.writeWidth
-  val addr_bits = log2Up(memBits / minWidth)
-  val addrOfUnit_bits = log2Up(asymRatio)
+  val addr_bits = log2Ceil(memBits / minWidth)
+  val addrOfUnit_bits = log2Ceil(asymRatio)
   val addrInUnit_bits = addr_bits - addrOfUnit_bits
   if(asymRatio == 1) {
     // just instantiate a regular PipelinedDualPortBRAM
@@ -36,12 +37,12 @@ class AsymPipelinedDualPortBRAM(
     Predef.assert(isPow2(asymRatio))
     Predef.assert(p.writeDepth * p.writeWidth == p.readDepth * p.readWidth)
     // instantiate unit-sized mems, based on the minimum width
-    val mem = Vec.fill(asymRatio) {
+    val mem = VecInit(Seq.fill(asymRatio)(
       Module(new PipelinedDualPortBRAM(
         addrBits = addrInUnit_bits, dataBits = minWidth, regIn = regIn,
         regOut = regOut
       )).io
-    }
+    ))
 
     // use both ports
     for(pn <- 0 until 2) {
@@ -56,7 +57,7 @@ class AsymPipelinedDualPortBRAM(
         mem.map(_.ports(pn).req.writeData := io.ports(pn).req.writeData)
         // only right unit gets write enable
         for(j <- 0 until asymRatio) {
-          mem(j).ports(pn).req.writeEn := io.ports(pn).req.writeEn & (UInt(j) === addrOfUnit)
+          mem(j).ports(pn).req.writeEn := io.ports(pn).req.writeEn & (j.U === addrOfUnit)
         }
         // read data is several unit reads concatenated
         io.ports(pn).rsp.readData := Cat(mem.map(_.ports(pn).rsp.readData).reverse)

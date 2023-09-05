@@ -1,13 +1,14 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 class StreamFilter[Tin <: Data, Tout <: Data]
   (genI: Tin, genO: Tout, filterFxn: Tin => Tout  ) extends Module {
-    val io = new Bundle {
-      val in = Decoupled(genI).flip
+    val io = IO(new Bundle {
+      val in = Flipped(Decoupled(genI))
       val out = Decoupled(genO)
-    }
+    })
     io.out.valid := io.in.valid
     io.out.bits := filterFxn(io.in.bits)
     io.in.ready := io.out.ready
@@ -16,7 +17,7 @@ class StreamFilter[Tin <: Data, Tout <: Data]
 object StreamFilter {
   def apply[Tin <: Data, Tout <: Data]
     (in: DecoupledIO[Tin], outGen: Tout, filterFxn: Tin => Tout ) = {
-      val sf = Module(new StreamFilter[Tin,Tout](in.bits.clone,outGen.clone, filterFxn)).io
+      val sf = Module(new StreamFilter[Tin,Tout](in.bits.cloneType,outGen.cloneType, filterFxn)).io
       sf.in <> in
       sf.out
     }

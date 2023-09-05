@@ -1,21 +1,20 @@
 package fpgatidbits.regfile
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // command bundle for read/writes to AEG/CSR registers
 class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
-  val regID     = UInt(width = idBits)
+  val regID     = UInt(idBits.W)
   val read      = Bool()
   val write     = Bool()
-  val writeData = UInt(width = dataBits)
-
-  override def clone = { new RegCommand(idBits, dataBits).asInstanceOf[this.type] }
+  val writeData = UInt(dataBits.W)
 
   def driveDefaults() = {
-    regID := UInt(0)
-    read := Bool(false)
-    write := Bool(false)
-    writeData := UInt(0)
+    regID := 0.U
+    read := false.B
+    write := false.B
+    writeData := 0.U
   }
 }
 
@@ -23,35 +22,39 @@ class RegCommand(idBits: Int, dataBits: Int) extends Bundle {
 class RegFileSlaveIF(idBits: Int, dataBits: Int) extends Bundle {
   // register read/write commands
   // the "valid" signal here should be connected to (.read OR .write)
-  val cmd         = Valid(new RegCommand(idBits, dataBits)).flip
+  val cmd         = Flipped(Valid(new RegCommand(idBits, dataBits)))
   // returned read data
-  val readData    = Valid(UInt(width = dataBits))
+  val readData    = Valid(UInt(dataBits.W))
   // number of registers
-  val regCount    = UInt(OUTPUT, width = idBits)
+  val regCount    = Output(UInt(idBits.W))
 
-  override def clone = { new RegFileSlaveIF(idBits, dataBits).asInstanceOf[this.type] }
 }
 
 
 class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // external command interface
     val extIF = new RegFileSlaveIF(idBits, dataBits)
     // exposed values of all registers, for internal use
-    val regOut = Vec.fill(numRegs) { UInt(OUTPUT, width = dataBits) }
+    val regOut = Vec(numRegs, Output(UInt(dataBits.W)))
     // valid pipes for writing new values for all registers, for internal use
     // (extIF takes priority over this)
-    val regIn = Vec.fill(numRegs) { Valid(UInt(width = dataBits)).flip }
-  }
+    val regIn = Vec(numRegs, Flipped(Valid(UInt(dataBits.W))))
+  })
   // drive num registers to compile-time constant
-  io.extIF.regCount := UInt(numRegs)
+  io.extIF.regCount := numRegs.U
 
   // instantiate the registers in the file
-  val regFile = Vec.fill(numRegs) { Reg(init = UInt(0, width = dataBits)) }
+  val regFile = RegInit(VecInit(Seq.fill(numRegs){0.U(dataBits.W)}))
+  for (i <- 0 until numRegs) {
+    dontTouch(regFile(i))
+  }
+
 
   // latch the incoming commands
-  val regCommand = Reg(next = io.extIF.cmd.bits)
-  val regDoCmd = Reg(init = Bool(false), next = io.extIF.cmd.valid)
+  val regCommand = RegNext(io.extIF.cmd.bits)
+  val regDoCmd = RegNext(next=io.extIF.cmd.valid, init=false.B)
+
 
   val hasExtReadCommand = (regDoCmd && regCommand.read)
   val hasExtWriteCommand = (regDoCmd && regCommand.write)
@@ -59,11 +62,11 @@ class RegFile(numRegs: Int, idBits: Int, dataBits: Int) extends Module {
   // register read logic
   io.extIF.readData.valid := hasExtReadCommand
   // make sure regID stays within range for memory read
-  when (regCommand.regID < UInt(numRegs)) {
+  when (regCommand.regID < (numRegs).U) {
     io.extIF.readData.bits  := regFile(regCommand.regID)
   } .otherwise {
     // return 0 otherwise
-    io.extIF.readData.bits  := UInt(0)
+    io.extIF.readData.bits  := 0.U
   }
 
   // register write logic

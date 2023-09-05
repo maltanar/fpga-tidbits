@@ -1,6 +1,7 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
 import fpgatidbits.regfile._
 import fpgatidbits.ocm._
@@ -25,7 +26,7 @@ object WX690TParams extends PlatformWrapperParams {
 
 // TODO plug unused platform ports if accel has less mem ports
 
-class WolverinePlatformWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class WolverinePlatformWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
 extends PlatformWrapper(WX690TParams, instFxn) {
   val useAEGforRegFile = false
 
@@ -55,12 +56,12 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   // - the accelerator as "accel"
   // - the register file as "regFile"
 
-  io.dispException := UInt(0) // TODO Convey: support exceptions
+  io.dispException := 0.U // TODO Convey: support exceptions
 
   // for now, our Convey wrapper accepts a single instructions, then never
   // returns (just keeps idle low and stall high)
   // TODO add a platform-level register to control this
-  val regBusy = Reg(init = Bool(false))
+  val regBusy = RegInit(false.B)
   when (!regBusy) {regBusy := io.dispInstValid}
   io.dispIdle := !regBusy
   io.dispStall := regBusy
@@ -69,7 +70,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // use the Convey AEG interface for controlling the register file
     // useful mostly for debugging in simulation, since the Convey simulation
     // infrastructure does not seem to support CSR r/w
-    io.dispAegCnt := UInt(numRegs)
+    io.dispAegCnt := numRegs.U
     io.dispRtnValid := regFile.extIF.readData.valid
     io.dispRtnData := regFile.extIF.readData.bits
     regFile.extIF.cmd.bits.regID := io.dispRegID
@@ -78,16 +79,30 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     regFile.extIF.cmd.bits.writeData := io.dispRegWrData
     regFile.extIF.cmd.valid := io.dispRegRead || io.dispRegWrite
     // plug the CSR IF
-    io.csrReadAck := Bool(false)
-    io.csrReadData := UInt(0)
+    io.csrReadAck := false.B
+    io.csrReadData := 0.U
 
     // hack: special treatment for the "start" register
     // accelerator must not start issuing memreqs before dispatch comes
     // TODO add platform-level start-active-finished signals
     if(regFileMap.contains("start")) {
       println("====> Rewiring start to Convey instruction dispatch")
-      accel("start") := regBusy
-      when (regBusy) {regBusy := !(accel("finished").toBool())}
+      var foundStart = false
+      var foundFinished = false
+      for (elt <- accel.io.elements) {
+        if (elt._1.equals("start")) {
+          elt._2 := regBusy
+          foundStart = true
+        }
+        if (elt._1.equals("finished")) {
+          elt._2 := regBusy
+          foundFinished = true
+          when(regBusy) {
+            regBusy := !(elt._2.asTypeOf(Bool()))
+          }
+        }
+      }
+      require(foundStart && foundFinished)
     }
     println("====> RegFile is using the Convey AEG interface")
   } else {
@@ -95,15 +110,15 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // why 2? does not overlap with the reset controls in PlatformWrapper
     // this allows a clear detach (don't need to reload same bitfile next time)
     // TODO find a cleaner way to do all this!
-    val magicDMatch = io.csrWrData === UInt(2)
-    val clearBusyMagic = (io.csrAddr === UInt(0)) & io.csrWrValid & magicDMatch
-    when (regBusy & clearBusyMagic) { regBusy := Bool(false)}
+    val magicDMatch = io.csrWrData === 2.U
+    val clearBusyMagic = (io.csrAddr === 0.U) & io.csrWrValid & magicDMatch
+    when (regBusy & clearBusyMagic) { regBusy := false.B}
 
     // use the Convey CSR interface for controlling the register file
     // use a single, constant register for the AEGs
-    io.dispAegCnt := UInt(1)
-    io.dispRtnValid := Reg(next = io.dispRegRead)
-    io.dispRtnData := UInt("hdeadbeef")
+    io.dispAegCnt := 1.U
+    io.dispRtnValid := RegNext(io.dispRegRead)
+    io.dispRtnData := "hdeadbeef".U
 
     // use Convey CSR interface to talk to our regfile
     regFile.extIF.cmd.bits.regID := io.csrAddr
@@ -116,15 +131,15 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     println("====> RegFile is using the Convey CSR interface, remember to enable the CSR agent")
   }
 
-  io.mcReqValid := UInt(0)
-  io.mcReqRtnCtl := UInt(0)
-  io.mcReqData := UInt(0)
-  io.mcReqAddr := UInt(0)
-  io.mcReqSize := UInt(0)
-  io.mcReqCmd := UInt(0)
-  io.mcReqSCmd := UInt(0)
-  io.mcResStall := UInt(0)
-  io.mcReqFlush := UInt(0)
+  io.mcReqValid := 0.U
+  io.mcReqRtnCtl := 0.U
+  io.mcReqData := 0.U
+  io.mcReqAddr := 0.U
+  io.mcReqSize := 0.U
+  io.mcReqCmd := 0.U
+  io.mcReqSCmd := 0.U
+  io.mcResStall := 0.U
+  io.mcReqFlush := 0.U
 
   // wire up memory port adapters
   // TODO add support for write flush
@@ -133,7 +148,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
       throw new Exception("Too many mem ports in accelerator")
     }
 
-    val adps = Vec.fill(nmp) {
+    val adps = for (i <- 0 until nmp) yield {
       Module(new ConveyGenericMemAdapter(p.toMemReqParams())).io
     }
 
@@ -164,7 +179,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // - Convey mem.port's stall is driven by "almost full" from queue
     // TODO generalize this idea into an interface adapter + use for reqs too
     val respQueElems = 8
-    val respQueues = Vec.fill(nmp) {
+    val respQueues = for(i <- 0 until nmp) yield {
       Module(
           new FPGAQueue(new ConveyMemResponse(p.memIDBits, p.memDataBits), respQueElems)
         ).io
@@ -174,7 +189,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
     // to drive the Convey mem resp port's stall input
     // this is quite conservative (stall when FIFO is half full) but
     // it seems to work (there may be a deeper problem here)
-    val respStall = Cat(respQueues.map(x => (x.count >= UInt(respQueElems/2))))
+    val respStall = Cat(respQueues.map(x => (x.count >= (respQueElems/2).U)))
     // Cat concatenation order needs to be reversed
     io.mcResStall := Reverse(respStall)
 
@@ -210,22 +225,22 @@ extends PlatformWrapper(WX690TParams, instFxn) {
 // Convey memory request adapter
 class ConveyMemReqAdp(p: MemReqParams) extends Module {
   val io = new Bundle {
-    val genericReqIn = Decoupled(new GenericMemoryRequest(p)).flip
+    val genericReqIn = Flipped(Decoupled(new GenericMemoryRequest(p)))
     val conveyReqOut = Decoupled(new ConveyMemRequest(p.idWidth, p.addrWidth, p.dataWidth))
-    val writeData = Decoupled(UInt(width = p.dataWidth)).flip
+    val writeData = Flipped(Decoupled(UInt(p.dataWidth.W)))
   }
   if(p.dataWidth != 64) {
     throw new Exception("ConveyMemReqAdp requires p.dataWidth=64")
   }
   // default outputs
-  io.genericReqIn.ready := Bool(false)
-  io.conveyReqOut.valid := Bool(false)
+  io.genericReqIn.ready := false.B
+  io.conveyReqOut.valid := false.B
   io.conveyReqOut.bits.rtnCtl := io.genericReqIn.bits.channelID
   io.conveyReqOut.bits.writeData := io.writeData.bits
   io.conveyReqOut.bits.addr := io.genericReqIn.bits.addr
   // can actually be smaller for subword writes/reads but those are not
   // supported (so UInt( log2Up(p.dataWidth/8)))
-  io.conveyReqOut.bits.size := UInt(3)
+  io.conveyReqOut.bits.size := 3.U
   // see Convey PDK Guide 8.3.x for more details on the memreq signals
   // values for cmd:
   // 1 for regular load
@@ -233,7 +248,7 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   // 6 for burst write
   // 5 for atomics (not supported in fpga-tidbits)
   // 7 for burst read
-  io.conveyReqOut.bits.cmd := UInt(0)
+  io.conveyReqOut.bits.cmd := 0.U
   // values for scmd:
   // supposedly number of beats (quadwords) for burst write -- but not really
   // 0 for everything else (except atomics, which we do not support)
@@ -259,54 +274,54 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
   // as reserved
   // ====================================================================
   // since we only support 64byte writes anyway, set scmd to be const zero
-  io.conveyReqOut.bits.scmd := UInt(0)
+  io.conveyReqOut.bits.scmd := 0.U
 
   // plug write data ready signals by default
-  io.writeData.ready := Bool(false)
+  io.writeData.ready := false.B
 
   // TODO only 64byte bursts for now
-  val isBurst = (io.genericReqIn.bits.numBytes === UInt(64))
+  val isBurst = (io.genericReqIn.bits.numBytes === 64.U)
   val isWriteBurst = io.genericReqIn.bits.isWrite & isBurst
 
   // regular write must have both request and data ready
   val isWriteReadyToGo = io.genericReqIn.valid & io.writeData.valid
   val isWriteRegular = io.genericReqIn.bits.isWrite & !isBurst
 
-  val sRegular :: sWriteBurst :: Nil = Enum(UInt(), 2)
-  val regState = Reg(init = UInt(sRegular))
+  val sRegular :: sWriteBurst :: Nil = Enum(2)
+  val regState = RegInit(sRegular)
   // register to keep write burst state
-  val regWriteBurst = Reg(init = GenericMemoryRequest(p))
-  val regWriteBeatsLeft = Reg(init = UInt(0, width = 32))
+  val regWriteBurst = RegInit(GenericMemoryRequest(p))
+  val regWriteBeatsLeft = RegInit(0.U(32.W))
 
   switch(regState) {
     is(sRegular) {
       // "regular" state for the adapter, burst reads and non-burst writes
       when(isWriteRegular & isWriteReadyToGo) {
         // non-burst write request
-        io.conveyReqOut.bits.cmd := UInt(2)
+        io.conveyReqOut.bits.cmd := 2.U
         // both request and associated channel data are valid
-        io.conveyReqOut.valid := Bool(true)
+        io.conveyReqOut.valid := true.B
         // both request and associated channel data must be ready
         io.genericReqIn.ready := io.conveyReqOut.ready
         io.writeData.ready := io.conveyReqOut.ready
       } .elsewhen (io.genericReqIn.valid && !io.genericReqIn.bits.isWrite) {
         // read request, burst or regular
-        io.conveyReqOut.bits.cmd := Mux(isBurst, UInt(7), UInt(1))
-        io.conveyReqOut.valid := Bool(true)
+        io.conveyReqOut.bits.cmd := Mux(isBurst, 7.U, 1.U)
+        io.conveyReqOut.valid := true.B
         io.genericReqIn.ready := io.conveyReqOut.ready
       } .elsewhen(io.genericReqIn.valid & isWriteBurst) {
         // when write burst is detected, switch to sWriteBurst state
         regState := sWriteBurst
         // consume the write burst request
-        io.genericReqIn.ready := Bool(true)
+        io.genericReqIn.ready := true.B
         // register the write request and # of beats needed
         regWriteBurst := io.genericReqIn.bits
-        regWriteBeatsLeft := io.genericReqIn.bits.numBytes / UInt(8)
+        regWriteBeatsLeft := io.genericReqIn.bits.numBytes / 8.U
       }
     }
     is(sWriteBurst) {
       // use registers to generate the next request of the write burst
-      io.conveyReqOut.bits.cmd := UInt(6)
+      io.conveyReqOut.bits.cmd := 6.U
       io.conveyReqOut.bits.rtnCtl := regWriteBurst.channelID
       io.conveyReqOut.bits.addr := regWriteBurst.addr
 
@@ -315,10 +330,10 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
 
       when(io.conveyReqOut.valid & io.conveyReqOut.ready) {
         // update registered request and decrement counter
-        regWriteBeatsLeft := regWriteBeatsLeft - UInt(1)
-        regWriteBurst.addr := regWriteBurst.addr + UInt(8)
+        regWriteBeatsLeft := regWriteBeatsLeft - 1.U
+        regWriteBurst.addr := regWriteBurst.addr + 8.U
         // back to sRegular when no more write burst beats
-        when(regWriteBeatsLeft <= UInt(1)) {
+        when(regWriteBeatsLeft <= 1.U) {
           regState := sRegular
         }
       }
@@ -329,7 +344,7 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
 // Convey memory response adapter
 class ConveyMemRspAdp(p: MemReqParams) extends Module {
   val io = new Bundle {
-    val conveyRspIn = Decoupled(new ConveyMemResponse(32, 64)).flip
+    val conveyRspIn = Flipped(Decoupled(new ConveyMemResponse(32, 64)))
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
   }
 
@@ -340,18 +355,18 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
   io.genericRspOut.bits.readData := io.conveyRspIn.bits.readData
   // TODO handle Convey atomics correctly?
   // this works for reads, writes and bursts, but not atomics
-  io.genericRspOut.bits.isWrite := (io.conveyRspIn.bits.cmd === UInt(3))
+  io.genericRspOut.bits.isWrite := (io.conveyRspIn.bits.cmd === 3.U)
   // mark the last beat in a read with the isLast flag
   // a single read's response is always last
-  val isSingleReadRsp = (io.conveyRspIn.bits.cmd === UInt(2))
+  val isSingleReadRsp = (io.conveyRspIn.bits.cmd === 2.U)
   // only supports 8-beat bursts, so a isLast response is always nr 7
   // (first response is #0) TODO Convey atomics won't work with this!
-  val isBurstReadRsp = (io.conveyRspIn.bits.cmd === UInt(7))
-  val isLastInRdBurst = isBurstReadRsp & (io.conveyRspIn.bits.scmd === UInt(7))
+  val isBurstReadRsp = (io.conveyRspIn.bits.cmd === 7.U)
+  val isLastInRdBurst = isBurstReadRsp & (io.conveyRspIn.bits.scmd === 7.U)
   io.genericRspOut.bits.isLast := isLastInRdBurst | isSingleReadRsp
 
   // TODO carry cmd and scmd here
-  io.genericRspOut.bits.metaData := UInt(0)
+  io.genericRspOut.bits.metaData := 0.U
 }
 
 // Convey memory port adapter
@@ -374,5 +389,5 @@ class ConveyGenericMemAdapter(p: MemReqParams) extends Module {
   rspadp.genericRspOut <> muxer.simplex.rsp
 
   // TODO enable flush requests from generic interface somehow?
-  io.conveyMem.flushReq := Bool(false)
+  io.conveyMem.flushReq := false.B
 }

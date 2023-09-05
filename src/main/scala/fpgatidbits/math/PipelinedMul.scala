@@ -1,16 +1,15 @@
 package fpgatidbits.math
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 class PipelinedMultStageData(w: Int, wMul: Int) extends Bundle {
   val signA = Bool()
-  val a = UInt(width = w)
+  val a = UInt(w.W)
   val signB = Bool()
-  val b = UInt(width = w)
-  val mulRes = UInt(width = 2*wMul)
-  val addRes = UInt(width = w)
-
-  override def cloneType: this.type = new PipelinedMultStageData(w, wMul).asInstanceOf[this.type]
+  val b = UInt(w.W)
+  val mulRes = UInt((2*wMul).W)
+  val addRes = UInt(w.W)
 }
 
 // pipelined 64-bit signed multiplier with backpressure support, hardwired
@@ -28,10 +27,10 @@ class SystolicSInt64Mul_5Stage extends BinaryMathOp(64) {
   val fxnS0 = {i: BinaryMathOperands => val m = new PipelinedMultStageData(64, wMul)
     m.signA := i.first(63)
     m.signB := i.second(63)
-    m.a := Mux(i.first(63), UInt(~i.first + UInt(1), width = 64), i.first)
-    m.b := Mux(i.second(63), UInt(~i.second + UInt(1), width = 64), i.second)
-    m.mulRes := UInt(0)
-    m.addRes := UInt(0)
+    m.a := Mux(i.first(63), ~i.first+ 1.U, i.first)
+    m.b := Mux(i.second(63), ~i.second + 1.U, i.second)
+    m.mulRes := 0.U
+    m.addRes := 0.U
     m
   }
   val s0 = SystolicReg(io.in.bits, metad, fxnS0, io.in)
@@ -42,14 +41,14 @@ class SystolicSInt64Mul_5Stage extends BinaryMathOp(64) {
   // where the values to be multiplied will be taken from within the operands
   // and shiftAdd (should be equal to wMul*sum of offsets for prev stage)
   val fMaker = { (offA: Int, offB: Int, shiftAdd: Int) =>
-    {i: PipelinedMultStageData => val m = new PipelinedMultStageData(64, wMul)
-      m := i
-      // multiply offA-th wMul-wide word of A, off-Bth of B
-      m.mulRes := i.a((wMul*(offA+1))-1, wMul*offA) * i.b((wMul*(offB+1))-1, wMul*offB)
-      // add partial product and addRes from previous stage
-      m.addRes := (i.mulRes << UInt(shiftAdd)) + i.addRes
-      m
-    }
+  {i: PipelinedMultStageData => val m = new PipelinedMultStageData(64, wMul)
+    m := i
+    // multiply offA-th wMul-wide word of A, off-Bth of B
+    m.mulRes := i.a((wMul*(offA+1))-1, wMul*offA) * i.b((wMul*(offB+1))-1, wMul*offB)
+    // add partial product and addRes from previous stage
+    m.addRes := (i.mulRes << shiftAdd.U) + i.addRes
+    m
+  }
   }
 
   val s1 = SystolicReg(metad, metad, fMaker(0, 0, 0), s0)
@@ -64,7 +63,7 @@ class SystolicSInt64Mul_5Stage extends BinaryMathOp(64) {
   s4.ready := io.out.ready
   io.out.valid := s4.valid
 
-  val magnRes = Cat(UInt(0, width=1), s4.bits.addRes(62, 0))
+  val magnRes = Cat(0.U(1.W), s4.bits.addRes(62, 0))
   val isResultNegative = s4.bits.signA ^ s4.bits.signB
-  io.out.bits := Mux(isResultNegative, ~magnRes + UInt(1), magnRes)
+  io.out.bits := Mux(isResultNegative, ~magnRes + 1.U, magnRes)
 }

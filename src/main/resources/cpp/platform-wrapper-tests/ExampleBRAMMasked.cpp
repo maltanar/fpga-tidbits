@@ -1,6 +1,6 @@
 #include <iostream>
 #include "platform.h"
-#include "TestBRAMMasked.hpp"
+#include "ExampleBRAMMasked.hpp"
 #include <string>
 
 using namespace std;
@@ -8,7 +8,7 @@ using namespace std;
 int main() {
   WrapperRegDriver * platform = initPlatform();
 
-  TestBRAMMasked t(platform);
+  ExampleBRAMMasked t(platform);
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
 

@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // StreamCAM: a CAM with stream-style (DecoupledIO) interfaces.
 // a CAM with <entires> slots, each slot <tag_bits> wide, is instantiated.
@@ -10,12 +11,12 @@ import Chisel._
 // present (indicated by the <hazard> signal)
 
 class StreamCAM(entries: Int, tag_bits: Int) extends Module {
-  val io = new Bundle {
-    val hazard = Bool(OUTPUT)
-    val full = Bool(OUTPUT)
-    val in = Decoupled(UInt(width=tag_bits)).flip
-    val rm = Decoupled(UInt(width=tag_bits)).flip
-  }
+  val io = IO(new Bundle {
+    val hazard = Output(Bool())
+    val full = Output(Bool())
+    val in = Flipped(Decoupled(UInt(tag_bits.W)))
+    val rm = Flipped(Decoupled(UInt(tag_bits.W)))
+  })
 
   val cam = Module(new CAM(entries, tag_bits)).io
   // removal logic
@@ -38,48 +39,50 @@ class StreamCAM(entries: Int, tag_bits: Int) extends Module {
 // interface & implementation for a combinational content-addressable memory
 
 class CAMIO(entries: Int, addr_bits: Int, tag_bits: Int) extends Bundle {
-  val clear_hit = Bool(INPUT)
-  val is_clear_hit = Bool(OUTPUT)
-  val clear_tag = Bits(INPUT, tag_bits)
+  val clear_hit = Input(Bool())
+  val is_clear_hit = Output(Bool())
+  val clear_tag = Input(UInt(tag_bits.W))
 
-  val tag = Bits(INPUT, tag_bits)
-  val hit = Bool(OUTPUT)
-  val hits = UInt(OUTPUT, entries)
-  val valid_bits = Bits(OUTPUT, entries)
-  val write = Bool(INPUT)
-  val write_tag = Bits(INPUT, tag_bits)
-  val hasFree = Bool(OUTPUT)
-  val freeInd = UInt(OUTPUT, log2Up(entries))
+  val tag = Input(UInt(tag_bits.W))
+  val hit = Output(Bool())
+  val hits = Output(UInt(entries.W))
+  val valid_bits = Output(UInt(entries.W))
+  val write = Input(Bool())
+  val write_tag = Input(UInt(tag_bits.W))
+  val hasFree = Output(Bool())
+  val freeInd = Output(UInt(log2Ceil(entries).W))
+
 }
 
 // TODO make the CAM search/match function customizable?
 // (e.g compare only a subset of tag bits or such)
 class CAM(entries: Int, tag_bits: Int) extends Module {
   val addr_bits = log2Up(entries)
-  val io = new CAMIO(entries, addr_bits, tag_bits)
-  val cam_tags = Mem(Bits(width = tag_bits), entries)
+  val io = IO(new CAMIO(entries, addr_bits, tag_bits))
+  val cam_tags = SyncReadMem(entries, UInt(tag_bits.W))
   // valid (fullness) of each slot in the CAM
-  val vb_array = Reg(init = Bits(0, entries))
+  val vb_array = RegInit(0.U(entries.W))
   // hit status for clearing
-  val clearHits = Vec((0 until entries).map(i => vb_array(i) && cam_tags(i) === io.clear_tag))
-  io.is_clear_hit := clearHits.toBits.orR
+  //val clearHits = Vec((0 until entries).map(i => vb_array(i) && cam_tags(i) === io.clear_tag))
+  val clearHits = VecInit(Seq.tabulate(entries){i => vb_array(i) && cam_tags(i) === io.clear_tag})
+  io.is_clear_hit := clearHits.asUInt.orR
 
   // index of first free slot in the CAM (least significant first)
   val freeLocation = PriorityEncoder(~vb_array)
   io.freeInd := freeLocation
   // whether there are any free slots at all
-  io.hasFree := orR(~vb_array)
+  io.hasFree := ~vb_array.orR
 
   // produce masks to allow simultaneous write+clear
-  val writeMask = Mux(io.write, UIntToOH(freeLocation), Bits(0, entries))
-  val clearMask = Mux(io.clear_hit, ~(clearHits.toBits), ~Bits(0, entries))
+  val writeMask = Mux(io.write, UIntToOH(freeLocation), (0.U(entries.W)))
+  val clearMask = Mux(io.clear_hit, (~clearHits.asUInt).asUInt, (~0.U(entries.W)).asUInt)
 
-  vb_array := (vb_array | writeMask) & clearMask
+  vb_array := ((vb_array | writeMask) & clearMask).asUInt
 
   when (io.write) { cam_tags(freeLocation) := io.write_tag }
 
-  val hits = (0 until entries).map(i => vb_array(i) && cam_tags(i) === io.tag)
+  val hits = VecInit(Seq.tabulate(entries) { (i => vb_array(i) && cam_tags(i) === io.tag) })
   io.valid_bits := vb_array
-  io.hits := Vec(hits).toBits
+  io.hits := hits.asUInt
   io.hit := io.hits.orR
 }

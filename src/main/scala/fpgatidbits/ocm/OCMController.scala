@@ -1,6 +1,7 @@
 package fpgatidbits.ocm
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // a definitions and helpers for FPGA On-Chip Memory (OCM)
 // (typically "BRAM" for Xilinx and "embedded memory" for Altera)
@@ -21,14 +22,14 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
   val bits: Int = b
 
   def makeReadAddr(x: UInt): UInt = {
-    if (rWidth <= wWidth) x else (x << UInt(log2Up(rWidth/wWidth)))
+    if (rWidth <= wWidth) x else x << (log2Ceil(rWidth/wWidth))
   }
 
   def makeWriteAddr(x: UInt): UInt = {
-    if (wWidth <= rWidth) x else (x << UInt(log2Up(wWidth/rWidth)))
+    if (wWidth <= rWidth) x else x << (log2Ceil(wWidth/rWidth))
   }
 
-  def printParams() {
+  def printParams(): Unit =  {
     println("OCM parameters:")
     println("Address width: " + addrWidth.toString)
     println("Total # bits: " + bits.toString)
@@ -40,154 +41,152 @@ class OCMParameters(b: Int, rWidth: Int, wWidth: Int, pts: Int, lat: Int) {
   }
 }
 
-class OCMRequest(writeWidth: Int, addrWidth: Int) extends Bundle {
-  val addr = UInt(width = addrWidth)
-  val writeData = UInt(width = writeWidth)
+class OCMRequest(private val writeWidth: Int, private val addrWidth: Int) extends Bundle {
+  val addr = UInt(addrWidth.W)
+  val writeData = UInt(writeWidth.W)
   val writeEn = Bool()
-
-  override def clone = {new OCMRequest(writeWidth, addrWidth).asInstanceOf[this.type]}
 }
 
 object NullOCMRequest {
   def apply(p: OCMParameters) = {
     val ocmr = new OCMRequest(p.writeWidth, p.addrWidth)
-    ocmr.addr := UInt(0)
-    ocmr.writeEn := Bool(false)
-    ocmr.writeData := UInt(0)
+    ocmr.addr := 0.U
+    ocmr.writeEn := false.B
+    ocmr.writeData := 0.U
     ocmr
   }
 }
 
-class OCMResponse(readWidth: Int) extends Bundle {
-  val readData = UInt(width = readWidth)
-
-  override def clone = {new OCMResponse(readWidth).asInstanceOf[this.type]}
+class OCMResponse(private val readWidth: Int) extends Bundle {
+  val readData = UInt(readWidth.W)
 }
 
 // master interface for an OCM access port (read/write, possibly with different
 // widths)
 class OCMMasterIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundle {
-  val req = new OCMRequest(writeWidth, addrWidth).asOutput()
-  val rsp = new OCMResponse(readWidth).asInput()
+  val req = Output(new OCMRequest(writeWidth, addrWidth))
+  val rsp = Input(new OCMResponse(readWidth))
 
-  override def clone =
-    { new OCMMasterIF(writeWidth, readWidth, addrWidth).asInstanceOf[this.type] }
+  def driveDefaults(): Unit = {
+    req.writeEn := false.B
+    req.writeData := DontCare
+    req.addr := DontCare
+  }
 }
 
 // slave interface is just the master interface flipped
 class OCMSlaveIF(writeWidth: Int, readWidth: Int, addrWidth: Int) extends Bundle {
-  val req = new OCMRequest(writeWidth, addrWidth).asInput()
-  val rsp = new OCMResponse(readWidth).asOutput()
+  val req = Input(new OCMRequest(writeWidth, addrWidth))
+  val rsp = Output(new OCMResponse(readWidth))
 
-  override def clone =
-    { new OCMSlaveIF(writeWidth, readWidth, addrWidth).asInstanceOf[this.type] }
 }
 
-class OnChipMemoryBlackBoxIF(p: OCMParameters)extends Bundle {
-  val ports = Vec.fill(p.portCount) {
-    new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+class OnChipMemoryBlackBoxIF(p: OCMParameters) extends Bundle {
+  val ports = Output(Vec(p.portCount, new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)))
 }
 
 // we assume the actual OCM instance is generated via vendor-provided tools
 // so this is just a BlackBox (wrapper module)
 class OnChipMemory(p: OCMParameters, ocmName: String) extends BlackBox {
-  moduleName = ocmName
-  val io = new OnChipMemoryBlackBoxIF(p)
+  override def desiredName = ocmName
+  val io = IO(new OnChipMemoryBlackBoxIF(p))
 
-  def renameSignals() {
+
+  def renameSignals(): Unit = {
     val portLetters = Array("a", "b")
     for(i <- 0 until p.portCount) {
-      io.ports(i).req.writeEn.setName("we"+portLetters(i))
-      io.ports(i).req.writeData.setName("din"+portLetters(i))
-      io.ports(i).req.addr.setName("addr"+portLetters(i))
-      io.ports(i).rsp.readData.setName("dout"+portLetters(i))
+      io.ports(i).req.writeEn.suggestName("we"+portLetters(i))
+      io.ports(i).req.writeData.suggestName("din"+portLetters(i))
+      io.ports(i).req.addr.suggestName("addr"+portLetters(i))
+      io.ports(i).rsp.readData.suggestName("dout"+portLetters(i))
     }
   }
 
   renameSignals()
-  this.addClock(Driver.implicitClock)
-}
 
+  // Missing adding clock?
+
+}
 class OCMControllerIF(p: OCMParameters) extends Bundle {
   // control/status interface
-  val mode = UInt(INPUT, 1)
-  val start = Bool(INPUT)
-  val done = Bool(OUTPUT)
-  val fillPort = Decoupled(UInt(width = p.writeWidth)).flip
-  val dumpPort = Decoupled(UInt(width = p.readWidth))
-  val busy = Bool(OUTPUT)
+  val mode = Input(UInt(1.W))
+  val start = Input(Bool())
+  val done = Output(Bool())
+  val fillPort = Flipped(Decoupled(UInt(p.writeWidth.W)))
+  val dumpPort = Decoupled(UInt(p.readWidth.W))
+  val busy = Output(Bool())
   // word index to start with during fill/dump
-  val fillDumpStart = UInt(INPUT, width = p.addrWidth+1)
+  val fillDumpStart = Input(UInt((p.addrWidth+1).W))
   // number of OCM words to fill/dump
-  val fillDumpCount = UInt(INPUT, width = p.addrWidth+1)
+  val fillDumpCount = Input(UInt((p.addrWidth+1).W))
 }
 
 // TODO support fill/dump through all ports (width*count)
 
 class OCMController(p: OCMParameters) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val mcif = new OCMControllerIF(p)
     // master port to connect to the OCM instance
     val ocm = new OCMMasterIF(p.writeWidth, p.readWidth, p.addrWidth)
-  }
+  })
   // TODO test fill port functionality
   // TODO test dump port functionality
-  val sIdle :: sFill :: sDump :: sFinished :: Nil = Enum(UInt(), 4)
-  val regState = Reg(init = UInt(sIdle))
+  val sIdle :: sFill :: sDump :: sFinished :: Nil = Enum(4)
+  val regState = RegInit(sIdle)
 
   val ocm = io.ocm
 
-  io.mcif.busy := (regState != sIdle)
+  io.mcif.busy := (regState =/= sIdle)
 
   // use a FIFO queue to make burst reads with latency easier
   // TODO parametrize # entires in dump queue
   val fifoCapacity = 16
-  val regDumpValid = Reg(init = Bool(false))
-  val dumpQ = Module(new Queue(UInt(width = p.readWidth), entries = fifoCapacity))
+  val regDumpValid = RegInit(false.B)
+  val dumpQ = Module(new Queue(UInt(p.readWidth.W), entries = fifoCapacity))
   // shift registers to compensate for OCM read latency (address to valid)
   // -1 since this is already sourced from a register
-  dumpQ.io.enq.valid := ShiftRegister(in=regDumpValid, n=p.readLatency-1)
+  dumpQ.io.enq.valid := ShiftRegister(regDumpValid, p.readLatency-1)
   dumpQ.io.enq.bits := ocm.rsp.readData
   dumpQ.io.deq <> io.mcif.dumpPort
 
   // TODO use instead "programmable full" threshold on Xilinx FIFOs
   // the 2x here is probably overly cautious, but better safe than sorry
   // (since we don't wait before all responses are committed before checking room)
-  val hasRoom = (dumpQ.io.count < UInt((fifoCapacity-2*p.readLatency-1)))
+  val hasRoom = (dumpQ.io.count < ((fifoCapacity-2*p.readLatency-1)).U)
 
   // address register, for both reads and writes (we do only one at once)
   // +1 in width to not overflow to zero if we increment too much
-  val regAddr = Reg(init = UInt(0, p.addrWidth+1))
-  val regFillDumpCount = Reg(init = UInt(0, p.addrWidth+1))
+  val regAddr = RegInit(0.U((p.addrWidth+1).W))
+  val regFillDumpCount = RegInit(0.U((p.addrWidth+1).W))
 
   // default outputs
-  io.mcif.done := Bool(false)
-  io.mcif.fillPort.ready := Bool(false)
-  ocm.req.addr := UInt(0)
-  ocm.req.writeEn := Bool(false)
+  io.mcif.done := false.B
+  io.mcif.fillPort.ready := false.B
+  ocm.req.addr := 0.U
+  ocm.req.writeEn := false.B
   ocm.req.writeData := io.mcif.fillPort.bits
 
   // default assignment to valid shiftreg
-  regDumpValid := Bool(false)
+  regDumpValid := false.B
 
   switch(regState) {
       is(sIdle) {
         regAddr := io.mcif.fillDumpStart
         regFillDumpCount := io.mcif.fillDumpCount
         when(io.mcif.start) {
-          when (io.mcif.mode === UInt(0)) { regState := sFill }
-          .elsewhen (io.mcif.mode === UInt(1)) { regState := sDump }
+          when (io.mcif.mode === 0.U) { regState := sFill }
+          .elsewhen (io.mcif.mode === 1.U) { regState := sDump }
         }
       }
 
       is(sFill) {
-        io.mcif.fillPort.ready := Bool(true)
+        io.mcif.fillPort.ready := true.B
         ocm.req.addr := p.makeWriteAddr(regAddr)
 
         when (regAddr === regFillDumpCount) {regState := sFinished}
         .elsewhen (io.mcif.fillPort.valid) {
-          ocm.req.writeEn := Bool(true)
-          regAddr := regAddr + UInt(1)
+          ocm.req.writeEn := true.B
+          regAddr := regAddr + 1.U
         }
       }
 
@@ -195,13 +194,13 @@ class OCMController(p: OCMParameters) extends Module {
         ocm.req.addr := p.makeReadAddr(regAddr)
         when (regAddr === regFillDumpCount) {regState := sFinished}
         .elsewhen (hasRoom & dumpQ.io.enq.ready) {
-          regDumpValid := Bool(true)
-          regAddr := regAddr + UInt(1)
+          regDumpValid := true.B
+          regAddr := regAddr + 1.U
         }
       }
 
       is(sFinished) {
-        io.mcif.done := Bool(true)
+        io.mcif.done := true.B
         when (!io.mcif.start) {regState := sIdle}
       }
   }
@@ -209,11 +208,43 @@ class OCMController(p: OCMParameters) extends Module {
 
 // convenience module for instantiating an OCM and a coupled controller
 class OCMAndController(p: OCMParameters, ocmName: String, blackbox: Boolean) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val mcif = new OCMControllerIF(p)
-    val ocmUser = Vec.fill(p.portCount){
-      new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)}
+    val ocmUser = VecInit(Seq.fill(p.portCount){
+      new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)})
+  })
+
+  assert(blackbox == false, "We have instantiated the wrong OCMAndController (should be Blackbox)")
+  // instantiate the OCM controller
+  val ocmControllerInst = Module(new OCMController(p))
+  // connect the MCIF
+  io.mcif <> ocmControllerInst.io.mcif
+
+  // instantiate the OCM
+  val ocmInst  = Module(new AsymDualPortRAM(p))
+  // connect OCM controller with passthrough logic:
+  // port 0 is driven by the MC when MC is busy, by the user port otherwise
+  val enablePassthrough = !ocmControllerInst.io.mcif.busy
+  val mcifPort = ocmControllerInst.io.ocm
+  val sharedPort = ocmInst.io.ports(0)
+
+  sharedPort.req := Mux(enablePassthrough, io.ocmUser(0).req, mcifPort.req)
+  mcifPort.rsp := sharedPort.rsp
+  io.ocmUser(0).rsp := sharedPort.rsp
+
+  // connect the rest of the ports
+  for(i <- 1 until p.portCount) {
+    ocmInst.io.ports(i) <> io.ocmUser(i)
   }
+
+}
+
+class OCMAndControllerBlackBox(p: OCMParameters, ocmName: String, blackbox: Boolean) extends Module {
+  val io = IO(new Bundle {
+    val mcif = new OCMControllerIF(p)
+    val ocmUser = VecInit(Seq.fill(p.portCount){
+      new OCMSlaveIF(p.writeWidth, p.readWidth, p.addrWidth)})
+  })
 
   // instantiate the OCM controller
   val ocmControllerInst = Module(new OCMController(p))
@@ -221,7 +252,7 @@ class OCMAndController(p: OCMParameters, ocmName: String, blackbox: Boolean) ext
   io.mcif <> ocmControllerInst.io.mcif
 
   // instantiate the OCM
-  val ocmInst = Module(if (blackbox) new OnChipMemory(p, ocmName) else new AsymDualPortRAM(p))
+  val ocmInst  = Module(new OnChipMemory(p, ocmName))
   // connect OCM controller with passthrough logic:
   // port 0 is driven by the MC when MC is busy, by the user port otherwise
   val enablePassthrough = !ocmControllerInst.io.mcif.busy

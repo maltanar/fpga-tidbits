@@ -1,21 +1,23 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
-import Chisel._
+import chisel3._
 import fpgatidbits.PlatformWrapper._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
+
+class ExampleSumIO(p: PlatformWrapperParams) extends GenericAcceleratorIF(1, p) {
+  val start = Input(Bool())
+  val finished = Output(Bool())
+  val baseAddr = Input(UInt(64.W))
+  val byteCount = Input(UInt(32.W))
+  val sum = Output(UInt(32.W))
+  val cycleCount = Output(UInt(32.W))
+}
 // read and sum a contiguous stream of 32-bit uints from main memory
-class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+class ExampleSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val finished = Bool(OUTPUT)
-    val baseAddr = UInt(INPUT, width = 64)
-    val byteCount = UInt(INPUT, width = 32)
-    val sum = UInt(OUTPUT, width = 32)
-    val cycleCount = UInt(OUTPUT, width = 32)
-  }
+  val io = IO(new ExampleSumIO(p))
   io.signature := makeDefaultSignature()
   plugMemWritePort(0)
 
@@ -31,6 +33,12 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   reader.baseAddr := io.baseAddr
   reader.byteCount := io.byteCount
 
+  // Added by erlingrj because chisel3 complains they are not initialized
+  //  when inspecting verilog output of chisel2 synthesis they are commented out of the
+  //  module interface of StreamReader, how?
+  reader.doInit := false.B
+  reader.initCount := 8.U
+
   red.start := io.start
   red.byteCount := io.byteCount
 
@@ -42,8 +50,8 @@ class TestSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
 
   reader.out <> red.streamIn
 
-  val regCycleCount = Reg(init = UInt(0, 32))
+  val regCycleCount = RegInit(0.U(32.W))
   io.cycleCount := regCycleCount
-  when(!io.start) {regCycleCount := UInt(0)}
-  .elsewhen(io.start & !io.finished) {regCycleCount := regCycleCount + UInt(1)}
+  when(!io.start) {regCycleCount := 0.U}
+  .elsewhen(io.start & !io.finished) {regCycleCount := regCycleCount + 1.U}
 }

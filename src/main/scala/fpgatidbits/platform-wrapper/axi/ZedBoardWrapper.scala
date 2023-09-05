@@ -1,7 +1,12 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
+import chisel3.util._
+import java.nio.file.Paths
 
+import fpgatidbits.TidbitsMakeUtils._
+
+import scala.io.Source
 // platform wrapper for the ZedBoard
 
 object ZedBoardParams extends PlatformWrapperParams {
@@ -18,16 +23,35 @@ object ZedBoardParams extends PlatformWrapperParams {
 }
 
 
-class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String, generateRegDriver: Boolean = true)
   extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zedboard.cpp", "zedboardregdriver.hpp", "axiregdriver.hpp"
   )
+
+  if (generateRegDriver) {
+    // Generate the RegFile driver
+    println("Generating Register Driver at directory:" + targetDir)
+    generateRegDriver(targetDir)
+    // Copy over the other needed files
+    //val resRoot = getClass.getResource("").getPath
+    resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+    println(s"=======> Driver files copied to ${targetDir}")
+
+  }
+
 }
 
-class ZedBoardLinuxWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class ZedBoardLinuxWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
 extends AXIPlatformWrapper(ZedBoardParams, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-zedboard-linux.cpp", "linuxphysregdriver.hpp", "axiregdriver.hpp"
   )
+
+  // Generate the RegFile driver
+  generateRegDriver(targetDir)
+
+  // Copy over the other needed files
+  resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  println(s"=======> Driver files copied to ${targetDir}")
 }

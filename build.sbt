@@ -1,18 +1,25 @@
-val chiselVersion = System.getProperty("chiselVersion", "latest.release")
+// See README.md for license details.
 
-val scalaVer = System.getProperty("scalaVer", "2.11.6")
+ThisBuild / scalaVersion     := "2.13.8"
+ThisBuild / version          := "0.1.0"
+ThisBuild / organization     := "com.github.erlingrj"
 
-lazy val fpgatidbitsSettings = Seq (
-  version := "0.1",
-  name := "fpgatidbits",
+lazy val fpgatidbits = (project in file("."))
+  .settings(
+    name := "fpgatidbits",
+    libraryDependencies ++= Seq(
+      "edu.berkeley.cs" %% "chisel3" % "3.5.6",
+      "edu.berkeley.cs" %% "chiseltest" % "0.5.6" % "test",
+    ),
+    scalacOptions ++= Seq(
+      "-language:reflectiveCalls",
+      "-deprecation",
+      "-feature",
+      "-Xcheckinit"
+    ),
+    testOptions ++= Seq(
+      //      Tests.Argument("-oF") // Dont truncate stack trace
+    ),
+    addCompilerPlugin("edu.berkeley.cs" % "chisel3-plugin" % "3.5.6" cross CrossVersion.full),
+  )
 
-  scalaVersion := scalaVer,
-
-  libraryDependencies ++= ( if (chiselVersion != "None" ) ("edu.berkeley.cs" %% "chisel" % chiselVersion) :: Nil; else Nil),
-
-  libraryDependencies += "com.novocode" % "junit-interface" % "0.10" % "test",
-  libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-  libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVer
-)
-
-lazy val fpgatidbits = (project in file(".")).settings(fpgatidbitsSettings: _*)

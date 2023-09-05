@@ -15,12 +15,23 @@ project/plugins/project/
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
+.bsp
+.metals
+.sbt_log
+.vscode
+project/metals.sbt
+.idea
 
 *~
 /*.v
 testOutput/
 verilogOutput/
 /*.hpp
+test_run_dir/
+verilator/
+*DS_STORE
+integration-tests/
+
 
 # Qt
 *.pro.user
@@ -30,3 +41,7 @@ emulator/
 verilator/
 emu-*/
 vivado*.jou
+notes.md
+vivado
+Zedboard
+*.fir

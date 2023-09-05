@@ -1,5 +1,6 @@
 package fpgatidbits.streams
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // a hazard guard, useful for performing interleaved reductions
 // with high-latency operators
@@ -12,7 +13,7 @@ import Chisel._
 
 object OperandWithID {
   def apply(op: UInt, id: UInt) = {
-    val oid = new OperandWithID(op.getWidth(), id.getWidth())
+    val oid = new OperandWithID(op.getWidth, id.getWidth)
     oid.data := op
     oid.id := id
     oid
@@ -20,11 +21,8 @@ object OperandWithID {
 }
 
 class OperandWithID(wOp: Int, wId: Int) extends Bundle {
-  val data = UInt(width = wOp)
-  val id = UInt(width = wId)
-  override def clone = {
-    new OperandWithID(wOp, wId).asInstanceOf[this.type]
-  }
+  val data = UInt(wOp.W)
+  val id = UInt(wId.W)
 }
 
 
@@ -33,21 +31,21 @@ class OperandWithID(wOp: Int, wId: Int) extends Bundle {
 // in the queue will result in a stall (ready will go low)
 class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
   val io = new Bundle {
-    val enq = Decoupled(new OperandWithID(dataWidth, idWidth)).flip
+    val enq = Flipped(Decoupled(new OperandWithID(dataWidth, idWidth)))
     val deq = Decoupled(new OperandWithID(dataWidth, idWidth))
-    val hazard = Bool(OUTPUT)
-    val count = UInt(OUTPUT, width = log2Up(entries+1))
+    val hazard = Output(Bool())
+    val count = Output(UInt(log2Ceil(entries+1).W))
   }
   // mostly copied from Chisel Queue, with a few modifications:
   // - vector of registers instead of Mem, to expose all outputs
   // - id values already in the queue not allowed to get in
   val dt = new OperandWithID(dataWidth, idWidth)
-  val ram = Vec.fill(entries) { Reg(init = dt) }
-  val ramValid = Vec.fill(entries) { Reg(init = Bool(false)) }
+  val ram = RegInit(VecInit(Seq.fill(entries)(dt)))
+  val ramValid = RegInit(VecInit(Seq.fill(entries)(false.B)))
 
   val enq_ptr = Counter(entries)
   val deq_ptr = Counter(entries)
-  val maybe_full = Reg(init=Bool(false))
+  val maybe_full = RegInit(false.B)
 
   val ptr_match = enq_ptr.value === deq_ptr.value
   val empty = ptr_match && !maybe_full
@@ -57,20 +55,20 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
   val do_deq = io.deq.ready && io.deq.valid
   when (do_enq) {
     ram(enq_ptr.value) := io.enq.bits
-    ramValid(enq_ptr.value) := Bool(true)
+    ramValid(enq_ptr.value) := true.B
     enq_ptr.inc()
   }
   when (do_deq) {
-    ramValid(deq_ptr.value) := Bool(false)
+    ramValid(deq_ptr.value) := false.B
     deq_ptr.inc()
   }
-  when (do_enq != do_deq) {
+  when (do_enq =/= do_deq) {
     maybe_full := do_enq
   }
 
   // <hazard guard logic>
   val newData = io.enq.bits.id
-  val hits = Vec.tabulate(entries) {i: Int => ram(i).id === newData & ramValid(i)}
+  val hits = VecInit(Seq.tabulate(entries)(i => ram(i).id === newData && ramValid(i)))
   val hazardDetected = hits.exists({x:Bool => x}) & io.enq.valid
   io.hazard := hazardDetected
   // </hazard guard logic>
@@ -84,9 +82,9 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
     io.count := Cat(maybe_full && ptr_match, ptr_diff)
   } else {
     io.count := Mux(ptr_match,
-                  Mux(maybe_full, UInt(entries), UInt(0)),
+                  Mux(maybe_full, entries.U, 0.U),
                   Mux(deq_ptr.value > enq_ptr.value,
-                      UInt(entries) + ptr_diff, ptr_diff)
+                      entries.U + ptr_diff, ptr_diff)
                     )
   }
 }
@@ -95,18 +93,18 @@ class UniqueQueue(dataWidth: Int, idWidth: Int, entries: Int) extends Module {
 // TODO break long combinatorial paths in here - OK to add some latency
 class HazardGuard(dataWidth: Int, idWidth: Int, hazardStages: Int) extends Module {
   val io = new Bundle {
-    val streamIn = Decoupled(new OperandWithID(dataWidth, idWidth)).flip
+    val streamIn = Flipped(Decoupled(new OperandWithID(dataWidth, idWidth)))
     val streamOut = Decoupled(new OperandWithID(dataWidth, idWidth))
-    val hazardStalls = UInt(OUTPUT, width = 32)
-    val hazardHits = UInt(OUTPUT, width = hazardStages)
+    val hazardStalls = Output(UInt(32.W))
+    val hazardHits = Output(UInt(hazardStages.W))
   }
   // extra bit in each stage to indicate a valid entry (bit 0)
-  val stages = Vec.fill(hazardStages) { Reg(init=UInt(0, width=idWidth+1)) }
+  val stages = RegInit(VecInit(Seq.fill(hazardStages)(0.U((idWidth+1).W))))
 
   val hazardCandidate = io.streamIn.bits.id
 
-  val hits = UInt(Cat(stages.map({x:UInt => x(0) & (x(idWidth, 1) === hazardCandidate)})))
-  val hazardDetected = orR(hits)
+  val hits = Cat(stages.map({x:UInt => x(0) & (x(idWidth, 1) === hazardCandidate)}))
+  val hazardDetected = hits.orR
   io.hazardHits := hits
 
   val downstreamReady = io.streamOut.ready
@@ -117,17 +115,17 @@ class HazardGuard(dataWidth: Int, idWidth: Int, hazardStages: Int) extends Modul
   io.streamOut.bits := io.streamIn.bits
 
   when(downstreamReady) {
-    stages(0) := Mux(hazardDetected, UInt(0), Cat(io.streamIn.bits.id, io.streamIn.valid))
+    stages(0) := Mux(hazardDetected, 0.U, Cat(io.streamIn.bits.id, io.streamIn.valid))
     for(i <- 1 until hazardStages) {
       stages(i) := stages(i-1)
     }
   }
 
   // generate statistics
-  val regHazardStalls = Reg(init = UInt(0, 32))
+  val regHazardStalls = RegInit(0.U(32.W))
   io.hazardStalls := regHazardStalls
   when (downstreamReady & upstreamValid & hazardDetected) {
-    regHazardStalls := regHazardStalls + UInt(1)
+    regHazardStalls := regHazardStalls + 1.U
   }
 
 }

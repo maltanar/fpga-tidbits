@@ -1,6 +1,6 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import chisel3._
 
 // platform wrapper for PYNQ on Ultra-96 with one cache-coherent port
 
@@ -17,16 +17,15 @@ object PYNQU96CCParams extends PlatformWrapperParams {
   val coherentMem = true
 }
 
-class PYNQU96CCWrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class PYNQU96CCWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
   extends AXIPlatformWrapper(PYNQU96Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-mpsoc-cc-xlnk.cpp", "xlnkdriver.hpp"
   )
-  setName("PYNQU96CCWrapper")
-  setModuleName("PYNQU96CCWrapper")
+  suggestName("PYNQU96CCWrapper")
   // override AXI MM signals for cache coherency
-  io.mem(0).readAddr.bits.cache := UInt("b1100")
-  io.mem(0).writeAddr.bits.cache := UInt("b1100")
-  io.mem(0).readAddr.bits.prot := UInt("b10")
-  io.mem(0).writeAddr.bits.prot := UInt("b10")
+  mem(0).readAddr.bits.cache := "b1100".U
+  mem(0).writeAddr.bits.cache := "b1100".U
+  mem(0).readAddr.bits.prot := "b10".U
+  mem(0).writeAddr.bits.prot := "b10".U
 }

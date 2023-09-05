@@ -26,7 +26,7 @@ extern "C" {
 
 LinuxPhysRegDriver * platform = 0;
 
-WrapperRegDriver * initPlatform() {
+WrapperRegDriver * initPlatform(bool tracing) {
   if(!platform) {
     platform = new LinuxPhysRegDriver((void *) 0x43c00000, (void *) 0x10000000, 256 * 1024 * 1024);
   }

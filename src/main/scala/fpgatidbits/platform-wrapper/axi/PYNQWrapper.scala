@@ -1,6 +1,9 @@
 package fpgatidbits.PlatformWrapper
 
-import Chisel._
+import java.nio.file.Paths
+import chisel3._
+import chisel3.util._
+import fpgatidbits.TidbitsMakeUtils.{resourceCopyBulk}
 
 // platform wrapper for PYNQ
 
@@ -17,11 +20,17 @@ object PYNQZ1Params extends PlatformWrapperParams {
   val coherentMem = false // TODO add CC version of PYNQZ1 as well
 }
 
-class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator)
+class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targetDir: String)
   extends AXIPlatformWrapper(PYNQZ1Params, instFxn) {
   val platformDriverFiles = baseDriverFiles ++ Array[String](
     "platform-xlnk.cpp", "xlnkdriver.hpp"
   )
-  setName("PYNQZ1Wrapper")
-  setModuleName("PYNQZ1Wrapper")
+  suggestName("PYNQZ1Wrapper")
+  override def desiredName = "PYNQZ1Wrapper"
+  // Generate the RegFile driver
+  generateRegDriver(targetDir)
+
+  // Copy over the other needed files
+  resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  println(s"=======> Driver files copied to ${targetDir}")
 }

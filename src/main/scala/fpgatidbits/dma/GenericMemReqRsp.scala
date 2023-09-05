@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm._
 import fpgatidbits.streams.PrintableBundle
 
@@ -14,53 +15,44 @@ class MemReqParams(
   val sameIDInOrder: Boolean = true // whether requests with the same
                                     // ID return in-order, like in AXI
 ) {
-  override def clone = {
-    new MemReqParams(
-      addrWidth, dataWidth, idWidth, metaDataWidth, sameIDInOrder
-    ).asInstanceOf[this.type]
-  }
 }
 
 // a generic memory request structure, inspired by AXI with some diffs
 class GenericMemoryRequest(p: MemReqParams) extends PrintableBundle {
   // ID of the request channel (useful for out-of-order data returns)
-  val channelID = UInt(width = p.idWidth)
   // whether this request is a read (if false) or write (if true)
+  val channelID = UInt(p.idWidth.W)
   val isWrite = Bool()
   // start address of the request
-  val addr = UInt(width = p.addrWidth)
+  val addr = UInt(p.addrWidth.W)
   // number of bytes to read/write by this request
-  val numBytes = UInt(width = 8)
+  val numBytes = UInt(8.W)
   // metadata information (can be protection bits, caching bits, etc.)
-  val metaData = UInt(width = p.metaDataWidth)
+  val metaData = UInt(p.metaDataWidth.W)
 
   val printfStr = "id %d addr %d numBytes %d \n"
   val printfElems = {() => Seq(channelID, addr, numBytes)}
 
-  override def clone = {
-    new GenericMemoryRequest(p).asInstanceOf[this.type]
-  }
-
   def driveDefaults() = {
-    channelID := UInt(0)
-    isWrite := Bool(false)
-    addr := UInt(0)
-    numBytes := UInt(0)
-    metaData := UInt(0)
+    channelID := 0.U
+    isWrite := false.B
+    addr := 0.U
+    numBytes := 0.U
+    metaData := 0.U
   }
 }
 
 object GenericMemoryRequest {
   def apply(p: MemReqParams): GenericMemoryRequest = {
-    val n = new GenericMemoryRequest(p)
-    n.driveDefaults
+    val n = Wire(new GenericMemoryRequest(p))
+    n.driveDefaults()
     n
   }
 
   def apply(p: MemReqParams, addr: UInt, write:Bool,
     id: UInt, numBytes: UInt): GenericMemoryRequest = {
-    val n = new GenericMemoryRequest(p)
-    n.metaData := UInt(0)
+    val n = Wire(new GenericMemoryRequest(p))
+    n.metaData := 0.U
     n.addr := addr
     n.isWrite := write
     n.channelID := id
@@ -72,83 +64,81 @@ object GenericMemoryRequest {
 // a generic memory response structure
 class GenericMemoryResponse(p: MemReqParams) extends PrintableBundle {
   // ID of the request channel (useful for out-of-order data returns)
-  val channelID = UInt(width = p.idWidth)
+  val channelID = UInt(p.idWidth.W)
   // returned read data (always single beat, bursts broken down into
   // multiple beats while returning)
-  val readData = UInt(width = p.dataWidth)
+  val readData = UInt(p.dataWidth.W)
   // is this response from a write?
   val isWrite = Bool()
   // is this response the last one in a burst of responses?
   val isLast = Bool()
   // metadata information (can be status/error bits, etc.)
-  val metaData = UInt(width = p.metaDataWidth)
+  val metaData = UInt(p.metaDataWidth.W)
 
   val printfStr = "id %d readData %x isLast %d \n"
   val printfElems = {() => Seq(channelID, readData, isLast)}
 
-  override def clone = {
-    new GenericMemoryResponse(p).asInstanceOf[this.type]
-  }
-
   def driveDefaults() = {
-    channelID := UInt(0)
-    readData := UInt(0)
-    metaData := UInt(0)
-    isLast := Bool(false)
-    isWrite := Bool(false)
+    channelID := 0.U
+    readData := 0.U
+    metaData := 0.U
+    isLast := false.B
+    isWrite := false.B
   }
 }
 
 object GenericMemoryResponse {
   def apply(p: MemReqParams): GenericMemoryResponse = {
-    val n = new GenericMemoryResponse(p)
-    n.driveDefaults
+    val n = Wire(new GenericMemoryResponse(p))
+    n.driveDefaults()
     n
   }
 }
 
-class GenericMemoryMasterPort(p: MemReqParams) extends Bundle {
+class GenericMemoryMasterPort(private val p: MemReqParams) extends Bundle {
   // req - rsp interface for memory reads
   val memRdReq = Decoupled(new GenericMemoryRequest(p))
-  val memRdRsp = Decoupled(new GenericMemoryResponse(p)).flip
+  val memRdRsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
   // req - rsp interface for memory writes
   val memWrReq = Decoupled(new GenericMemoryRequest(p))
-  val memWrDat = Decoupled(UInt(width = p.dataWidth))
-  val memWrRsp = Decoupled(new GenericMemoryResponse(p)).flip
+  val memWrDat = Decoupled(UInt(p.dataWidth.W))
+  val memWrRsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
 }
 
-class GenericMemorySlavePort(p: MemReqParams) extends Bundle {
+class GenericMemorySlavePort(private val p: MemReqParams) extends Bundle {
   // req - rsp interface for memory reads
-  val memRdReq = Decoupled(new GenericMemoryRequest(p)).flip
+  val memRdReq = Flipped(Decoupled(new GenericMemoryRequest(p)))
   val memRdRsp = Decoupled(new GenericMemoryResponse(p))
   // req - rsp interface for memory writes
-  val memWrReq = Decoupled(new GenericMemoryRequest(p)).flip
-  val memWrDat = Decoupled(UInt(width = p.dataWidth)).flip
+  val memWrReq = Flipped(Decoupled(new GenericMemoryRequest(p)))
+  val memWrDat = Flipped(Decoupled(UInt(p.dataWidth.W)))
   val memWrRsp = Decoupled(new GenericMemoryResponse(p))
 }
 
 // variant of the generic memory port where read/write requests
 // are multiplexed onto the same channel
-class SimplexMemoryMasterPort(p: MemReqParams) extends Bundle {
+class SimplexMemoryMasterPort(private val p: MemReqParams) extends Bundle {
   val req = Decoupled(new GenericMemoryRequest(p))
-  val wrdat = Decoupled(UInt(width = p.dataWidth))
-  val rsp = Decoupled(new GenericMemoryResponse(p)).flip
+  val wrdat = Decoupled(UInt(p.dataWidth.W))
+  val rsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
 }
 
-class SimplexMemorySlavePort(p: MemReqParams) extends SimplexMemoryMasterPort(p) {
-  flip
+class SimplexMemorySlavePort(private val p: MemReqParams) extends SimplexMemoryMasterPort(p) {
+  override val req = Flipped(Decoupled(new GenericMemoryRequest(p)))
+  override val wrdat = Flipped(Decoupled(UInt(p.dataWidth.W)))
+  override val rsp = Decoupled(new GenericMemoryResponse(p))
 }
 
 // derive a read-write deinterleaver for handling the responses
-class QueuedRdWrDeinterleaver(p: MemReqParams) extends QueuedDeinterleaver(2, p, 4,
- routeFxn = {x: GenericMemoryResponse => Mux(x.isWrite, UInt(1), UInt(0))})
+class QueuedRdWrDeinterleaver(private val p: MemReqParams) extends QueuedDeinterleaver(2, p, 4,
+ routeFxn = {x: GenericMemoryResponse => Mux(x.isWrite, 1.U, 0.U)})
 
 // adapter for duplex <> simplex
-class SimplexAdapter(p: MemReqParams) extends Module {
-  val io = new Bundle {
+class SimplexAdapter(private val p: MemReqParams) extends Module {
+  val io = IO(new Bundle {
     val duplex = new GenericMemorySlavePort(p)
     val simplex = new SimplexMemoryMasterPort(p)
-  }
+  })
 
   val rdReqQ = FPGAQueue(io.duplex.memRdReq, 2)
   val wrReqQ = FPGAQueue(io.duplex.memWrReq, 2)

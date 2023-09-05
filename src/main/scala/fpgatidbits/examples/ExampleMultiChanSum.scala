@@ -1,21 +1,22 @@
-package fpgatidbits.Testbenches
+package fpgatidbits.examples
 
-import Chisel._
+import chisel3._
 import fpgatidbits.PlatformWrapper._
-import fpgatidbits.axi._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 
-class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
+
+class ExampleMultiChanSumIO(n: Int, p: PlatformWrapperParams, numChans: Int) extends GenericAcceleratorIF(n,p) {
+  val start = Input(Bool())
+  val baseAddr = Vec(numChans, Input(UInt(64.W)))
+  val byteCount = Vec(numChans, Input(UInt(32.W)))
+  val sum = Vec(numChans, Output(UInt(32.W)))
+  val status = Output(Bool())
+}
+class ExampleMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 1
   val numChans = 2
-  val io = new GenericAcceleratorIF(numMemPorts, p) {
-    val start = Bool(INPUT)
-    val baseAddr = Vec.fill(numChans) {UInt(INPUT, width=64)}
-    val byteCount = Vec.fill(numChans) {UInt(INPUT, width=32)}
-    val sum = Vec.fill(numChans) {UInt(OUTPUT, width=32)}
-    val status = Bool(OUTPUT)
-  }
+  val io = IO(new ExampleMultiChanSumIO(numMemPorts, p, numChans))
   plugMemWritePort(0) // write ports not used
   io.signature := makeDefaultSignature()
   val mrp = p.toMemReqParams()
@@ -27,10 +28,10 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     ))).io
   }
 
-  val readers = Vec.tabulate(numChans) {i:Int => makeReader(i)}
-  val reducers = Vec.fill(numChans) {
+  val readers = VecInit(Seq.tabulate(numChans) {i:Int => makeReader(i)})
+  val reducers = VecInit(Seq.fill(numChans) {
     Module(new StreamReducer(32, 0, {_+_})).io
-  }
+  })
 
   val intl = Module(new ReqInterleaver(numChans, mrp)).io
   val deintl = Module(new QueuedDeinterleaver(numChans, mrp, 4)).io
@@ -42,9 +43,14 @@ class TestMultiChanSum(p: PlatformWrapperParams) extends GenericAccelerator(p) {
     readers(i).baseAddr := io.baseAddr(i)
     readers(i).byteCount := io.byteCount(i)
 
+    readers(i).doInit := false.B
+    readers(i).initCount := 0.U
+
     readers(i).req <> intl.reqIn(i)
     deintl.rspOut(i) <> readers(i).rsp
-    readers(i).out <> reducers(i).streamIn
+    readers(i).out.ready :=  reducers(i).streamIn.ready
+    reducers(i).streamIn.valid := readers(i).out.valid
+    reducers(i).streamIn.bits := readers(i).out.bits
 
     reducers(i).start := io.start
     reducers(i).byteCount := io.byteCount(i)

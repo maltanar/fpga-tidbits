@@ -1,22 +1,20 @@
 package fpgatidbits.math
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 class BinaryMathOperands(val w: Int) extends Bundle {
-  val first = UInt(width = w)
-  val second = UInt(width = w)
+  val first = UInt(w.W)
+  val second = UInt(w.W)
 
-  override def clone = {
-    new BinaryMathOperands(w).asInstanceOf[this.type]
-  }
 }
 
 object BinaryMathOperands {
   def apply(first: UInt, second: UInt) = {
-    if(first.getWidth() != second.getWidth()) {
+    if(first.getWidth != second.getWidth) {
       throw new Exception("Operand widths do not match")
     }
-    val sop = new BinaryMathOperands(first.getWidth())
+    val sop = new BinaryMathOperands(first.getWidth)
     sop.first := first
     sop.second := second
     sop
@@ -24,8 +22,8 @@ object BinaryMathOperands {
 }
 
 class BinaryMathOpIO(w: Int) extends Bundle {
-  val in = Decoupled(new BinaryMathOperands(w)).flip
-  val out = Decoupled(UInt(width = w))
+  val in = Flipped(Decoupled(new BinaryMathOperands(w)))
+  val out = Decoupled(UInt(w.W))
 }
 
 // abstract base class for binary operators
@@ -45,20 +43,20 @@ abstract class BinaryMathOp(val w: Int) extends Module {
 // parameters:
 
 class SystolicRegParams[TI <: Data, TO <: Data](
-  val tIn: TI, // wIn: width of input stream in bits
-  val tOut: TO, // wOut: width of output stream in bits
-  val fxn: TI => TO // fxn: function to apply on the way out
-)
+                                                 val tIn: TI, // wIn: width of input stream in bits
+                                                 val tOut: TO, // wOut: width of output stream in bits
+                                                 val fxn: TI => TO // fxn: function to apply on the way out
+                                               )
 
 class SystolicReg[TI <: Data, TO <: Data](val p: SystolicRegParams[TI, TO])
-extends Module {
+  extends Module {
   val io = new Bundle {
-    val in = Decoupled(p.tIn.cloneType).flip
+    val in = Flipped(Decoupled(p.tIn.cloneType))
     val out = Decoupled(p.tOut.cloneType)
   }
-  val regValid = Reg(init = Bool(false))
-  val resetVal = UInt(0, width = p.tOut.getWidth())
-  val regData = RegInit[TO](p.tOut.fromBits(resetVal))
+  val regValid = RegInit(false.B)
+  val resetVal = 0.U(p.tOut.getWidth.W)
+  val regData: TO = RegInit[TO](resetVal.asInstanceOf[TO])
   val allowNewData = (!regValid || io.out.ready)
 
   io.out.bits := regData
@@ -78,7 +76,7 @@ extends Module {
 object SystolicReg {
   def apply(w: Int) = {
     val uintP = new SystolicRegParams[UInt, UInt](
-      UInt(width = w), UInt(width = w), fxn = {x: UInt => x}
+      UInt(w.W), UInt(w.W), fxn = {x: UInt => x}
     )
     Module(new SystolicReg[UInt, UInt](uintP)).io
   }
@@ -88,8 +86,8 @@ object SystolicReg {
   }
 
   def apply[TI <: Data, TO <: Data](tIn: TI, tOut: TO, fxn: TI => TO,
-    in: DecoupledIO[TI]
-  ) = {
+                                    in: DecoupledIO[TI]
+                                   ) = {
     val p = new SystolicRegParams[TI,TO](tIn, tOut, fxn)
     val mod = Module(new SystolicReg[TI,TO](p)).io
     in <> mod.in

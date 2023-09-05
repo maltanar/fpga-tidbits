@@ -1,6 +1,6 @@
 #include <iostream>
 #include "platform.h"
-#include "TestBRAM.hpp"
+#include "ExampleBRAM.hpp"
 #include <string>
 
 using namespace std;
@@ -8,7 +8,7 @@ using namespace std;
 int main() {
   WrapperRegDriver * platform = initPlatform();
 
-  TestBRAM t(platform);
+  ExampleBRAM t(platform);
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
 

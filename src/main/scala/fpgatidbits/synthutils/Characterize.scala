@@ -34,8 +34,10 @@ package fpgatidbits.synthutils
 import sys.process._
 import java.io._
 import scala.collection.mutable.ArrayBuffer
-import Chisel._
+import chisel3._
 import fpgatidbits.TidbitsMakeUtils.fpgaPartMap
+
+import chisel3.stage.{ChiselStage, ChiselGeneratorAnnotation}
 
 // Utilities for estimating FPGA resource and Fmax from a parametrizable Chisel
 // Module. Uses the oh-my-xilinx scripts to perform Vivado out-of-context
@@ -75,25 +77,48 @@ class CharacterizeResult(
 object VivadoSynth {
   // given an instantiation function instFxn that generates a Chisel module
   // from parameters p, return the FPGA synthesis results
-  def characterizePoint[Tp <: PrintableParam, Tm <: Module](
+
+  def writeVerilogToFile(verilog: String, path: String) = {
+    import java.io._
+    val fname = path
+    val f = new File(fname)
+    if (!f.exists()) {
+      f.getParentFile.mkdirs
+      f.createNewFile()
+    }
+    val writer = new PrintWriter(f)
+    writer.write(verilog)
+    writer.close()
+
+  }
+
+  def characterizePoint[Tp <: PrintableParam, Tm <: RawModule](
     p: Tp, // printable parameters for instantiation of module
-    instFxn: Tp ⇒ Tm, // function that instantiates module from parameters
+    instFxn: Tp => Tm, // function that instantiates module from parameters
     path: String, // directory to create Vivado proj in
-    fpgaPart: String // FPGA part to run characterization for
+    fpgaPart: String, // FPGA part to run characterization for
+    topModuleName: String
   ): CharacterizeResult = {
-    val args = Array[String]("--backend", "v", "--targetDir", path)
+    val args = Array[String]("--targetDir", path)
     println("Now exploring design point with parameters:")
     println(p.headersAsList().mkString("\t"))
     println(p.contentAsList().mkString("\t"))
     // call Chisel to generate Verilog
-    chiselMain(args, () ⇒ instFxn(p))
-    val topModuleName: String = instFxn(p).getClass.getSimpleName
+    val verilogString = (new chisel3.stage.ChiselStage).emitVerilog(instFxn(p))
+    writeVerilogToFile(verilogString, path+"/"+topModuleName + ".v")
+
     // run Nachiket Kapre's quick synthesis-and-characterization scripts
     var ret: CharacterizeResult = new CharacterizeResult(
       lut = 0, reg = 0, bram = 0, dsp = 0, target_ns = 0, fmax_mhz = 0)
     try {
-      val omxDir = getClass.getResource("/script/oh-my-xilinx").getPath
-      val compile_res = Process(s"zsh $omxDir/vivadocompile.sh $topModuleName clk $fpgaPart", new File(path), "OHMYXILINX" -> s"$omxDir").!!
+      val omxDir = "/home/erling/tools/oh-my-xilinx"
+      //val compile_res = Process(s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart", new File(path), "OHMYXILINX" -> s"$omxDir").!!
+      val compile_res = Process(Seq("bash", "-c", s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart"),
+        new File(path),
+        "OHMYXILINX" -> s"$omxDir",
+      ).!!
+
+      println(compile_res)
       val result_res = Process(s"cat results_$topModuleName/res.txt", new File(path)).!!
       // do some string parsing to pull out the numbers
       val result_lines = result_res.split("\n")
@@ -111,7 +136,11 @@ object VivadoSynth {
         bram = bram_fields(1).toInt,
         dsp = dsps_fields(1).toInt, target_ns = req_ns, fmax_mhz = fmax_mhz)
     } catch {
-      case error: Throwable ⇒ println("Characterization ERROR: something went wrong. Synthesis failed, probably out of resources")
+      case error: Throwable => {
+        println("Characterization ERROR: something went wrong. Synthesis failed, probably out of resources")
+        println(error.getMessage)
+        println(error.printStackTrace())
+      }
     }
 
     println("Results for parameters:")
@@ -124,19 +153,20 @@ object VivadoSynth {
   // from parameters, and a space of parameters, return FPGA synth results
   def characterizeSpace[Tp <: PrintableParam, Tm <: Module](
     param_space: Seq[Tp], // space of parameters to explore
-    instFxn: Tp ⇒ Tm, // instantiation function as in characterizePoint
+    instFxn: Tp => Tm, // instantiation function as in characterizePoint
     path: String, // directory to create Vivado proj in
     log: String, // filename for log
     // FPGA part to run characterization for
-    fpgaPart: String = fpgaPartMap("PYNQZ1")): Seq[(Tp, CharacterizeResult)] = {
+    fpgaPart: String = fpgaPartMap("PYNQZ1"),
+    topModuleName: String): Seq[(Tp, CharacterizeResult)] = {
     // TODO maybe consider parallelization here to make things go faster?
     val logfile = new PrintWriter(new File(log))
     logfile.println("Design Space Exploration Results")
     logfile.println("===================================")
     var headers_written = false
     var design_space = ArrayBuffer[(Tp, CharacterizeResult)]()
-    for (p ← param_space) {
-      val res = characterizePoint(p, instFxn, path, fpgaPart)
+    for (p <- param_space) {
+      val res = characterizePoint(p, instFxn, path, fpgaPart, topModuleName)
       // write headers (description of parameters)
       if (!headers_written) {
         val headers = param_space(0).headersAsList() ++ res.headersAsList()
@@ -152,6 +182,6 @@ object VivadoSynth {
     }
 
     logfile.close()
-    return design_space
+    return design_space.toSeq
   }
 }

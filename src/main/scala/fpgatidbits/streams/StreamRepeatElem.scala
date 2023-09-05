@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.axi._
 
 
@@ -12,9 +13,9 @@ import fpgatidbits.axi._
 
 object StreamRepeatElem {
   def apply(inElem: DecoupledIO[UInt], inRepCnt: DecoupledIO[UInt]):
-  DecoupledIO[UInt] = {
-    val repgen = Module(new StreamRepeatElem(inElem.bits.getWidth(),
-                        inRepCnt.bits.getWidth())).io
+  AXIStreamIF[UInt] = {
+    val repgen = Module(new StreamRepeatElem(inElem.bits.getWidth,
+                        inRepCnt.bits.getWidth)).io
     repgen.inElem <> inElem
     repgen.inRepCnt <> inRepCnt
     repgen.out
@@ -22,16 +23,16 @@ object StreamRepeatElem {
 
   def apply[Te <: Data](gen: Te, inElem: DecoupledIO[Te], inRepCnt: DecoupledIO[UInt]):
   DecoupledIO[Te] = {
-    val repgen = Module(new StreamRepeatElem(gen.getWidth(),
-                        inRepCnt.bits.getWidth())).io
+    val repgen = Module(new StreamRepeatElem(gen.getWidth,
+                        inRepCnt.bits.getWidth)).io
     val ret = Decoupled(gen)
-    repgen.inElem.bits := inElem.bits.toBits
+    repgen.inElem.bits := inElem.bits
     repgen.inElem.valid := inElem.valid
     inElem.ready := repgen.inElem.ready
 
     repgen.inRepCnt <> inRepCnt
     ret.valid := repgen.out.valid
-    ret.bits := gen.fromBits(repgen.out.bits)
+    ret.bits := repgen.out.bits
     repgen.out.ready := ret.ready
 
     ret
@@ -39,48 +40,50 @@ object StreamRepeatElem {
 }
 
 class StreamRepeatElem(dataWidth: Int, repWidth: Int) extends Module {
-  val io = new Bundle {
-    val inElem = new AXIStreamSlaveIF(UInt(width = dataWidth))
-    val inRepCnt = new AXIStreamSlaveIF(UInt(width = repWidth))
-    val out = new AXIStreamMasterIF(UInt(width = dataWidth))
-  }
+  val io = IO(new Bundle {
+    val inElem =Flipped(new AXIStreamIF(UInt(dataWidth.W)))
+    val inRepCnt =Flipped(new AXIStreamIF(UInt(repWidth.W)))
+    val out = new AXIStreamIF(UInt(dataWidth.W))
+  })
 
-  io.inElem.ready := Bool(false)
-  io.inRepCnt.ready := Bool(false)
-  io.out.valid := Bool(false)
+  io.inElem.ready := false.B
+  io.inRepCnt.ready := false.B
+  io.out.valid := false.B
 
-  val regElem = Reg(init = UInt(0, dataWidth))
-  val regRep = Reg(init = UInt(0, repWidth))
+  val regElem = RegInit(0.U(dataWidth.W))
+  val regRep = RegInit(0.U(repWidth.W))
 
   io.out.bits := regElem
 
   val bothValid = io.inElem.valid & io.inRepCnt.valid
 
-  when(regRep === UInt(0)) {
+  when(regRep === 0.U) {
     when (bothValid) {
       regElem := io.inElem.bits
       regRep := io.inRepCnt.bits
-      io.inElem.ready := Bool(true)
-      io.inRepCnt.ready := Bool(true)
+      io.inElem.ready := true.B
+      io.inRepCnt.ready := true.B
     }
   }
   .otherwise {
-    io.out.valid := Bool(true)
+    io.out.valid := true.B
     when(io.out.ready) {
-      regRep := regRep - UInt(1)
+      regRep := regRep - 1.U
       // last repetition? prefetch in read
-      when(regRep === UInt(1)) {
+      when(regRep === 1.U) {
         // prefetch elem and repcount, if possible
         when (bothValid) {
           regElem := io.inElem.bits
           regRep := io.inRepCnt.bits
-          io.inElem.ready := Bool(true)
-          io.inRepCnt.ready := Bool(true)
+          io.inElem.ready := true.B
+          io.inRepCnt.ready := true.B
         }
       }
     }
   }
 }
+
+/*
 
 class StreamRepeatElemTester(c: StreamRepeatElem) extends Tester(c) {
   var elems = Array(100, 200, 300, 400)
@@ -132,3 +135,4 @@ class StreamRepeatElemTester(c: StreamRepeatElem) extends Tester(c) {
 
   expect(res.deep == golden.deep, "Result equals golden")
 }
+*/

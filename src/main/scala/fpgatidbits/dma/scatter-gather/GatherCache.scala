@@ -1,10 +1,11 @@
 package fpgatidbits.dma
 
-import Chisel._
-
+import chisel3._
+import chisel3.util._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 import fpgatidbits.ocm._
+import fpgatidbits.utils.BitExtraction
 
 // nonblocking (cache will "set aside" misses and keep servicing up to a point)
 // the misses are put in a queue, and a ReadOrderCache is used to ensure that
@@ -25,14 +26,14 @@ class GatherNBCache_InOrderMissHandling(
   mrp: MemReqParams,
   orderRsps: Boolean = false
 ) extends Module {
-  val io = new GatherIF(indWidth, datWidth, tagWidth, mrp) {
+  val io = IO(new GatherIF(indWidth, datWidth, tagWidth, mrp) {
     // req - rsp interface for memory reads
     val memRdReq = Decoupled(new GenericMemoryRequest(mrp))
-    val memRdRsp = Decoupled(new GenericMemoryResponse(mrp)).flip
-  }
+    val memRdRsp = Flipped(Decoupled(new GenericMemoryResponse(mrp)))
+  })
   // number of bits&bytes in each cacheline
   val bitsPerLine = elemsPerLine * datWidth
-  val bytesPerLine = UInt(bitsPerLine/8)
+  val bytesPerLine = (bitsPerLine/8).U
   // be extra conservative with allowed cacheline sizes for now
   // (either single or 8-beat bursts)
   if(bitsPerLine != mrp.dataWidth && bitsPerLine != 8*mrp.dataWidth)
@@ -72,34 +73,28 @@ class GatherNBCache_InOrderMissHandling(
   // the request is ready to be served.
   // define types for internal requests and responses:
   class InternalReq extends CloakroomBundle(outstandingTxns) {
-    val cacheLine = UInt(width = cacheLineNumBits)
-    val cacheTag = UInt(width = cacheTagBits)
-    val cacheOffset = UInt(width = cacheOffsetBitsAvoidW0W)
+    val cacheLine = UInt(cacheLineNumBits.W)
+    val cacheTag = UInt(cacheTagBits.W)
+    val cacheOffset = UInt(cacheOffsetBitsAvoidW0W.W)
 
     override val printfStr = "req: id = %d line = %d tag = %d ofs = %d\n"
     override val printfElems = {() => Seq(id, cacheLine, cacheTag, cacheOffset)}
 
-    override def cloneType: this.type =
-      new InternalReq().asInstanceOf[this.type]
   }
   class InternalTagRsp extends InternalReq {
     val isHit = Bool()
-    val dat = UInt(width = bitsPerLine)
+    val dat = UInt(bitsPerLine.W)
 
     override val printfStr = "req: id = %d linersp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
 
-    override def cloneType: this.type =
-      new InternalTagRsp().asInstanceOf[this.type]
   }
   class InternalRsp extends CloakroomBundle(outstandingTxns) {
-    val dat = UInt(width = datWidth)
+    val dat = UInt(datWidth.W)
 
     override val printfStr = "req: id = %d rsp: %x\n"
     override val printfElems = {() => Seq(id, dat)}
 
-    override def cloneType: this.type =
-      new InternalRsp().asInstanceOf[this.type]
   }
   val ireq = new InternalReq()
   val itagrsp = new InternalTagRsp()
@@ -112,7 +107,7 @@ class GatherNBCache_InOrderMissHandling(
     int.cacheLine := cacheLine(ext.ind)
     int.cacheTag := cacheTag(ext.ind)
     if(needOffset) int.cacheOffset := cacheOffset(ext.ind)
-    else int.cacheOffset := UInt(0)
+    else int.cacheOffset := 0.U
     int
   }
 
@@ -125,7 +120,7 @@ class GatherNBCache_InOrderMissHandling(
 
   val cloakroom = Module(new CloakroomLUTRAM(
     num = outstandingTxns, genA = io.in.bits.cloneType, undress = undressFxn,
-    genC = irsp, dress = dressFxn
+    genC = irsp, dress = dressFxn, new InternalReq, new GatherRsp(datWidth, tagWidth)
   )).io
 
   io.in <> cloakroom.extIn
@@ -156,18 +151,18 @@ class GatherNBCache_InOrderMissHandling(
   )).io
   val tagRd = tagStore.ports(0)
   val tagWr = tagStore.ports(1)
-  tagRd.req.writeEn := Bool(false)
-  tagRd.req.writeData := UInt(0)
-  tagWr.req.writeEn := Bool(false)
+  tagRd.req.writeEn := false.B
+  tagRd.req.writeData := 0.U
+  tagWr.req.writeEn := false.B
   val datStore = Module(new PipelinedDualPortBRAM(
     addrBits = cacheLineNumBits, dataBits = bitsPerLine,
     regIn = 0, regOut = pipelinedStorage
   )).io
   val datRd = datStore.ports(0)
   val datWr = datStore.ports(1)
-  datRd.req.writeEn := Bool(false)
-  datRd.req.writeData := UInt(0)
-  datWr.req.writeEn := Bool(false)
+  datRd.req.writeEn := false.B
+  datRd.req.writeData := 0.U
+  datWr.req.writeEn := false.B
 
   // various queues that hold intermediate results
   val tagRspQ = Module(new FPGAQueue(itagrsp, 2 + storeLatency)).io
@@ -187,15 +182,15 @@ class GatherNBCache_InOrderMissHandling(
 
   // ==========================================================================
   // initialize tags (all lines invalid) on reset, using the tagRd port
-  val regInitActive = Reg(init = Bool(true))
-  val regTagInitAddr = Reg(init = UInt(0, 1+cacheLineNumBits))
+  val regInitActive = RegInit(true.B)
+  val regTagInitAddr = RegInit(0.U((1+cacheLineNumBits).W))
 
 
   when(regInitActive) {
     tagRd.req.addr := regTagInitAddr
-    tagRd.req.writeEn := Bool(true)
-    regTagInitAddr := regTagInitAddr + UInt(1)
-    when(regTagInitAddr === UInt(lines-1)) { regInitActive := Bool(false)}
+    tagRd.req.writeEn := true.B
+    regTagInitAddr := regTagInitAddr + 1.U
+    when(regTagInitAddr === (lines-1).U) { regInitActive := false.B}
   }
 
   // ==========================================================================
@@ -203,7 +198,7 @@ class GatherNBCache_InOrderMissHandling(
   // handshaking across latency: readyReqs -> [tag & data read] -> tagRspQ
   // also need to check whether tag init after reset is finished
   val lineConflict = tagWr.req.writeEn & (tagWr.req.addr === tagRd.req.addr)
-  val canDoTagRsp = (tagRspQ.count < UInt(2)) & !regInitActive & !lineConflict
+  val canDoTagRsp = (tagRspQ.count < 2.U) & !regInitActive & !lineConflict
   val doHandleReq = canDoTagRsp & readyReqs.valid
   val origReq = ShiftRegister(readyReqs.bits, storeLatency)
   val tagMatch = tagRd.rsp.readData(cacheTagBits-1, 0) === origReq.cacheTag
@@ -227,9 +222,9 @@ class GatherNBCache_InOrderMissHandling(
 
   // move only the requested word at the correct offset if applicable
   if(needOffset) {
-    val offsMin = UInt(datWidth) * tagRspQ.deq.bits.cacheOffset
-    val offsMax = UInt(datWidth) * (UInt(1) + tagRspQ.deq.bits.cacheOffset)
-    hitQ.enq.bits.dat := tagRspQ.deq.bits.dat(offsMax-UInt(1), offsMin)
+    val offsMin = (datWidth).U * tagRspQ.deq.bits.cacheOffset
+    val offsMax = (datWidth).U * (1.U + tagRspQ.deq.bits.cacheOffset)
+    hitQ.enq.bits.dat := BitExtraction(tagRspQ.deq.bits.dat, offsMax-1.U, offsMin)
   }
 
   // =========================================================================
@@ -252,9 +247,9 @@ class GatherNBCache_InOrderMissHandling(
     theRsp.id := a.id
     if(needOffset) {
       // move only the requested word at the correct offset
-      val offsMin = UInt(datWidth) * a.cacheOffset
-      val offsMax = UInt(datWidth) * (UInt(1) + a.cacheOffset)
-      theRsp.dat := b.readData(offsMax-UInt(1), offsMin)
+      val offsMin = (datWidth).U * a.cacheOffset
+      val offsMax = (datWidth).U * (1.U + a.cacheOffset)
+      theRsp.dat := BitExtraction(b.readData,offsMax-1.U, offsMin)
     } else {
       theRsp.dat := b.readData
     }
@@ -283,12 +278,12 @@ class GatherNBCache_InOrderMissHandling(
 
   // update tag and data when miss is handled
   tagWr.req.addr := pendingQ.deq.bits.cacheLine
-  tagWr.req.writeData := Cat(Bool(true), pendingQ.deq.bits.cacheTag)
+  tagWr.req.writeData := Cat(true.B, pendingQ.deq.bits.cacheTag)
   datWr.req.addr := pendingQ.deq.bits.cacheLine
 
-  when(handledQ.enq.fire()) {
-    tagWr.req.writeEn := Bool(true)
-    datWr.req.writeEn := Bool(true)
+  when(handledQ.enq.fire) {
+    tagWr.req.writeEn := true.B
+    datWr.req.writeEn := true.B
   }
 
   // =========================================================================
@@ -302,8 +297,8 @@ class GatherNBCache_InOrderMissHandling(
   // debug
   /*
   val regCnt = Reg(init = UInt(0, 32))
-  when(readyReqs.fire()) { regCnt := regCnt + UInt(1)}
-  val doMon = (regCnt > UInt(0)) && (regCnt < UInt(5882))
+  when(readyReqs.fire) { regCnt := regCnt + 1.U}
+  val doMon = (regCnt > 0.U) && (regCnt < UInt(5882))
   val doVerboseDebug = false
 
   StreamMonitor(cloakroom.extIn, doMon, "cloakroom.extIn", doVerboseDebug)
@@ -318,7 +313,7 @@ class GatherNBCache_InOrderMissHandling(
   */
 
   /*
-  PrintableBundleStreamMonitor(io.memRdRsp, Bool(true), "memRdRsp", true)
-  PrintableBundleStreamMonitor(io.memRdReq, Bool(true), "memRdReq", true)
+  PrintableBundleStreamMonitor(io.memRdRsp, true.B, "memRdRsp", true)
+  PrintableBundleStreamMonitor(io.memRdReq, true.B, "memRdReq", true)
   */
 }

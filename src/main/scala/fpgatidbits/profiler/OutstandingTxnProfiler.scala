@@ -1,43 +1,45 @@
 package fpgatidbits.profiler
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 class OutstandingTxnProfilerOutput(w: Int) extends Bundle {
-  val sum = UInt(OUTPUT, w)
-  val cycles = UInt(OUTPUT, w)
+  val sum = Output(UInt(w.W))
+  val cycles = Output(UInt(w.W))
 }
 
 class OutstandingTxnProfiler(w: Int) extends Module {
   val io = new Bundle {
-    val enable = Bool(INPUT)
-    val probeReqValid = Bool(INPUT)
-    val probeReqReady = Bool(INPUT)
-    val probeRspValid = Bool(INPUT)
-    val probeRspReady = Bool(INPUT)
+    val enable = Input(Bool())
+    val probeReqValid = Input(Bool())
+    val probeReqReady = Input(Bool())
+    val probeRspValid = Input(Bool())
+    val probeRspReady = Input(Bool())
 
     val out = new OutstandingTxnProfilerOutput(w)
   }
 
-  val regCycles = Reg(init = UInt(0, w))
-  val regTotalReq = Reg(init = UInt(0, w))
-  val regTotalRsp = Reg(init = UInt(0, w))
-  val regActiveTxns = Reg(init = UInt(0, w))
+  val regCycles = RegInit(0.U(32.W))
+  val regTotalReq = RegInit(0.U(32.W))
+  val regTotalRsp = RegInit(0.U(32.W))
+  val regActiveTxns = RegInit(0.U(32.W))
 
-  val regActive = Reg(next = io.enable)
+  val regActive = RegInit(false.B)
+  regActive := io.enable
 
   val reqTxn = io.probeReqReady & io.probeReqValid
   val rspTxn = io.probeRspValid & io.probeRspReady
 
   when(!regActive & io.enable) {
     // reset all counters when first enabled
-    regCycles := UInt(0)
-    regTotalReq := UInt(0)
-    regTotalRsp := UInt(0)
-    regActiveTxns := UInt(0)
+    regCycles := 0.U
+    regTotalReq := 0.U
+    regTotalRsp := 0.U
+    regActiveTxns := 0.U
   } .elsewhen(regActive & io.enable) {
-    regCycles := regCycles + UInt(1)
-    when(reqTxn) { regTotalReq := regTotalReq + UInt(1) }
-    when(rspTxn) { regTotalRsp := regTotalRsp + UInt(1) }
+    regCycles := regCycles + 1.U
+    when(reqTxn) { regTotalReq := regTotalReq + 1.U }
+    when(rspTxn) { regTotalRsp := regTotalRsp + 1.U }
     regActiveTxns := regActiveTxns + (regTotalReq - regTotalRsp)
   }
 

@@ -1,20 +1,21 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.axi._
 
 class ParallelInSerialOut(parWidth: Int, serWidth: Int) extends Module {
   val numShiftSteps = parWidth/serWidth
 
-  val io = new Bundle {
-    val parIn = UInt(INPUT, parWidth)
-    val parWrEn = Bool(INPUT)
-    val serIn = UInt(INPUT, serWidth)
-    val serOut = UInt(OUTPUT, serWidth)
-    val shiftEn = Bool(INPUT)
-  }
+  val io = IO(new Bundle {
+    val parIn = Input(UInt(parWidth.W))
+    val parWrEn = Input(Bool())
+    val serIn = Input(UInt(serWidth.W))
+    val serOut = Output(UInt(serWidth.W))
+    val shiftEn = Input(Bool())
+  })
 
-  val stages = Vec.fill(numShiftSteps) { Reg(init = UInt(0, serWidth)) }
+  val stages = RegInit(VecInit(Seq.fill(numShiftSteps)(0.U(serWidth.W))))
 
   when( io.parWrEn ) {
     // load entire register from parallel input
@@ -33,6 +34,8 @@ class ParallelInSerialOut(parWidth: Int, serWidth: Int) extends Module {
   // provide serial output from lowest stage
   io.serOut := stages(0)
 }
+
+/*
 
 class PISOTester(c: ParallelInSerialOut) extends Tester(c) {
   peek(c.io.serOut)
@@ -54,9 +57,11 @@ class PISOTester(c: ParallelInSerialOut) extends Tester(c) {
 
 }
 
+ */
+
 object StreamDownsizer {
   def apply(in: DecoupledIO[UInt], outW: Int): DecoupledIO[UInt] = {
-    val ds = Module(new AXIStreamDownsizer(in.bits.getWidth(), outW)).io
+    val ds = Module(new AXIStreamDownsizer(in.bits.getWidth, outW))
     ds.in <> in
     ds.out
   }
@@ -64,73 +69,70 @@ object StreamDownsizer {
 
 class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
   val numShiftSteps = inWidth/outWidth
-  val io = new Bundle {
-    val in = new AXIStreamSlaveIF(UInt(width = inWidth))
-    val out = new AXIStreamMasterIF(UInt(width = outWidth))
-  }
 
-  // rename signals to infer AXI stream interfaces in Vivado
-  io.in.renameSignals("wide")
-  io.out.renameSignals("narrow")
+
+  val in = IO(Flipped(new AXIStreamIF(UInt(inWidth.W)))).suggestName("wide")
+  val out = IO(new AXIStreamIF(UInt(outWidth.W))).suggestName("narrow")
+
 
   // the shift register
   val shiftReg = Module(new ParallelInSerialOut(inWidth, outWidth))
-  shiftReg.io.parIn := io.in.bits
-  shiftReg.io.serIn := UInt(0)
-  io.out.bits := UInt(shiftReg.io.serOut)
-  shiftReg.io.parWrEn := Bool(false)
-  shiftReg.io.shiftEn := Bool(false)
+  shiftReg.io.parIn := in.bits
+  shiftReg.io.serIn := 0.U
+  out.bits := (shiftReg.io.serOut)
+  shiftReg.io.parWrEn := false.B
+  shiftReg.io.shiftEn := false.B
 
   // FSM and register definitions
-  val sWaitInput :: sShift :: sLastStep :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sWaitInput))
-  val regShiftCount = Reg(init = UInt(0, width = log2Up(numShiftSteps)))
+  val sWaitInput :: sShift :: sLastStep :: Nil = Enum(3)
+  val regState = RegInit(sWaitInput)
+  val regShiftCount = RegInit(0.U(log2Ceil(numShiftSteps).W))
 
   // default outputs
-  io.in.ready := Bool(false)
-  io.out.valid := Bool(false)
+  in.ready := false.B
+  out.valid := false.B
 
   // state machine
   switch( regState ) {
     is( sWaitInput ) {
       // enable parallel load to shift register
-      shiftReg.io.parWrEn := Bool(true)
+      shiftReg.io.parWrEn := true.B
       // signal to input that we are ready to go
-      io.in.ready := Bool(true)
+      in.ready := true.B
       // reset the count register
-      regShiftCount := UInt(0)
+      regShiftCount := 0.U
       // wait until data is available at the input
-      when ( io.in.valid ) { regState := sShift }
+      when ( in.valid ) { regState := sShift }
     }
 
     is( sShift ) {
       // signal to output that data is available
-      io.out.valid := Bool(true)
+      out.valid := true.B
       // wait for ack from output
-      when (io.out.ready) {
+      when (out.ready) {
         // increment shift counter
-        regShiftCount := regShiftCount + UInt(1)
+        regShiftCount := regShiftCount + 1.U
         // enable shift
-        shiftReg.io.shiftEn := Bool(true)
+        shiftReg.io.shiftEn := true.B
         // go to last state when appropriate, stay here otherwise
         // note that we don't have to shift the very last step,
         // hence the one before last is numShiftSteps-2
-        when (regShiftCount === UInt(numShiftSteps-2)) { regState := sLastStep }
+        when (regShiftCount === (numShiftSteps.U-2.U)) { regState := sLastStep }
       }
     }
 
     is( sLastStep ) {
       // signal to output that data is available
-      io.out.valid := Bool(true)
+      out.valid := true.B
       // wait for ack from output
-      when (io.out.ready) {
+      when (out.ready) {
         // next action depends on both the in and out sides
-        when ( io.in.valid ) {
+        when ( in.valid ) {
           // new data already available on input, grab it
-          shiftReg.io.parWrEn := Bool(true)
-          io.in.ready := Bool(true)
+          shiftReg.io.parWrEn := true.B
+          in.ready := true.B
           // reset counter and go to shift state
-          regShiftCount := UInt(0)
+          regShiftCount := 0.U
           regState := sShift
         } .otherwise {
           // go to sWaitInput
@@ -141,6 +143,8 @@ class AXIStreamDownsizer(inWidth: Int, outWidth: Int) extends Module {
   }
 }
 
+
+/*
 class AXIStreamDownsizerTester(c: AXIStreamDownsizer) extends Tester(c) {
   // simple tester for a 64-to-16 bit downsizer
   poke(c.io.in.valid, 0)
@@ -221,3 +225,5 @@ class AXIStreamDownsizerTester(c: AXIStreamDownsizer) extends Tester(c) {
   expect(c.io.in.ready, 1)  // ready to pull data
   expect(c.io.out.valid, 0) // no data on output
 }
+
+*/

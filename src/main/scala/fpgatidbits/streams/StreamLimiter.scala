@@ -1,6 +1,7 @@
 package fpgatidbits.streams
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // limits the amount of data passing through a stream
 // - when not started, the stream just passes through unhindered
@@ -10,7 +11,7 @@ import Chisel._
 
 object StreamLimiter {
   def apply(in: DecoupledIO[UInt], start: Bool, count: UInt): DecoupledIO[UInt] = {
-    val limiter = Module(new StreamLimiter(in.bits.getWidth())).io
+    val limiter = Module(new StreamLimiter(in.bits.getWidth)).io
     limiter.start := start
     limiter.byteCount := count
     limiter.streamIn <> in
@@ -19,24 +20,24 @@ object StreamLimiter {
 }
 
 class StreamLimiter(w: Int) extends Module {
-  val io = new Bundle {
-    val start = Bool(INPUT)
-    val done = Bool(OUTPUT)
-    val byteCount = UInt(INPUT, 32)
-    val streamIn = Decoupled(UInt(width=w)).flip
-    val streamOut = Decoupled(UInt(width=w))
-  }
+  val io = IO(new Bundle {
+    val start = Input(Bool())
+    val done = Output(Bool())
+    val byteCount = Input(UInt(32.W))
+    val streamIn = Flipped(Decoupled(UInt(w.W)))
+    val streamOut = Decoupled(UInt(w.W))
+  })
 
-  io.done := Bool(false)
+  io.done := false.B
 
   io.streamOut.bits := io.streamIn.bits
   io.streamOut.valid := io.streamIn.valid
   io.streamIn.ready := io.streamOut.ready
 
-  val sIdle :: sRun :: sFinished :: Nil = Enum(UInt(), 3)
-  val regState = Reg(init = UInt(sIdle))
+  val sIdle :: sRun :: sFinished :: Nil = Enum(3)
+  val regState = RegInit((sIdle))
 
-  val regBytesLeft = Reg(init = UInt(0, 32))
+  val regBytesLeft = RegInit(0.U(32.W))
 
   switch(regState) {
       is(sIdle) {
@@ -47,18 +48,18 @@ class StreamLimiter(w: Int) extends Module {
       is(sRun) {
         // count each transaction and decrement counter
         when (io.streamIn.valid & io.streamOut.ready) {
-          regBytesLeft := regBytesLeft - UInt(w/8)
-          when (regBytesLeft === UInt(w/8)) {regState := sFinished}
+          regBytesLeft := regBytesLeft - (w/8).U
+          when (regBytesLeft === (w/8).U) {regState := sFinished}
         }
       }
 
       is(sFinished) {
         // do not let any more transactions through towards out
-        io.streamOut.valid := Bool(false)
+        io.streamOut.valid := false.B
         // let upstream sources continue, do not clog the pipes
-        io.streamIn.ready := Bool(true)
+        io.streamIn.ready := true.B
         // signal finished
-        io.done := Bool(true)
+        io.done := true.B
         when(!io.start) {regState := sIdle}
       }
   }

@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.ocm._
 import fpgatidbits.streams._
 
@@ -11,9 +12,10 @@ import fpgatidbits.streams._
 // burst data.
 
 class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
-  val io = new ReadOrderCacheIO(p.mrp, p.maxBurst)
-  val beat = UInt(0, width = p.mrp.dataWidth)
-  val rid = UInt(0, width = p.mrp.idWidth)
+  val io = IO(new ReadOrderCacheIO(p.mrp, p.maxBurst))
+
+  val beat = 0.U(p.mrp.dataWidth.W)
+  val rid = 0.U(p.mrp.idWidth.W)
   val mreq = new GenericMemoryRequest(p.mrp)
   val mrsp = new GenericMemoryResponse(p.mrp)
 
@@ -33,14 +35,14 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   val readyReqs = StreamJoin(
     inA = freeReqID.idOut, inB = io.reqOrdered, genO = mreq,
     join = {(freeID: UInt, r: GenericMemoryRequest) => GenericMemoryRequest(
-      p = p.mrp, addr = r.addr, write = Bool(false), id = freeID,
+      p = p.mrp, addr = r.addr, write = false.B, id = freeID,
       numBytes = r.numBytes
     )}
   )
 
   // save original request ID upon entry
   // TODO should replace this with Cloakroom structure
-  val origReqID = Mem(mreq.channelID.cloneType, p.outstandingReqs)
+  val origReqID = SyncReadMem(p.outstandingReqs, mreq.channelID.cloneType)
   when(readyReqs.ready & readyReqs.valid) {
     origReqID(freeReqID.idOut.bits) := io.reqOrdered.bits.channelID
   }
@@ -56,37 +58,43 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   reqIssueFork.outA <> io.reqMem
   reqIssueFork.outB <> busyReqs.enq
 
-  io.reqMem.bits.channelID := UInt(p.chanIDBase) + reqIssueFork.outA.bits.channelID
+  io.reqMem.bits.channelID := p.chanIDBase.U + reqIssueFork.outA.bits.channelID
 
   //==========================================================================
 
-  val ctrBits = log2Up(p.maxBurst)
-  val reqIDBits = log2Up(p.outstandingReqs)
+  val ctrBits = log2Ceil(p.maxBurst)
+  val reqIDBits = log2Ceil(p.outstandingReqs)
   // since burst responses can be interleaved, each in-flight burst can have
   // a number of elements it has already received. we use the following BRAM
   // as a counter to keep track of the number of elements received for each
   // in-flight burst. we do a read-modify-write through this BRAM to do this.
-  val rspCounters = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
+  val rspCountersExt = Module(new DualPortBRAM(reqIDBits, ctrBits)).io
+  val rspCounters = Wire(new DualPortBRAMIOWrapper(reqIDBits, ctrBits))
+  rspCountersExt.a.connect(rspCounters.ports(0))
+  rspCountersExt.b.connect(rspCounters.ports(1))
+  rspCounters.ports.map(_.driveDefaults())
+
+
   val ctrRd = rspCounters.ports(0)
   val ctrWr = rspCounters.ports(1)
   // an issued request always means its storage space is ready, so we can always
   // accept memory responses.
-  io.rspMem.ready := Bool(true)
+  io.rspMem.ready := true.B
   // subtract chanIDBase to get index of counter to read & use as read addr
-  val ctrRdInd = io.rspMem.bits.channelID - UInt(p.chanIDBase)
+  val ctrRdInd = io.rspMem.bits.channelID - p.chanIDBase.U
   ctrRd.req.addr := ctrRdInd
-  ctrRd.req.writeEn := Bool(false)
+  ctrRd.req.writeEn := false.B
 
-  val regCtrInd = Reg(next = ctrRdInd)
-  val regCtrValid = Reg(next = io.rspMem.valid)
-  val regCtrData = Reg(next = io.rspMem.bits.readData)
-  val regCtrLast = Reg(next = io.rspMem.bits.isLast)
+  val regCtrInd = RegNext(ctrRdInd)
+  val regCtrValid = RegNext(io.rspMem.valid)
+  val regCtrData = RegNext(io.rspMem.bits.readData)
+  val regCtrLast = RegNext(io.rspMem.bits.isLast)
   // bypass logic to compensate for BRAM latency
-  val regDoBypass = Reg(next = ctrWr.req.writeEn & (ctrRd.req.addr === ctrWr.req.addr))
-  val regNewVal = Reg(init = UInt(0, width = ctrBits))
+  val regDoBypass = RegNext(ctrWr.req.writeEn & (ctrRd.req.addr === ctrWr.req.addr))
+  val regNewVal = RegInit(0.U(ctrBits.W))
   val ctrOldVal = Mux(regDoBypass, regNewVal, ctrRd.rsp.readData)
   // use regCtrLast to clear counter at end of burst
-  val ctrNewVal = Mux(regCtrLast, UInt(0), ctrOldVal + UInt(1))
+  val ctrNewVal = Mux(regCtrLast, 0.U, ctrOldVal + 1.U)
   regNewVal := ctrNewVal
   ctrWr.req.addr := regCtrInd
   ctrWr.req.writeEn := regCtrValid
@@ -96,26 +104,34 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
       can add registers prior to data store BRAM to improve
   */
   // store received data in BRAM
-  val storage = Module(new DualPortBRAM(
-    addrBits = log2Up(p.outstandingReqs * p.maxBurst),
+  val storageExt = Module(new DualPortBRAM(
+    addrBits = log2Ceil(p.outstandingReqs * p.maxBurst),
     dataBits = p.mrp.dataWidth
   )).io
+  val storage = Wire(new DualPortBRAMIOWrapper(
+    addrBits = log2Ceil(p.outstandingReqs * p.maxBurst),
+    dataBits = p.mrp.dataWidth
+  ))
+  storageExt.clk := clock
+  storageExt.a.connect(storage.ports(0))
+  storageExt.b.connect(storage.ports(1))
+  storage.ports.map(_.driveDefaults())
+
+
   val dataRd = storage.ports(0)
   val dataWr = storage.ports(1)
-  dataRd.req.writeEn := Bool(false)
+  dataRd.req.writeEn := false.B
   dataWr.req.writeData := regCtrData
   // compute where the newly arrived data goes
-  dataWr.req.addr := regCtrInd * UInt(p.maxBurst) + ctrOldVal
+  dataWr.req.addr := regCtrInd * p.maxBurst.U + ctrOldVal
   // store data when available
   dataWr.req.writeEn := regCtrValid
 
   // bitfield to keep track of burst finished status
-  val regBurstFinished = Reg(init = UInt(0, width = p.outstandingReqs))
-  val burstFinishedSet = UInt(width = p.outstandingReqs)
-  burstFinishedSet := UInt(0, p.outstandingReqs)
-  val burstFinishedClr = UInt(width = p.outstandingReqs)
-  burstFinishedClr := UInt(0, p.outstandingReqs)
-  regBurstFinished := (regBurstFinished & ~burstFinishedClr) | burstFinishedSet
+  val regBurstFinished = RegInit(0.U(p.outstandingReqs.W))
+  val burstFinishedSet = WireInit(0.U(p.outstandingReqs.W))
+  val burstFinishedClr = WireInit(0.U(p.outstandingReqs.W))
+  regBurstFinished := (regBurstFinished & (~burstFinishedClr).asUInt) | burstFinishedSet
 
   // set finished flag on last beat received
   when(regCtrValid & regCtrLast) {
@@ -127,35 +143,41 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
   // pop response when appropriate
   val headReq = busyReqs.deq.bits
   val headReqID = headReq.channelID
-  val headReqBeats = headReq.numBytes / UInt(p.mrp.dataWidth/8)
+  val headReqBeats = headReq.numBytes / (p.mrp.dataWidth/8).U
   val headReqValid = busyReqs.deq.valid
   val headReqBurstFinished = regBurstFinished(headReqID)
   // keep track of how many elems have been emitted for the head request
-  val regRspsPopped = Reg(init = UInt(0, 4))
+  val regRspsPopped = RegInit(0.U(4.W))
 
   // handshaking-over-latency to read out results
-  val canPopRsp = headRsps.count < UInt(2)
+  val canPopRsp = headRsps.count < 2.U
   val isRspAvailable = headReqValid & headReqBurstFinished
   val doPopRsp = canPopRsp & isRspAvailable
-  dataRd.req.addr := (headReqID * UInt(p.maxBurst)) + regRspsPopped
+  dataRd.req.addr := (headReqID * (p.maxBurst).U) + regRspsPopped
 
-  headRsps.enq.valid := Reg(next = doPopRsp)
+  headRsps.enq.valid := RegNext(doPopRsp)
   headRsps.enq.bits.readData := dataRd.rsp.readData
-  headRsps.enq.bits.channelID := Reg(next = headReqID)  // internal ID
+  headRsps.enq.bits.channelID := RegNext(headReqID)  // internal ID
   freeReqID.idIn.bits := headReqID
-  busyReqs.deq.ready := Bool(false)
-  freeReqID.idIn.valid := Bool(false)
+  busyReqs.deq.ready := false.B
+  freeReqID.idIn.valid := false.B
+
+  // erlingrj: TODO: This seems cumbersome. And maybe error prone?
+  // Tie off unused headRsps signals
+  headRsps.enq.bits.isWrite := false.B
+  headRsps.enq.bits.metaData := 0.U
+  headRsps.enq.bits.isLast := false.B
 
   when(doPopRsp) {
-    when(regRspsPopped === headReqBeats - UInt(1)) {
+    when(regRspsPopped === headReqBeats - 1.U) {
       // when emitted responses = burst size, we are done
       // pop from busyReqs, recycle the ID and reset the counter
-      regRspsPopped := UInt(0)
+      regRspsPopped := 0.U
       burstFinishedClr := UIntToOH(headReqID, p.outstandingReqs)
-      freeReqID.idIn.valid := Bool(true)
-      busyReqs.deq.ready := Bool(true)
+      freeReqID.idIn.valid := true.B
+      busyReqs.deq.ready := true.B
     } .otherwise {
-      regRspsPopped := regRspsPopped + UInt(1)
+      regRspsPopped := regRspsPopped + 1.U
     }
   }
 
@@ -165,8 +187,8 @@ class ReadOrderCacheBRAM(p: ReadOrderCacheParams) extends Module {
 
   // =========================================================================
   // debug
-  //StreamMonitor(io.reqOrdered, Bool(true), "reqOrdered", true)
-  //StreamMonitor(io.rspOrdered, Bool(true), "rspOrdered", true)
-  //StreamMonitor(io.reqMem, Bool(true), "memRdReq", true)
-  //StreamMonitor(io.rspMem, Bool(true), "memRdRsp", true)
+  //StreamMonitor(io.reqOrdered, true.B, "reqOrdered", true)
+  //StreamMonitor(io.rspOrdered, true.B, "rspOrdered", true)
+  //StreamMonitor(io.reqMem, true.B, "memRdReq", true)
+  //StreamMonitor(io.rspMem, true.B, "memRdRsp", true)
 }

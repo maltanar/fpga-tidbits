@@ -1,6 +1,6 @@
 package fpgatidbits.hlstools
 
-import Chisel._
+import chisel3._
 
 // helper class to derive BlackBox modules that correspond to Vivado HLS
 // templated functions which come with a macro-based wrapper. Suppose that

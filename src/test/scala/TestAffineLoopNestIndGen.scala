@@ -1,10 +1,11 @@
-import Chisel._
-import org.scalatest.junit.JUnitSuite
-import org.junit.Test
-import fpgatidbits.streams._
+//import chisel3._
+//import chisel3.util._
+//import fpgatidbits.streams._
 
 // Tester-derived class to give stimulus and observe the outputs for the
 // Module to be tested
+
+/*
 class AffineLoopNestIndGenTester(c: AffineLoopNestIndGen) extends Tester(c) {
   val levels = c.n
   val r = scala.util.Random
@@ -91,3 +92,4 @@ class TestAffineLoopNestIndGen extends JUnitSuite {
     }
   }
 }
+*/

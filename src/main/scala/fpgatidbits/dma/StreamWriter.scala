@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.streams._
 
 // write contiguous streams of data to main memory
@@ -16,43 +17,43 @@ class StreamWriterParams(
 )
 
 class StreamWriterIF(w: Int, p: MemReqParams) extends Bundle {
-  val start = Bool(INPUT)
-  val active = Bool(OUTPUT)
-  val finished = Bool(OUTPUT)
-  val error = Bool(OUTPUT)
-  val baseAddr = UInt(INPUT, p.addrWidth)
-  val byteCount = UInt(INPUT, 32)
+  val start = Input(Bool())
+  val active = Output(Bool())
+  val finished = Output(Bool())
+  val error = Output(Bool())
+  val baseAddr = Input(UInt(p.addrWidth.W))
+  val byteCount = Input(UInt(32.W))
   // stream data input
-  val in = Decoupled(UInt(width = w)).flip
+  val in = Flipped(Decoupled(UInt(w.W)))
   // interface towards memory port
   val req = Decoupled(new GenericMemoryRequest(p))
-  val wdat = Decoupled(UInt(width = p.dataWidth))
-  val rsp = Decoupled(new GenericMemoryResponse(p)).flip
+  val wdat = Decoupled(UInt(p.dataWidth.W))
+  val rsp = Flipped(Decoupled(new GenericMemoryResponse(p)))
 }
 
 class StreamWriter(val p: StreamWriterParams) extends Module {
-  val io = new StreamWriterIF(p.streamWidth, p.mem)
-  val StreamElem = UInt(width = p.streamWidth)
+  val io = IO(new StreamWriterIF(p.streamWidth, p.mem))
+  val StreamElem = UInt(p.streamWidth.W)
 
   // always ready to receive write responses
-  io.rsp.ready := Bool(true)
+  io.rsp.ready := true.B
   // count write responses to determine finished
-  val regNumPendingReqs = Reg(init = UInt(0, 32))
-  val regRequestedBytes = Reg(init = UInt(0, 32))
+  val regNumPendingReqs = RegInit(0.U(32.W))
+  val regRequestedBytes = RegInit(0.U(32.W))
   when(!io.start) {
-    regNumPendingReqs := UInt(0)
-    regRequestedBytes := UInt(0)
+    regNumPendingReqs := 0.U
+    regRequestedBytes := 0.U
   } .otherwise {
     val reqFired = io.req.valid & io.req.ready
     val rspFired = io.rsp.valid & io.rsp.ready
-    regRequestedBytes := regRequestedBytes + Mux(reqFired, io.req.bits.numBytes, UInt(0))
-    when(reqFired && !rspFired) { regNumPendingReqs := regNumPendingReqs + UInt(1)}
-    .elsewhen(!reqFired && rspFired) { regNumPendingReqs := regNumPendingReqs - UInt(1) }
+    regRequestedBytes := regRequestedBytes + Mux(reqFired, io.req.bits.numBytes, 0.U)
+    when(reqFired && !rspFired) { regNumPendingReqs := regNumPendingReqs + 1.U}
+    .elsewhen(!reqFired && rspFired) { regNumPendingReqs := regNumPendingReqs - 1.U }
   }
   // finished when:
   // - all bytes have been requested
   // - there are no pending (un-responded) requests left
-  val fin = (regRequestedBytes === io.byteCount) & (regNumPendingReqs === UInt(0))
+  val fin = (regRequestedBytes === io.byteCount) & (regNumPendingReqs === 0.U)
   io.finished := io.start & fin
 
   // write request generator
@@ -60,7 +61,7 @@ class StreamWriter(val p: StreamWriterParams) extends Module {
   wg.ctrl.start := io.start
   wg.ctrl.baseAddr := io.baseAddr
   wg.ctrl.byteCount := io.byteCount // TODO must be multiple of write size!
-  wg.ctrl.throttle := Bool(false)
+  wg.ctrl.throttle := false.B
   io.active := (io.start & !fin)
   io.error := wg.stat.error
 

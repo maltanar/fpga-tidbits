@@ -1,6 +1,7 @@
 package fpgatidbits.dma
 
-import Chisel._
+import chisel3._
+import chisel3.util._
 import fpgatidbits.streams._
 import fpgatidbits.ocm._
 
@@ -69,11 +70,11 @@ extends Module {
 
   val io = new Bundle {
     // interface towards channels
-    val req = Vec.fill(numChans) { Decoupled(new GenericMemoryRequest(mrp)).flip }
-    val rsp = Vec.fill(numChans) { Decoupled(new GenericMemoryResponse(mrp)) }
+    val req = Vec(numChans, Flipped(Decoupled(new GenericMemoryRequest(mrp))))
+    val rsp = Vec(numChans, Decoupled(new GenericMemoryResponse(mrp)))
     // interface towards memory port
-    val memReq = Vec.fill(numPorts) {Decoupled(new GenericMemoryRequest(mrp))}
-    val memRsp = Vec.fill(numPorts) {Decoupled(new GenericMemoryResponse(mrp)).flip}
+    val memReq = Vec(numPorts, Decoupled(new GenericMemoryRequest(mrp)))
+    val memRsp = Vec(numPorts, Flipped(Decoupled(new GenericMemoryResponse(mrp))))
   }
 
   for(i <- 0 until numPorts) {
@@ -106,11 +107,11 @@ class MultiChanReadPort(val mrp: MemReqParams,
 
   val io = new Bundle {
     // interface towards channels
-    val req = Vec.fill(numChans) { Decoupled(new GenericMemoryRequest(mrp)).flip }
-    val rsp = Vec.fill(numChans) { Decoupled(new GenericMemoryResponse(mrp)) }
+    val req = Vec(numChans, Flipped(Decoupled(new GenericMemoryRequest(mrp))))
+    val rsp = Vec(numChans, Decoupled(new GenericMemoryResponse(mrp)))
     // interface towards memory port
     val memReq = Decoupled(new GenericMemoryRequest(mrp))
-    val memRsp = Decoupled(new GenericMemoryResponse(mrp)).flip
+    val memRsp = Flipped(Decoupled(new GenericMemoryResponse(mrp)))
   }
   // instantiate the interleaver and connect channels
   val intl = Module(new ReqInterleaver(numChans, mrp)).io
@@ -119,7 +120,7 @@ class MultiChanReadPort(val mrp: MemReqParams,
   intl.reqOut <> io.memReq
 
   // function to decide where the responses go
-  val rspDecode = {x: GenericMemoryResponse => x.channelID >> chanReqIDBits}
+  val rspDecode = {x: GenericMemoryResponse => (x.channelID >> chanReqIDBits).asUInt}
 
   // instantiate deinterleaver and connect channels
   val deintl = Module(new QueuedDeinterleaver(numChans, mrp, 4, rspDecode)).io

@@ -1,15 +1,15 @@
 package fpgatidbits.streams
-import Chisel._
+import chisel3._
+import chisel3.util._
 
 // a content-searchable queue
 // mostly a straightforward copy from ChiselUtils Queue; with modifications
 // to permit making the content searchable
 
 class SearchableQueueIO[T <: Data](gen: T, n: Int) extends QueueIO(gen, n) {
-  val searchVal = gen.cloneType.asInput
-  val foundVal = Bool(OUTPUT)
+  val searchVal = Input(gen)
+  val foundVal = Output(Bool())
 
-  override def cloneType: this.type = new SearchableQueueIO(gen, n).asInstanceOf[this.type]
 }
 
 class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
@@ -19,12 +19,12 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
   // - simplified to pipe = false flow = false
   // - vector of registers instead of Mem, to expose all outputs
 
-  val ram = Vec.fill(entries) { Reg(init = UInt(0, gen.getWidth())) }
-  val ramValid = Vec.fill(entries) { Reg(init = Bool(false)) }
+  val ram: Vec[UInt] = RegInit(VecInit(Seq.fill(entries)(0.U(gen.getWidth.W))))
+  val ramValid = RegInit(VecInit(Seq.fill(entries)(false.B)))
 
   val enq_ptr = Counter(entries)
   val deq_ptr = Counter(entries)
-  val maybe_full = Reg(init=Bool(false))
+  val maybe_full = RegInit(false.B)
 
   val ptr_match = enq_ptr.value === deq_ptr.value
   val empty = ptr_match && !maybe_full
@@ -34,21 +34,21 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
   val do_deq = io.deq.ready && io.deq.valid
   when (do_enq) {
     ram(enq_ptr.value) := io.enq.bits
-    ramValid(enq_ptr.value) := Bool(true)
+    ramValid(enq_ptr.value) := true.B
     enq_ptr.inc()
   }
   when (do_deq) {
-    ramValid(deq_ptr.value) := Bool(false)
+    ramValid(deq_ptr.value) := false.B
     deq_ptr.inc()
   }
-  when (do_enq != do_deq) {
+  when (do_enq =/= do_deq) {
     maybe_full := do_enq
   }
 
   // <content search logic>
   val newData = io.searchVal
-  val hits = Vec.tabulate(entries) {i: Int => ram(i) === newData & ramValid(i)}
-  io.foundVal := hits.exists({x:Bool => x})
+  val hits = VecInit(Seq.tabulate(entries)(i => ram(i) === newData.asUInt && ramValid(i)))
+  io.foundVal := hits.asUInt.orR
   // </content search logic>
 
   io.deq.valid := !empty
@@ -60,9 +60,9 @@ class SearchableQueue[T <: Data](gen: T, entries: Int) extends Module {
     io.count := Cat(maybe_full && ptr_match, ptr_diff)
   } else {
     io.count := Mux(ptr_match,
-                  Mux(maybe_full, UInt(entries), UInt(0)),
+                  Mux(maybe_full, entries.U, 0.U),
                   Mux(deq_ptr.value > enq_ptr.value,
-                      UInt(entries) + ptr_diff, ptr_diff)
+                      entries.U + ptr_diff, ptr_diff)
                     )
   }
 }

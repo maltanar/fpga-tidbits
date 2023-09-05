@@ -1,11 +1,11 @@
 #include <iostream>
 using namespace std;
 
-#include "TestMultiChanSum.hpp"
+#include "ExampleMultiChanSum.hpp"
 #include "platform.h"
 
-bool Run_TestMultiChanSum(WrapperRegDriver * platform) {
-	TestMultiChanSum t(platform);
+bool Run_ExampleMultiChanSum(WrapperRegDriver * platform) {
+	ExampleMultiChanSum t(platform);
 
 	cout << "Signature: " << hex << t.get_signature() << dec << endl;
 	unsigned int ub = 0, offs = 0;
@@ -52,7 +52,7 @@ int main()
 {
 	WrapperRegDriver * platform = initPlatform();
 
-	Run_TestMultiChanSum(platform);
+	Run_ExampleMultiChanSum(platform);
 
 	deinitPlatform(platform);
 

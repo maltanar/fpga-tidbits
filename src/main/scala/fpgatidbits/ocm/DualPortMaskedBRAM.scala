@@ -1,6 +1,8 @@
 package fpgatidbits.ocm
 
-import Chisel._
+import chisel3._
+import chisel3.util._
+import fpgatidbits.utils.SubWordAssignment
 
 // creates a BRAM of desired size, which supports partial writes at "unit"
 // granularity. which parts will be written is determined by the writeMask.
@@ -10,15 +12,27 @@ import Chisel._
 class DualPortMaskedBRAM(addrBits: Int, dataBits: Int, unit: Int = 8)
 extends Module {
   val numBanks = dataBits/unit
-  val io = new DualPortMaskedBRAMIO(addrBits, dataBits, numBanks)
-  val banks = Vec.fill(numBanks) {
+  val io = IO(new DualPortMaskedBRAMIO(addrBits, dataBits, numBanks))
+
+  val banksExt = VecInit(Seq.fill(numBanks) {
     Module(new DualPortBRAM(addrBits, unit)).io
+  })
+
+  val banks = for (i <- 0 until numBanks) yield {
+    Wire(new DualPortBRAMIOWrapper(addrBits, unit))
   }
 
-  // assign zero to readData to enable partial assignment in loop
-  for(p <- 0 until 2) {
-    io.ports(p).rsp.readData := UInt(0)
-  }
+  (banksExt zip banks).map({
+    case (ext, int) =>
+      ext.clk := clock
+      ext.a.connect(int.ports(0))
+      ext.b.connect(int.ports(1))
+      int.ports.map(_.driveDefaults())
+  })
+
+  val wiresReadOut =VecInit(Seq.fill(2)(VecInit(Seq.fill(numBanks)(WireInit(0.U(unit.W))))))
+
+
 
   for(i <- 0 until numBanks) {
     for(p <- 0 until 2) {
@@ -31,8 +45,14 @@ extends Module {
       val bankWrEn = io.ports(p).req.writeEn & io.ports(p).req.writeMask(i)
       banks(i).ports(p).req.writeEn := bankWrEn
       // use partial assignment to concatenate read data
-      io.ports(p).rsp.readData((i+1)*unit-1, i*unit) := banks(i).ports(p).rsp.readData
+      // erlingr: chisel3 doesnt support subword assignment
+      wiresReadOut(p)(i) := banks(i).ports(p).rsp.readData
     }
+  }
+
+  // Concatenate output
+  for (p <- 0 until 2) {
+    io.ports(p).rsp.readData := wiresReadOut(p).asUInt
   }
 }
 
@@ -40,25 +60,19 @@ class OCMMaskedRequest(writeWidth: Int, addrWidth: Int, maskWidth: Int)
 extends OCMRequest(writeWidth, addrWidth) {
   if(writeWidth % maskWidth != 0)
     throw new Exception("Mask-writable BRAM needs data width % mask width = 0")
-  val writeMask = Vec.fill(maskWidth) {Bool()}
 
-  override def cloneType: this.type =
-    new OCMMaskedRequest(writeWidth, addrWidth, maskWidth).asInstanceOf[this.type]
+  val writeMask = Vec(maskWidth, Bool())
+
 }
 
 class OCMMaskedSlaveIF(dataWidth: Int, addrWidth: Int, maskWidth: Int)
 extends Bundle {
-  val req = new OCMMaskedRequest(dataWidth, addrWidth, maskWidth).asInput()
-  val rsp = new OCMResponse(dataWidth).asOutput()
+  val req = Input(new OCMMaskedRequest(dataWidth, addrWidth, maskWidth))
+  val rsp = Output(new OCMResponse(dataWidth))
 
-  override def cloneType: this.type =
-    new OCMMaskedSlaveIF(dataWidth, addrWidth, maskWidth).asInstanceOf[this.type]
 }
 
 class DualPortMaskedBRAMIO(addrBits: Int, dataBits: Int, maskBits: Int)
 extends Bundle {
-  val ports = Vec.fill(2) {new OCMMaskedSlaveIF(dataBits, addrBits, maskBits)}
-
-  override def cloneType: this.type =
-    new DualPortMaskedBRAMIO(addrBits, dataBits, maskBits).asInstanceOf[this.type]
+  val ports = Vec(2, new OCMMaskedSlaveIF(dataBits, addrBits, maskBits))
 }
