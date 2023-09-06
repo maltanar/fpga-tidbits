@@ -14,6 +14,8 @@ endif
 PLATFORM := TesterWrapper
 SRCS=main.cpp platform-verilatedtester.cpp
 
+build: $(EMULATOR_BIN)
+
 lib: $(SRCS)
 	verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) $(CC_OPTIONS) --exe --build $^
 	@rm $(VER_BUILD_DIR)/main.o
@@ -22,8 +24,6 @@ lib: $(SRCS)
 $(EMULATOR_BIN): main.cpp platform-verilatedtester.cpp
 	@verilator --cc $(PLATFORM).v $(VERILATOR_OPTIONS) $(CC_OPTIONS) --exe --build main.cpp platform-verilatedtester.cpp
 	@cp obj_dir/V$(PLATFORM) $(EMULATOR_BIN)
-
-build: $(EMULATOR_BIN)
 
 clean:
 	@rm -rf obj_dir
