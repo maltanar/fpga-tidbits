@@ -105,14 +105,14 @@ class MultiChanReadPort(val mrp: MemReqParams,
   val chanBaseIDs = (0 until numChans).map(i => i << chanReqIDBits)
   def getChanBaseID(i: Int): Int = { chanBaseIDs(i)}
 
-  val io = new Bundle {
+  val io = IO(new Bundle {
     // interface towards channels
     val req = Vec(numChans, Flipped(Decoupled(new GenericMemoryRequest(mrp))))
     val rsp = Vec(numChans, Decoupled(new GenericMemoryResponse(mrp)))
     // interface towards memory port
     val memReq = Decoupled(new GenericMemoryRequest(mrp))
     val memRsp = Flipped(Decoupled(new GenericMemoryResponse(mrp)))
-  }
+  })
   // instantiate the interleaver and connect channels
   val intl = Module(new ReqInterleaver(numChans, mrp)).io
   for(i <- 0 until numChans) { io.req(i) <> intl.reqIn(i) }
