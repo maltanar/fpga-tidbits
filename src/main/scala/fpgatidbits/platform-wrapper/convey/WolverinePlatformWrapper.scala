@@ -48,7 +48,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   // if no mem ports are desired, we still create one and drive outputs to 0
   val nmp = if(accel.numMemPorts == 0) 1 else accel.numMemPorts
 
-  val io = new ConveyPersonalityVerilogIF(nmp, p.memIDBits)
+  val io = IO(new ConveyPersonalityVerilogIF(nmp, p.memIDBits))
   // rename io signals to be compatible with Verilog template
   io.renameSignals()
 
