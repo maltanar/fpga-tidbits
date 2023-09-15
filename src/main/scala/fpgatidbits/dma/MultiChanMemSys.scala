@@ -94,13 +94,14 @@ class MultiChanReadPort(val mrp: MemReqParams,
   val maxTxns = chans.map(x => x.maxReadTxns).foldLeft(0)(Math.max)
   // we'll reserve the least significant <chanReqIDBits> of each id for the
   // channel's internal use
-  val chanReqIDBits = log2Up(maxTxns)
-  val chanIDBits = log2Up(numChans)
+  val chanReqIDBits = log2Ceil(maxTxns)
+  val chanIDBits = log2Ceil(numChans)
   // TODO not really; it's just that we have to use a different id allocation
   // scheme instead of reserving all lower-order bits for chanReqID bits
   if(chanIDBits + chanReqIDBits > mrp.idWidth)
     throw new Exception("Not enough ID bits to create memory channels")
 
+  println(s"MultiChanReadPort with numChans=$numChans, maxTxn=$maxTxns, chanReqIDBits = $chanReqIDBits, chanIDBits=$chanIDBits")
   // build the channel map, determining the baseID for each channel)
   val chanBaseIDs = (0 until numChans).map(i => i << chanReqIDBits)
   def getChanBaseID(i: Int): Int = { chanBaseIDs(i)}

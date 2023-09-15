@@ -138,7 +138,7 @@ class FPGAQueue[T <: Data](gen: T, val entries: Int) extends Module {
 object FPGAQueue
 {
   def apply[T <: Data](enq: DecoupledIO[T], entries: Int = 2): DecoupledIO[T]  = {
-    val q = Module(new FPGAQueue(enq.bits, entries))
+    val q = Module(new FPGAQueue(enq.bits.cloneType, entries))
     q.io.enq <> enq
     q.io.deq
   }
