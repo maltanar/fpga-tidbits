@@ -70,12 +70,12 @@ public:
   }
 
   // functions to ensure coherency across host-accelerator
-  virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
+  virtual void copyBufferHostToAccel(const void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     if(!wdm_memcpy(m_coproc, accelBuffer, hostBuffer, numBytes))
       throw "Error in copyBufferHostToAccel";
   }
 
-  virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
+  virtual void copyBufferAccelToHost(const void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
     if(!wdm_memcpy(m_coproc, hostBuffer, accelBuffer, numBytes))
       throw "Error in copyBufferAccelToHost";
   }

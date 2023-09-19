@@ -57,11 +57,11 @@ public:
   }
 
   // functions for host-accelerator buffer management
-  virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
+  virtual void copyBufferHostToAccel(const void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     memcpy(phys2virt(accelBuffer), hostBuffer, numBytes);
   }
 
-  virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
+  virtual void copyBufferAccelToHost(const void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
     memcpy(hostBuffer, phys2virt(accelBuffer), numBytes);
   }
 

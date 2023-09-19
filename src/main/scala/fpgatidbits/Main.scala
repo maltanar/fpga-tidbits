@@ -108,7 +108,7 @@ object MainObj {
     val targetDir = Paths.get(".").toString.dropRight(1) + s"$platformName-$accelName-driver/"
     val chiselArgs = Array("")
 
-    (new chisel3.stage.ChiselStage).emitVerilog(Module(platformInst(accInst, targetDir)))
+    (new chisel3.stage.ChiselStage).emitVerilog(platformInst(accInst, targetDir))
 
     // Copy test application
     //    val resRoot = Paths.get("./src/main/resources").toAbsolutePath

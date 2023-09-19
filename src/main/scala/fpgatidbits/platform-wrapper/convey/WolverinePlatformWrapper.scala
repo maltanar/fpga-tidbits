@@ -48,7 +48,7 @@ extends PlatformWrapper(WX690TParams, instFxn) {
   // if no mem ports are desired, we still create one and drive outputs to 0
   val nmp = if(accel.numMemPorts == 0) 1 else accel.numMemPorts
 
-  val io = new ConveyPersonalityVerilogIF(nmp, p.memIDBits)
+  val io = IO(new ConveyPersonalityVerilogIF(nmp, p.memIDBits))
   // rename io signals to be compatible with Verilog template
   io.renameSignals()
 
@@ -152,7 +152,10 @@ extends PlatformWrapper(WX690TParams, instFxn) {
       Module(new ConveyGenericMemAdapter(p.toMemReqParams())).io
     }
 
-    for(i <- 0 until nmp) { accel.io.memPort(i) <> adps(i).genericMem }
+    for(i <- 0 until nmp) {
+      accel.io.memPort(i) <> adps(i).genericMem
+      adps(i).conveyMem.flushOK := false.B // FIXME: This wire was unconnected.
+    }
 
     // Convey's interface semantics (stall-valid) are a bit more different than
     // just a decoupled (inverted ready)-valid:
@@ -224,11 +227,12 @@ extends PlatformWrapper(WX690TParams, instFxn) {
 
 // Convey memory request adapter
 class ConveyMemReqAdp(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val genericReqIn = Flipped(Decoupled(new GenericMemoryRequest(p)))
     val conveyReqOut = Decoupled(new ConveyMemRequest(p.idWidth, p.addrWidth, p.dataWidth))
     val writeData = Flipped(Decoupled(UInt(p.dataWidth.W)))
-  }
+  })
+
   if(p.dataWidth != 64) {
     throw new Exception("ConveyMemReqAdp requires p.dataWidth=64")
   }
@@ -343,10 +347,10 @@ class ConveyMemReqAdp(p: MemReqParams) extends Module {
 
 // Convey memory response adapter
 class ConveyMemRspAdp(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val conveyRspIn = Flipped(Decoupled(new ConveyMemResponse(32, 64)))
     val genericRspOut = Decoupled(new GenericMemoryResponse(p))
-  }
+  })
 
   io.conveyRspIn.ready := io.genericRspOut.ready
   io.genericRspOut.valid := io.conveyRspIn.valid
@@ -371,10 +375,10 @@ class ConveyMemRspAdp(p: MemReqParams) extends Module {
 
 // Convey memory port adapter
 class ConveyGenericMemAdapter(p: MemReqParams) extends Module {
-  val io = new Bundle {
+  val io = IO(new Bundle {
     val genericMem = new GenericMemorySlavePort(p)
     val conveyMem = new ConveyMemMasterIF(p.idWidth)
-  }
+  })
 
   val muxer = Module(new SimplexAdapter(p)).io
   io.genericMem <> muxer.duplex

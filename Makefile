@@ -31,10 +31,11 @@ emulator:
 #	Tests
 # ----------------------------------------------------------------------------------------------------------------------
 include integration-test.mk
+include board-test.mk
 
 unit-test:
 	$(SBT) $(SBT_FLAGS) test
 
-test: unit-test integration-test
+test: unit-test integration-test board-test
 
 .PHONY: all emulator verilog driver test unit-test

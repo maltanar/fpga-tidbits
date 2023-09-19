@@ -15,12 +15,12 @@ public:
 	}
 
   // functions for host-accelerator buffer management
-  virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
+  virtual void copyBufferHostToAccel(const void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     memcpy(accelBuffer, hostBuffer, numBytes);
     Xil_DCacheFlushRange((unsigned int) accelBuffer, numBytes);
   }
 
-  virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
+  virtual void copyBufferAccelToHost(const void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
     Xil_DCacheInvalidateRange((unsigned int) accelBuffer, numBytes);
     memcpy(hostBuffer,accelBuffer, numBytes);
   }

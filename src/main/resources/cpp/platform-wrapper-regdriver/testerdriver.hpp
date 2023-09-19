@@ -57,7 +57,7 @@ public:
 		return "EmuDriver";
 	}
 
-  virtual void copyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
+  virtual void copyBufferHostToAccel(const void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
     __TESTERDRIVER_DEBUG_PRINT("host2accel(" << (uint64_t) hostBuffer << " -> " << accelBufBase << " : " << numBytes << " bytes)");
 
@@ -70,16 +70,16 @@ public:
       unsigned int alignedSize = (startDiff + numBytes + 7) / 8 * 8;
       // copy containing block into host memory
       char * tmp = new char[alignedSize];
-      alignedCopyBufferAccelToHost((void *)alignedBase, (void *) tmp, alignedSize);
+      alignedCopyBufferAccelToHost((const void *)alignedBase, (void *) tmp, alignedSize);
       // do host-to-host unaligned copy
       memcpy((void *)&tmp[startDiff], hostBuffer, numBytes);
       // write containing block back to accel memory
-      alignedCopyBufferHostToAccel((void *)tmp, (void *)alignedBase, alignedSize);
+      alignedCopyBufferHostToAccel((const void *)tmp, (void *)alignedBase, alignedSize);
       delete [] tmp;
     }
   }
 
-  virtual void copyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
+  virtual void copyBufferAccelToHost(const void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
     __TESTERDRIVER_DEBUG_PRINT("accel2host(" << accelBufBase << " -> " << (uint64_t) hostBuffer << " : " << numBytes << " bytes)");
 
@@ -93,7 +93,7 @@ public:
       unsigned int alignedSize = (startDiff + numBytes + 7) / 8 * 8;
       // copy containing block into host memory
       char * tmp = new char[alignedSize];
-      alignedCopyBufferAccelToHost((void *)alignedBase, (void *) tmp, alignedSize);
+      alignedCopyBufferAccelToHost((const void *)alignedBase, (void *) tmp, alignedSize);
       // do host-to-host unaligned copy
       memcpy(hostBuffer, (void *)&tmp[startDiff],numBytes);
       delete [] tmp;
@@ -201,14 +201,14 @@ protected:
   }
 
   // "aligned" copy functions, where accel ptr start and size are guaranteed to be 8-aligned
-  void alignedCopyBufferHostToAccel(void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
+  void alignedCopyBufferHostToAccel(const void * hostBuffer, void * accelBuffer, unsigned int numBytes) {
     uint64_t * host_buf = (uint64_t *) hostBuffer;
     uint64_t accelBufBase = (uint64_t) accelBuffer;
     for(unsigned int i = 0; i < numBytes/8; i++)
         memWrite(accelBufBase + i*8, host_buf[i]);
   }
 
-  void alignedCopyBufferAccelToHost(void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
+  void alignedCopyBufferAccelToHost(const void * accelBuffer, void * hostBuffer, unsigned int numBytes) {
     uint64_t accelBufBase = (uint64_t) accelBuffer;
     uint64_t * readBuf = (uint64_t *) hostBuffer;
     for(unsigned int i = 0; i < numBytes/8; i++)

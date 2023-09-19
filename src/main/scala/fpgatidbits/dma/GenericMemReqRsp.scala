@@ -144,7 +144,7 @@ class SimplexAdapter(private val p: MemReqParams) extends Module {
   val wrReqQ = FPGAQueue(io.duplex.memWrReq, 2)
   val wrDatQ = FPGAQueue(io.duplex.memWrDat, 2)
 
-  val simplexReqQ = Module(new FPGAQueue(GenericMemoryRequest(p), 2)).io
+  val simplexReqQ = Module(new FPGAQueue(new GenericMemoryRequest(p), 2)).io
 
   // simply interleave the read-write reqs onto common req channel
   val mux = Module(new ReqInterleaver(2, p)).io

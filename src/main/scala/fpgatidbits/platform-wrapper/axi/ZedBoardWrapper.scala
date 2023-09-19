@@ -35,7 +35,7 @@ class ZedBoardWrapper(instFxn: PlatformWrapperParams => GenericAccelerator, targ
     generateRegDriver(targetDir)
     // Copy over the other needed files
     //val resRoot = getClass.getResource("").getPath
-    resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+    resourceCopyBulk("cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
     println(s"=======> Driver files copied to ${targetDir}")
 
   }

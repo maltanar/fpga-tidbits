@@ -31,6 +31,6 @@ class PYNQZ1Wrapper(instFxn: PlatformWrapperParams => GenericAccelerator, target
   generateRegDriver(targetDir)
 
   // Copy over the other needed files
-  resourceCopyBulk("/cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
+  resourceCopyBulk("cpp/platform-wrapper-regdriver/", targetDir, platformDriverFiles)
   println(s"=======> Driver files copied to ${targetDir}")
 }

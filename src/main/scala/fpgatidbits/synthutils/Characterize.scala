@@ -32,6 +32,7 @@
 package fpgatidbits.synthutils
 
 import sys.process._
+import scala.sys.process._
 import java.io._
 import scala.collection.mutable.ArrayBuffer
 import chisel3._
@@ -56,6 +57,7 @@ abstract class PrintableParam() {
 // bundled up numbers/results from characteriation
 class CharacterizeResult(
   val lut: Int,
+  val lutram: Int,
   val reg: Int,
   val dsp: Int,
   val bram: Int,
@@ -66,11 +68,11 @@ class CharacterizeResult(
   }
 
   def headersAsList(): List[String] = {
-    return List("LUT", "FF", "DSP", "BRAM", "Fmax (MHz)")
+    return List("LUT", "FF", "DSP", "LUTRAM","BRAM", "Fmax (MHz)")
   }
 
   def contentAsList(): List[String] = {
-    return List(lut, reg, dsp, bram, fmax_mhz).map(_.toString)
+    return List(lut, reg, dsp, lutram, bram, fmax_mhz).map(_.toString)
   }
 }
 
@@ -109,30 +111,31 @@ object VivadoSynth {
 
     // run Nachiket Kapre's quick synthesis-and-characterization scripts
     var ret: CharacterizeResult = new CharacterizeResult(
-      lut = 0, reg = 0, bram = 0, dsp = 0, target_ns = 0, fmax_mhz = 0)
+      lut = 0, reg = 0, bram = 0, lutram=0, dsp = 0, target_ns = 0, fmax_mhz = 0)
     try {
-      val omxDir = "/home/erling/tools/oh-my-xilinx"
-      //val compile_res = Process(s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart", new File(path), "OHMYXILINX" -> s"$omxDir").!!
-      val compile_res = Process(Seq("bash", "-c", s"$omxDir/vivadocompile.sh $topModuleName clk $fpgaPart"),
-        new File(path),
-        "OHMYXILINX" -> s"$omxDir",
-      ).!!
+      // Verify that we have OHMYXILINX environment variable set.
+      if (System.getenv("OHMYXILINX") == null) {
+        throw new Exception("Environmental variable `OHMYXILINX` is missing. add `export OHMYXILINX=/path/to/oh-my-xilinx` to ~/.bashrc")
+      }
 
-      println(compile_res)
+      val cmd = s"bash -c \"$$OHMYXILINX/vivadocompile.sh ${topModuleName} clock ${fpgaPart}\""
+      println(s"Executing `$cmd")
+      val proc = Process(cmd, new File(path)).!
       val result_res = Process(s"cat results_$topModuleName/res.txt", new File(path)).!!
       // do some string parsing to pull out the numbers
       val result_lines = result_res.split("\n")
       val luts_fields = result_lines(0).split('=').map(_.trim)
-      val regs_fields = result_lines(1).split('=').map(_.trim)
-      val dsps_fields = result_lines(2).split('=').map(_.trim)
-      val bram_fields = result_lines(3).split('=').map(_.trim)
-      val slack_fields = result_lines(4).split('=').map(_.trim)
+      val lutrams_fields = result_lines(1).split('=').map(_.trim)
+      val regs_fields = result_lines(2).split('=').map(_.trim)
+      val dsps_fields = result_lines(3).split('=').map(_.trim)
+      val bram_fields = result_lines(4).split('=').map(_.trim)
+      val slack_fields = result_lines(9).split('=').map(_.trim)
       val slack_ns: Double = if (slack_fields.length <= 1) 0 else slack_fields(1).toDouble
       val req_ns: Double = 2.0 // TODO should pull from vivadocompile.xdc
       val fmax_mhz: Double = if (slack_fields.length <= 1) 0 else 1000.0 / (req_ns - slack_ns)
 
       ret = new CharacterizeResult(
-        lut = luts_fields(1).toInt, reg = regs_fields(1).toInt,
+        lut = luts_fields(1).toInt, lutram=lutrams_fields(1).toInt, reg = regs_fields(1).toInt,
         bram = bram_fields(1).toInt,
         dsp = dsps_fields(1).toInt, target_ns = req_ns, fmax_mhz = fmax_mhz)
     } catch {
